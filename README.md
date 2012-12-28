@@ -13,5 +13,8 @@ An obvious use of this technique is clustering.  From Rajamaran,
 > 1. If d(x,y) ≤ d1, then the probability that f(x) = f(y) is at least p1.  
 > 2. If d(x,y) ≥ d2, then the probability that f(x) = f(y) is at most p2.  
 
+## Forked modifications
 
-
+This package has been modified slightly by Chase Davis to accommodate the
+appication of clustering short strings (in this case names). See simple code
+for that task in tests/test_names.py.

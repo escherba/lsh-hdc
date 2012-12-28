@@ -116,24 +116,18 @@ class Cluster:
     def get_sets(self):
         return self.unionfind.sets()
 
-    
-def shingle(s, k):
-    """Generate k-length shingles of string s"""
-    k = min(len(s), k)
-    for i in range(len(s) - k + 1):
-        yield s[i:i+k]
+########## HELPER FUNCTIONS ###########
 
-def hshingle(s, k):
-    """Generate k-length shingles then hash"""
-    for s in shingle(s, k):
-        yield hash(s)
+def shingle(word, n):
+    '''
+    Not using a generator here, unlike the initial implementation,
+    both because it doesn't save a ton of memory in this use case
+    and because it was borking the creation of minhashes.
+    '''
+    return set([word[i:i + n] for i in range(len(word) - n + 1)])
 
 def jaccard_sim(X, Y):
     """Jaccard similarity between two sets"""
     x = set(X)
     y = set(Y)
     return float(len(x & y)) / len(x | y)
-
-def jaccard_dist(X, Y):
-    """Jaccard distance between two sets"""
-    return 1 - jaccard_sim(X, Y)
