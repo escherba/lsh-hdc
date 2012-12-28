@@ -16,5 +16,5 @@ An obvious use of this technique is clustering.  From Rajamaran,
 ## Forked modifications
 
 This package has been modified slightly by Chase Davis to accommodate the
-appication of clustering short strings (in this case names). See simple code
+application of clustering short strings (in this case names). See simple code
 for that task in tests/test_names.py.
