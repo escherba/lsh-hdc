@@ -33,7 +33,7 @@ def get_bandwidth(n, t):
     """
 
     best = n, 1
-    minerr = float("inf")
+    min_err = float("inf")
     for r in range(1, n + 1):
         try:
             b = 1. / (t ** r)
@@ -41,9 +41,9 @@ def get_bandwidth(n, t):
             # Divide by zero, your signature is huge
             return best
         err = abs(n - b * r)
-        if err < minerr:
+        if err < min_err:
             best = r
-            minerr = err
+            min_err = err
     return best
 
 
@@ -58,7 +58,7 @@ class Signature:
         """Returns dim different hash functions"""
         pass
 
-    def sign(self, object):
+    def sign(self, obj):
         """Return the signature for object s"""
         pass
 
@@ -127,9 +127,9 @@ class Cluster:
         sig = self.signer.sign(s)
 
         # Union labels with same LSH keys
-        for hshval in self.hasher.hash(sig):
-            self.hashmap.setdefault(hshval, []).append(label)
-            self.unionfind.union(label, self.hashmap[hshval][0])
+        for value in self.hasher.hash(sig):
+            self.hashmap.setdefault(value, []).append(label)
+            self.unionfind.union(label, self.hashmap[value][0])
 
     def get_sets(self):
         return self.unionfind.sets()
