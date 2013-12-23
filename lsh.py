@@ -15,11 +15,36 @@ def shingle(word, n):
     return set([word[i:i + n] for i in range(len(word) - n + 1)])
 
 
-def jaccard_sim(X, Y):
+def jaccard_sim(x, y):
     """Jaccard similarity between two sets"""
-    x = set(X)
-    y = set(Y)
-    return float(len(x & y)) / len(x | y)
+    set_x = set(x)
+    set_y = set(y)
+    return float(len(set_x & set_y)) / len(set_x | set_y)
+
+
+def get_bandwidth(n, t):
+    """Approximates the bandwidth (number of rows in each band)
+    needed to get threshold.
+
+    Threshold t = (1/b) ** (1/r) where
+    b = #bands
+    r = #rows per band
+    n = b * r = #elements in signature
+    """
+
+    best = n, 1
+    minerr = float("inf")
+    for r in range(1, n + 1):
+        try:
+            b = 1. / (t ** r)
+        except ZeroDivisionError:
+            # Divide by zero, your signature is huge
+            return best
+        err = abs(n - b * r)
+        if err < minerr:
+            best = r
+            minerr = err
+    return best
 
 
 class Signature:
@@ -46,13 +71,13 @@ class MinHashSignature(Signature):
         def hash_factory(n):
             return lambda x: hash("salt" + str(n) + str(x) + "salt")
         return [hash_factory(_) for _ in range(self.dim)]
-    
+
     def sign(self, s):
         """Returns minhash signature for set s"""
         sig = [float("inf")] * self.dim
         for hash_ix, hash_fn in enumerate(self.hashes):
             sig[hash_ix] = min(hash_fn(value) for value in s)
-        return sig        
+        return sig
 
 
 class LSH:
@@ -61,36 +86,12 @@ class LSH:
     def __init__(self, length, threshold):
         self.length = length
         self.threshold = threshold
-        self.bandwidth = self.get_bandwidth(length, threshold)
+        self.bandwidth = get_bandwidth(length, threshold)
 
     def hash(self, sig):
         """Generate hashvals for this signature"""
         for band in zip(*(iter(sig),) * self.bandwidth):
             yield hash("salt" + str(band) + "tlas")
-        
-    def get_bandwidth(self, n, t):
-        """Approximates the bandwidth (number of rows in each band)
-        needed to get threshold.  
-        
-        Threshold t = (1/b) ** (1/r) where
-        b = #bands
-        r = #rows per band
-        n = b * r = #elements in signature
-        """
-        
-        best = n, 1
-        minerr = float("inf")
-        for r in range(1, n + 1):
-            try:
-                b = 1. / (t ** r)
-            except ZeroDivisionError:
-                # Divide by zero, your signature is huge
-                return best
-            err = abs(n - b * r)
-            if err < minerr:
-                best = r
-                minerr = err
-        return best
 
     def get_threshold(self):
         r = self.bandwidth
