@@ -6,6 +6,22 @@ Algorithms based on 'Mining of Massive Datasets'
 from unionfind import UnionFind
 
 
+def shingle(word, n):
+    '''
+    Not using a generator here, unlike the initial implementation,
+    both because it doesn't save a ton of memory in this use case
+    and because it was borking the creation of minhashes.
+    '''
+    return set([word[i:i + n] for i in range(len(word) - n + 1)])
+
+
+def jaccard_sim(X, Y):
+    """Jaccard similarity between two sets"""
+    x = set(X)
+    y = set(Y)
+    return float(len(x & y)) / len(x | y)
+
+
 class Signature:
     """Signature Base class."""
 
@@ -29,11 +45,11 @@ class MinHashSignature(Signature):
         """Return dim different hash functions"""
         def hash_factory(n):
             return lambda x: hash("salt" + str(n) + str(x) + "salt")
-        return [ hash_factory(_) for _ in range(self.dim) ]
+        return [hash_factory(_) for _ in range(self.dim)]
     
     def sign(self, s):
         """Returns minhash signature for set s"""
-        sig = [ float("inf") ] * self.dim
+        sig = [float("inf")] * self.dim
         for hash_ix, hash_fn in enumerate(self.hashes):
             sig[hash_ix] = min(hash_fn(value) for value in s)
         return sig        
@@ -63,11 +79,12 @@ class LSH:
         """
         
         best = n, 1
-        minerr  = float("inf")
+        minerr = float("inf")
         for r in range(1, n + 1):
             try:
                 b = 1. / (t ** r)
-            except:             # Divide by zero, your signature is huge
+            except ZeroDivisionError:
+                # Divide by zero, your signature is huge
                 return best
             err = abs(n - b * r)
             if err < minerr:
@@ -115,19 +132,3 @@ class Cluster:
 
     def get_sets(self):
         return self.unionfind.sets()
-
-########## HELPER FUNCTIONS ###########
-
-def shingle(word, n):
-    '''
-    Not using a generator here, unlike the initial implementation,
-    both because it doesn't save a ton of memory in this use case
-    and because it was borking the creation of minhashes.
-    '''
-    return set([word[i:i + n] for i in range(len(word) - n + 1)])
-
-def jaccard_sim(X, Y):
-    """Jaccard similarity between two sets"""
-    x = set(X)
-    y = set(Y)
-    return float(len(x & y)) / len(x | y)
