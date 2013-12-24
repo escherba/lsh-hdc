@@ -50,3 +50,7 @@ class TestCluster(unittest.TestCase):
                     break
         avg_err = float(tot_err) / n_tests
         self.assertLessEqual(avg_err, expected_error, "Error too large")
+
+
+if __name__ == '__main__':
+    unittest.main()

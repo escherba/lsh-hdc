@@ -44,3 +44,7 @@ class TestSig(unittest.TestCase):
             expected_error,
             avg_err,
             msg="Accuracy test failed. (avg error: %f)" % avg_err)
+
+
+if __name__ == '__main__':
+    unittest.main()

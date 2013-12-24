@@ -12,3 +12,7 @@ class TestNames(unittest.TestCase):
         for name in set(names):
             cluster.add_set(shingle(name, 3), name)
         self.assertEqual(len(cluster.get_sets()), 352, "len check failed")
+
+
+if __name__ == '__main__':
+    unittest.main()
