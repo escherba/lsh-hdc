@@ -14,7 +14,7 @@ class TestFiles(unittest.TestCase):
         self.assertEqual(len(cluster.get_sets()), 352, "len check failed")
 
     def test_bills(self):
-        lines = open('data/bills.txt', 'r').readlines()
+        lines = open('data/bills100.txt', 'r').readlines()
         cluster = Cluster(threshold=0.25)
         for line in lines[0:100]:
             label, text = line.split("|")
