@@ -9,13 +9,13 @@ class TestSig(unittest.TestCase):
         """Signatures should have correct dimension"""
         dim = 100
         mh = MinHashSignature(dim)
-        self.assertEqual(dim, len(mh.sign(randset())))
+        self.assertEqual(dim, len(mh.get_signature(randset())))
 
     def test_consistent_signature(self):
         """Signatures should be consistent"""
         mh = MinHashSignature(100)
         s = randset()
-        self.assertEqual(mh.sign(s), mh.sign(s))
+        self.assertEqual(mh.get_signature(s), mh.get_signature(s))
 
     def test_signature_similarity(self):
         """The probability that two sets' signatures match at some index
@@ -29,7 +29,7 @@ class TestSig(unittest.TestCase):
         for test in range(n_tests):
             # Create random sets and their signatures
             sets = (randset(), randset())
-            sigs = map(mh.sign, sets)
+            sigs = map(mh.get_signature, sets)
 
             # Calculate true Jaccard similarity, and sim of signatures
             jsim = jaccard_sim(*sets)

@@ -3,23 +3,28 @@ lsh.py
 
 Algorithms based on 'Mining of Massive Datasets'
 """
+import re
 from unionfind import UnionFind
+from collections import defaultdict
 
 
-def shingle(word, n):
-    """
-    Not using a generator here, unlike the initial implementation,
-    both because it doesn't save a ton of memory in this use case
-    and because it was borking the creation of minhashes.
-    """
-    return set([word[i:i + n] for i in range(len(word) - n + 1)])
+def shingle(text, n):
+    return set([text[i:i + n] for i in range(len(text) - n + 1)])
+
+
+def word_shingle(text, n):
+    words = re.findall(r'(?u)\w+', text)
+    all_shingles = set()
+    for offset in xrange(len(words) - n + 1):
+        all_shingles.add(tuple(words[offset:(offset+n)]))
+    return all_shingles
 
 
 def jaccard_sim(x, y):
     """Jaccard similarity between two sets"""
     set_x = set(x)
     set_y = set(y)
-    return float(len(set_x & set_y)) / len(set_x | set_y)
+    return float(len(set_x & set_y)) / float(len(set_x | set_y))
 
 
 def get_bandwidth(n, threshold):
@@ -38,7 +43,6 @@ def get_bandwidth(n, threshold):
         try:
             b = 1. / (threshold ** r)
         except ZeroDivisionError:
-            # Divide by zero, your signature is huge
             return best
         err = abs(n - b * r)
         if err < min_err:
@@ -58,7 +62,7 @@ class Signature:
         """Returns dim different hash functions"""
         pass
 
-    def sign(self, obj):
+    def get_signature(self, obj):
         """Return the signature for object"""
         pass
 
@@ -72,24 +76,28 @@ class MinHashSignature(Signature):
             return lambda x: hash("salt" + str(n) + str(x) + "salt")
         return [hash_factory(_) for _ in range(self.dim)]
 
-    def sign(self, s):
-        """Returns minhash signature for set s"""
-        sig = [float("inf")] * self.dim
-        for i, hash_fun in enumerate(self.hashes):
-            sig[i] = min(hash_fun(value) for value in s)
-        return sig
+    def get_signature(self, s):
+        """Returns minhash signature for set s -- which
+        is a list of list consisting of hashings for each value and has function"""
+        return [min(hash_fun(value) for value in s) for hash_fun in self.hashes]
 
 
 class LSH:
     """Locality sensitive hashing.  Uses a banding approach to hash
     similar signatures to the same buckets."""
     def __init__(self, length, threshold):
-        self.length = length
-        self.threshold = threshold
+        #self.length = length
+        #self.threshold = threshold
         self.bandwidth = get_bandwidth(length, threshold)
 
     def hash(self, sig):
-        """Generate hashvals for this signature"""
+        """Generate hashvals for this signature
+
+        The zip() clause converts a 1D-list to a list of b-dimensional
+        tuples such that:
+        [1,2,3,4,5,6] -> [(1,2), (3,4), (5,6)] if bandwidth == 2
+                      -> [(1,2,3), (4,5,6)]    if bandwidth == 3
+        """
         for band in zip(*(iter(sig),) * self.bandwidth):
             yield hash("salt" + str(band) + "tlas")
 
@@ -115,7 +123,7 @@ class Cluster:
         self.unionfind = UnionFind()
         self.signer = MinHashSignature(width)
         self.hasher = LSH(width, threshold)
-        self.hashmap = {}
+        self.hashmap = defaultdict(list)
 
     def add_set(self, s, label=None):
         # A label for this set
@@ -126,11 +134,11 @@ class Cluster:
         self.unionfind[label]
 
         # Get signature
-        sig = self.signer.sign(s)
+        sig = self.signer.get_signature(s)
 
         # Union labels with same LSH keys
         for value in self.hasher.hash(sig):
-            self.hashmap.setdefault(value, []).append(label)
+            self.hashmap[value].append(label)
             self.unionfind.union(label, self.hashmap[value][0])
 
     def get_sets(self):
