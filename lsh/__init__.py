@@ -13,7 +13,9 @@ def shingle(text, n):
 
 
 def word_shingle(text, n):
-    words = re.findall(r'(?u)\w+', text)
+    #words = re.findall(r'(?u)\w+', text)
+    # match any Unicode word optionally preceded by #, $, or @ characters
+    words = re.findall(r'[#@$]?(?u)\w+', text)
     all_shingles = set()
     for offset in xrange(len(words) - n + 1):
         all_shingles.add(tuple(words[offset:(offset+n)]))
