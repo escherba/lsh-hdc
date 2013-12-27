@@ -12,14 +12,31 @@ def shingle(text, n):
     return set([text[i:i + n] for i in range(len(text) - n + 1)])
 
 
-def word_shingle(text, n):
-    #words = re.findall(r'(?u)\w+', text)
-    # match any Unicode word optionally preceded by #, $, or @ characters
-    words = re.findall(r'[#@$]?(?u)\w+', text)
-    all_shingles = set()
-    for offset in xrange(len(words) - n + 1):
-        all_shingles.add(tuple(words[offset:(offset+n)]))
-    return all_shingles
+class Shingler:
+    def __init__(self, n, pattern=None):
+        if pattern is None:
+            # match any Unicode word optionally preceded by #, $, or @ characters
+            #
+            #pattern = r'(?u)\w+'
+            #pattern = r'[#@$]?(?u)\w+'
+            pattern = """
+                        (?:                # Either
+                        http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+
+                        |                  # or
+                        [#@$]?             # (optional) pound-, at-, or dollar-sign
+                        (?u)\w+            # Unicode word
+                        )
+                        """
+        self.r = re.compile(pattern, re.VERBOSE)
+        self.n = n
+
+    def get_shingles(self, text):
+        n_ = self.n
+        shingles = set()
+        tokens = self.r.findall(text)
+        for offset in xrange(len(tokens) - n_ + 1):
+            shingles.add(tuple(tokens[offset:(offset + n_)]))
+        return shingles
 
 
 def jaccard_sim(x, y):

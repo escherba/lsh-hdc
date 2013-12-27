@@ -2,14 +2,16 @@ __author__ = 'escherba'
 
 import unittest
 import json
-from lsh import Cluster, word_shingle
+from lsh import Cluster, Shingler
 from operator import itemgetter
 import sys
 
 
 class TestMacLog(unittest.TestCase):
+
     def test_mac_log(self):
         cluster = Cluster(threshold=0.50)
+        shingler = Shingler(4)
         with open("data/detail.log.1") as mac_log:
             for line_num, line in enumerate(mac_log):
                 if not line_num % 1000:
@@ -17,7 +19,7 @@ class TestMacLog(unittest.TestCase):
                 obj = json.loads(line).get("object", {})
                 content = obj.get("content")
                 post_id = obj.get("post_id")
-                s = word_shingle(content, 4)
+                s = shingler.get_shingles(content)
                 if len(s) > 0:
                     cluster.add_set(s, post_id)
                 #if line_num > 10000:

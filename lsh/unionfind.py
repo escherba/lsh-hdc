@@ -10,6 +10,7 @@ with significant additional changes by D. Eppstein.
 
 from collections import defaultdict
 
+
 class UnionFind:
     """Union-find data structure.
 
