@@ -37,7 +37,7 @@ class Shingler:
 
     def normalize(self, text):
         #TODO: consider using a try/catch block
-        return self.html_parser.unescape(text.lower())
+        return self.html_parser.unescape(text).lower()
 
     def get_shingles(self, text):
         """Get shingles (n-grams) from text
