@@ -6,9 +6,12 @@ Algorithms based on 'Mining of Massive Datasets'
 """
 
 import re
-from unionfind import UnionFind
-from collections import defaultdict
 import HTMLParser
+from unionfind import UnionFind
+from functools import partial
+from itertools import imap
+from collections import defaultdict, Counter
+from math import log
 
 
 def shingle(text, n):
@@ -47,6 +50,9 @@ class Shingler:
         #TODO: consider using a try/catch block
         return self.html_parser.unescape(text).lower()
 
+    def tokenize(self, text):
+        return self.r.findall(self.normalize(text))
+
     def get_shingles(self, text):
         """Get shingles (n-grams) from text
 
@@ -57,8 +63,7 @@ class Shingler:
         """
         n_ = self.n
         shingles = set()
-
-        tokens = self.r.findall(self.normalize(text))
+        tokens = self.tokenize(text)
         if len(tokens) >= n_:
             for offset in xrange(len(tokens) - n_ + 1):
                 shingles.add(tuple(tokens[offset:(offset + n_)]))
@@ -171,6 +176,43 @@ class Cluster:
         self.signer = MinHashSignature(width)
         self.hasher = LSH(width, threshold)
         self.hashmap = defaultdict(list)
+
+    def calculate_bnmi(self, cluster_sets, items_to_shingles, min_cluster_size=2):
+        """Bitwise normalized mutual information index
+        TODO: this could be moved to lsh module
+        """
+        def entropyN(N, n):
+            n_ = float(n)
+            if n_ > 0.0:
+                return - n_ * log(n_ / float(N))
+            else:
+                return 0.0
+
+        post_count = 0
+        cluster_count = 0
+        numerator = 0.0
+        multiverse = Counter()
+        for cluster_id, cluster in enumerate(cluster_sets):
+            cluster_size = len(cluster)
+            if cluster_size >= min_cluster_size:
+                universe = Counter()
+                for post_id in cluster:
+                    universe.update(items_to_shingles[post_id])
+                numerator += \
+                    sum(imap(partial(entropyN, cluster_size), universe.values())) \
+                    / float(cluster_size)
+                multiverse.update(universe)
+                post_count += cluster_size
+                cluster_count += 1
+
+        denominator = float(cluster_count) * \
+            sum(imap(partial(entropyN, post_count), multiverse.values())) \
+            / float(post_count)
+
+        if numerator > 0.0:
+            return 1.0 - numerator / denominator
+        else:
+            return 1.0
 
     def add_set(self, s, label=None):
         # A label for this set

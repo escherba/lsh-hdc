@@ -1,9 +1,44 @@
 import unittest
-from utils import randset
+from utils import randset, lapply
 from lsh import Cluster, jaccard_sim
 
 
 class TestCluster(unittest.TestCase):
+
+    def test_bnmi(self):
+        """
+        This example is taken from:
+        Manning C D, Raghavan P, Schutze H. Introduction to Information Retrieval, CUP 2009, p. 357.
+        :return: None
+        """
+        cluster = Cluster()
+        cluster_sets = [set(["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"]),
+                        set(["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"]),
+                        set(["3.1", "3.2", "3.3", "3.4", "3.5"])]
+        items_to_shingles = {
+            "1.1": set([("x",)]),
+            "1.2": set([("x",)]),
+            "1.3": set([("x",)]),
+            "1.4": set([("x",)]),
+            "1.5": set([("x",)]),
+            "1.6": set([("o",)]),
+
+            "2.1": set([("x",)]),
+            "2.2": set([("o",)]),
+            "2.3": set([("o",)]),
+            "2.4": set([("o",)]),
+            "2.5": set([("v",)]),
+            "2.6": set([("o",)]),
+
+            "3.1": set([("x",)]),
+            "3.2": set([("x",)]),
+            "3.3": set([("v",)]),
+            "3.4": set([("v",)]),
+            "3.5": set([("v",)])
+        }
+        bnmi = cluster.calculate_bnmi(cluster_sets, items_to_shingles)
+        self.assertAlmostEqual(bnmi, 0.370949657)
+
     def test_same_set(self):
         """A set should be clustered with itself"""
         s = randset()

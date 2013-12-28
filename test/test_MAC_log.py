@@ -3,15 +3,21 @@ __author__ = 'escherba'
 import unittest
 import sys
 import json
-from lsh import Cluster, Shingler
-from utils import uniq_rev_index, sort_by_length
+import operator
+from utils import sort_by_length
+from collections import defaultdict
+
+import lsh
+from utils import uniq_rev_index
 
 
 class TestMacLog(unittest.TestCase):
 
     def test_mac_log(self):
-        cluster = Cluster(threshold=0.50)
-        shingler = Shingler(4)
+        cluster_builder = lsh.Cluster(threshold=0.50)
+        shingler = lsh.Shingler(4)
+
+        posts_to_shingles = {}
         with open("data/detail.log.1") as mac_log:
             for line_num, line in enumerate(mac_log):
                 if not line_num % 1000:
@@ -19,25 +25,37 @@ class TestMacLog(unittest.TestCase):
                 obj = json.loads(line).get("object", {})
                 content = obj.get("content")
                 post_id = obj.get("post_id")
-                s = shingler.get_shingles(content)
-                if len(s) > 0:
-                    cluster.add_set(s, post_id)
+                shingles = shingler.get_shingles(content)
+                # TODO: no need for condition below
+                if len(shingles) > 0:
+                    cluster_builder.add_set(shingles, post_id)
+                    posts_to_shingles[post_id] = shingles
                 #if line_num > 10000:
                 #    break
 
-        # clusters: cluster_id -> [ post_ids ]
-        clusters = dict(
-            enumerate(
-                sort_by_length(
-                    cluster.get_sets())))
-        self.output_pairs(clusters)
+        sets = cluster_builder.get_sets()
+        min_cluster_size = 4
+        bnmi = cluster_builder.calculate_bnmi(sets, posts_to_shingles,
+                                              min_cluster_size=min_cluster_size)
+        cluster_sizes = map(len, filter(lambda x: len(x) > min_cluster_size, sets))
+        num_clusters = len(cluster_sizes)
+        points_in_clusters = sum(cluster_sizes)
+        sys.stderr.write(json.dumps(
+            {"num_clusters": num_clusters,
+            "points_in_clusters": points_in_clusters,
+            "bnmi": bnmi}) + "\n")
 
-    def output_pairs(self, clusters):
+        # clusters: cluster_id -> [ post_ids ]
+        clusters = dict(enumerate(sort_by_length(sets)))
+        self.output_clusters(clusters)
+
+    def output_clusters(self, clusters, min_cluster_size=2):
 
         # reverse_index: post_id -> cluster_id
         reverse_index = uniq_rev_index(clusters)
 
-        out = []
+        out = defaultdict(list)
+
         with open("data/detail.log.1") as mac_log:
             for line_num, line in enumerate(mac_log):
                 #if not line_num % 1000:
@@ -45,18 +63,20 @@ class TestMacLog(unittest.TestCase):
                 obj = json.loads(line).get("object", {})
                 content = obj.get("content")
                 post_id = obj.get("post_id")
-                cluster_label = reverse_index.get(post_id)
-                if not cluster_label is None:
-                    neighbors = clusters.get(cluster_label)
-                    if not neighbors is None:
-                        if len(neighbors) > 1:
-                            out.append({"cluster_id": int(cluster_label), "content": content})
-
+                cluster_id = reverse_index.get(post_id)
+                if not cluster_id is None:
+                    cluster = clusters.get(cluster_id)
+                    if not cluster is None:
+                        if len(cluster) >= min_cluster_size:
+                            out[cluster_id].append({"post_id": post_id, "content": content})
                 #if line_num > 10000:
                 #    break
 
-        print json.dumps(out)
-        #self.assertEqual(len(sets), 88, "failed at similarity level 25%")
+        sorted_list = list({"cluster_id": k, "length": l, "posts": v} for k, v, l
+                           in sorted(((k, v, len(v)) for k, v
+                                      in out.items()), key=operator.itemgetter(2), reverse=True))
+        print json.dumps(sorted_list)
+
 
 if __name__ == '__main__':
     unittest.main()
