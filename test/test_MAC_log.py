@@ -22,7 +22,8 @@ class TestMacLog(unittest.TestCase):
             for line_num, line in enumerate(mac_log):
                 if not line_num % 1000:
                     sys.stderr.write("Processing line " + str(line_num) + "\n")
-                obj = json.loads(line).get("object", {})
+                json_obj = json.loads(line)
+                obj = json_obj.get("object", {})
                 content = obj.get("content")
                 post_id = obj.get("post_id")
                 shingles = shingler.get_shingles(content)
@@ -30,7 +31,7 @@ class TestMacLog(unittest.TestCase):
                 if len(shingles) > 0:
                     cluster_builder.add_set(shingles, post_id)
                     posts_to_shingles[post_id] = shingles
-                #if line_num > 10000:
+                #if line_num > 1000:
                 #    break
 
         sets = cluster_builder.get_sets()
@@ -60,21 +61,31 @@ class TestMacLog(unittest.TestCase):
             for line_num, line in enumerate(mac_log):
                 #if not line_num % 1000:
                 #    print "Reading line " + str(line_num)
-                obj = json.loads(line).get("object", {})
+                json_obj = json.loads(line)
+                obj = json_obj.get("object", {})
                 content = obj.get("content")
                 post_id = obj.get("post_id")
+                try:
+                    impermium = json_obj\
+                        .get("impermium", [])[1]\
+                        .get("4.0")
+                except:
+                    impermium = None
                 cluster_id = reverse_index.get(post_id)
                 if not cluster_id is None:
                     cluster = clusters.get(cluster_id)
                     if not cluster is None:
                         if len(cluster) >= min_cluster_size:
-                            out[cluster_id].append({"post_id": post_id, "content": content})
-                #if line_num > 10000:
+                            out[cluster_id].append({"cluster_id": cluster_id,
+                                                    "post_id": post_id,
+                                                    "content": content,
+                                                    "impermium": impermium})
+                #if line_num > 1000:
                 #    break
 
         sorted_list = list({"cluster_id": k, "length": l, "posts": v} for k, v, l
-                           in sorted(((k, v, len(v)) for k, v
-                                      in out.items()), key=operator.itemgetter(2), reverse=True))
+                           in sorted(((k, v, len(v)) for k, v in out.items()),
+                                     key=operator.itemgetter(2), reverse=True))
         print json.dumps(sorted_list)
 
 
