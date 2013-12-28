@@ -1,11 +1,14 @@
+# -*- coding: utf-8 -*-
 """
 lsh.py
 
 Algorithms based on 'Mining of Massive Datasets'
 """
+
 import re
 from unionfind import UnionFind
 from collections import defaultdict
+import HTMLParser
 
 
 def shingle(text, n):
@@ -17,25 +20,42 @@ class Shingler:
         if pattern is None:
             # match any Unicode word optionally preceded by #, $, or @ characters
             #
-            #pattern = r'(?u)\w+'
-            #pattern = r'[#@$]?(?u)\w+'
-            pattern = """
-                        (?:                # Either
+            #pattern = ur'(?u)\w+'
+            #pattern = ur'(?:\B[#@$£€¥₩฿])?(?u)\w+(?:[%\+]\B)?'
+            pattern = ur'''
+                        (?:                # Either URL
                         http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+
                         |                  # or
-                        [#@$]?             # (optional) pound-, at-, or dollar-sign
-                        (?u)\w+            # Unicode word
+                        (?:\B[#@$£€¥₩฿])?  # (preceded by optional pound-, at-, or currency signs)
+                        (?u)\w+            # a Unicode word
+                        (?:[%\+]\B)?       # optionally followed by percentage or plus signs
                         )
-                        """
-        self.r = re.compile(pattern, re.VERBOSE)
+                        '''
+        self.r = re.compile(pattern, (re.VERBOSE | re.UNICODE))
         self.n = n
+        self.html_parser = HTMLParser.HTMLParser()
 
     def get_shingles(self, text):
+        """Get shingles (n-grams) from text
+
+        :param text: Source text to process
+        :type text: unicode
+        :return: a collection of shingles found
+        :rtype: set
+        """
         n_ = self.n
         shingles = set()
-        tokens = self.r.findall(text)
-        for offset in xrange(len(tokens) - n_ + 1):
-            shingles.add(tuple(tokens[offset:(offset + n_)]))
+
+        #TODO: unescape text in a try/catch block?
+        text = self.html_parser.unescape(text)
+
+        #TODO: try lowercasing everything
+        tokens = self.r.findall(text.lower())
+        if len(tokens) >= n_:
+            for offset in xrange(len(tokens) - n_ + 1):
+                shingles.add(tuple(tokens[offset:(offset + n_)]))
+        else:
+            shingles.add(tuple(tokens))
         return shingles
 
 

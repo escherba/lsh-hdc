@@ -1,10 +1,10 @@
 __author__ = 'escherba'
 
 import unittest
+import sys
 import json
 from lsh import Cluster, Shingler
-from operator import itemgetter
-import sys
+from utils import uniq_rev_index, sort_by_length
 
 
 class TestMacLog(unittest.TestCase):
@@ -25,14 +25,17 @@ class TestMacLog(unittest.TestCase):
                 #if line_num > 10000:
                 #    break
 
-        sets = cluster.get_sets()
-        clusters = dict((str(idx), val[0]) for idx, val
-                        in enumerate(sorted([(s, len(s)) for s in sets],
-                        key=itemgetter(1), reverse=True)))
-        reverse_index = {}
-        for cluster_label, post_ids in clusters.items():
-            for post_id in post_ids:
-                reverse_index[post_id] = cluster_label
+        # clusters: cluster_id -> [ post_ids ]
+        clusters = dict(
+            enumerate(
+                sort_by_length(
+                    cluster.get_sets())))
+        self.output_pairs(clusters)
+
+    def output_pairs(self, clusters):
+
+        # reverse_index: post_id -> cluster_id
+        reverse_index = uniq_rev_index(clusters)
 
         out = []
         with open("data/detail.log.1") as mac_log:
