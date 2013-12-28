@@ -17,6 +17,14 @@ def shingle(text, n):
 
 class Shingler:
     def __init__(self, n, pattern=None):
+        """
+
+        :param n: Specifies shingle length. If a string
+                  has fewer tokens than n, get_shingles() will
+                  return a short shingle of only those tokens.
+        :param pattern: regex pattern that matches tokens from
+                        which shingles are formed.
+        """
         if pattern is None:
             # match any Unicode word optionally preceded by #, $, or @ characters
             #
