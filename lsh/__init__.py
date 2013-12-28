@@ -35,6 +35,10 @@ class Shingler:
         self.n = n
         self.html_parser = HTMLParser.HTMLParser()
 
+    def normalize(self, text):
+        #TODO: consider using a try/catch block
+        return self.html_parser.unescape(text.lower())
+
     def get_shingles(self, text):
         """Get shingles (n-grams) from text
 
@@ -46,11 +50,7 @@ class Shingler:
         n_ = self.n
         shingles = set()
 
-        #TODO: unescape text in a try/catch block?
-        text = self.html_parser.unescape(text)
-
-        #TODO: try lowercasing everything
-        tokens = self.r.findall(text.lower())
+        tokens = self.r.findall(self.normalize(text))
         if len(tokens) >= n_:
             for offset in xrange(len(tokens) - n_ + 1):
                 shingles.add(tuple(tokens[offset:(offset + n_)]))
