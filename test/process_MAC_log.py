@@ -102,6 +102,21 @@ class TestMacLog():
 
 
 if __name__ == '__main__':
+    """
+    A sample Bash script illustrating how to run this, iterating over shingles of
+    different sizes
+
+    threshold=0.9 && for i in 2 3 4 5 6 7 8
+        do echo "$i"
+        python process_MAC_log.py \
+        --shingle_size $i \
+        --threshold "$threshold" \
+        --quiet \
+        --file data/detail.log.1 \
+        | jq -c '.[].posts[] | select(.impermium.tag_details.bulk | length>0) | .post_id' \
+        | wc -l
+    done
+    """
     parser = argparse.ArgumentParser(description='Perform clustering.')
     parser.add_argument('--file', type=str, dest='file_path', required=True,
                         help='Path to log file to process (required)')
