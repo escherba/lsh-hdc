@@ -31,8 +31,10 @@ class Shingler:
         if pattern is None:
             # match any Unicode word optionally preceded by #, $, or @ characters
             #
-            #pattern = ur'(?u)\w+'
-            #pattern = ur'(?:\B[#@$£€¥₩฿])?(?u)\w+(?:[%\+]\B)?'
+            """
+            pattern = ur'(?u)\w+'
+            pattern = ur'(?:\B[#@$£€¥₩฿])?(?u)\w+(?:[%\+]\B)?'
+            """
             pattern = ur'''
                         (?:                # Either URL
                         http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+

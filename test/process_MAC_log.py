@@ -1,6 +1,6 @@
 __author__ = 'escherba'
 
-import unittest
+import argparse
 import sys
 import json
 import operator
@@ -11,16 +11,29 @@ import lsh
 from utils import uniq_rev_index
 
 
-class TestMacLog(unittest.TestCase):
+class Options(argparse.Namespace):
+    """Command-line option globals
+    """
+    file_path = "data/detail.log.1"
+    threshold = 0.50
+    shingle_size = 4
+    quiet = False
+    min_cluster = 4
+    head = None
+
+options = Options()
+
+
+class TestMacLog():
 
     def test_mac_log(self):
-        cluster_builder = lsh.Cluster(threshold=0.50)
-        shingler = lsh.Shingler(4)
+        cluster_builder = lsh.Cluster(threshold=options.threshold)
+        shingler = lsh.Shingler(options.shingle_size)
 
         posts_to_shingles = {}
-        with open("data/detail.log.1") as mac_log:
+        with open(options.file_path) as mac_log:
             for line_num, line in enumerate(mac_log):
-                if not line_num % 1000:
+                if (not options.quiet) and (not line_num % 10000):
                     sys.stderr.write("Processing line " + str(line_num) + "\n")
                 json_obj = json.loads(line)
                 obj = json_obj.get("object", {})
@@ -31,14 +44,13 @@ class TestMacLog(unittest.TestCase):
                 if len(shingles) > 0:
                     cluster_builder.add_set(shingles, post_id)
                     posts_to_shingles[post_id] = shingles
-                #if line_num > 1000:
-                #    break
+                if (not options.head is None) and line_num > options.head:
+                    break
 
         sets = cluster_builder.get_sets()
-        min_cluster_size = 4
         bnmi = cluster_builder.calculate_bnmi(sets, posts_to_shingles,
-                                              min_cluster_size=min_cluster_size)
-        cluster_sizes = map(len, filter(lambda x: len(x) > min_cluster_size, sets))
+                                              min_cluster_size=options.min_cluster)
+        cluster_sizes = map(len, filter(lambda x: len(x) > options.min_cluster, sets))
         num_clusters = len(cluster_sizes)
         points_in_clusters = sum(cluster_sizes)
         sys.stderr.write(json.dumps(
@@ -80,8 +92,8 @@ class TestMacLog(unittest.TestCase):
                                                     "post_id": post_id,
                                                     "content": content,
                                                     "impermium": impermium})
-                #if line_num > 1000:
-                #    break
+                if (not options.head is None) and line_num > options.head:
+                    break
 
         sorted_list = list({"cluster_id": k, "length": l, "posts": v} for k, v, l
                            in sorted(((k, v, len(v)) for k, v in out.items()),
@@ -90,4 +102,21 @@ class TestMacLog(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    parser = argparse.ArgumentParser(description='Perform clustering.')
+    parser.add_argument('--file', type=str, dest='file_path', required=True,
+                        help='Path to log file to process (required)')
+    parser.add_argument('--head', type=int, dest='head', default=None,
+                        help='how many lines from file to process (all if not set)', required=False)
+    parser.add_argument('--shingle_size', type=int, dest='shingle_size', default=4,
+                        help='shingle length (in tokens)', required=False)
+    parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=4,
+                        help='minimum cluster size for quality evaluation', required=False)
+    parser.add_argument('--threshold', type=float, dest='threshold', default=0.50,
+                        help='similarity threshold', required=False)
+    parser.add_argument('--quiet', action='store_true',
+                        help='whether to be quiet', required=False)
+    options = parser.parse_args()
+
+    #unittest.main()
+    o = TestMacLog()
+    o.test_mac_log()
