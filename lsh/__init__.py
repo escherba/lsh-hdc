@@ -108,8 +108,8 @@ def get_bandwidth(n, threshold):
 class Signature:
     """Signature Base class."""
 
-    def __init__(self, dim):
-        self.dim = dim
+    def __init__(self, width):
+        self.width = width
         self.hashes = self.hash_functions()
 
     def hash_functions(self):
@@ -128,7 +128,7 @@ class MinHashSignature(Signature):
         """Return dim different hash functions"""
         def hash_factory(n):
             return lambda x: hash("salt" + str(n) + str(x) + "salt")
-        return [hash_factory(_) for _ in range(self.dim)]
+        return [hash_factory(_) for _ in range(self.width)]
 
     def get_signature(self, s):
         """Returns minhash signature for set s -- which
@@ -139,10 +139,11 @@ class MinHashSignature(Signature):
 class LSH:
     """Locality sensitive hashing.  Uses a banding approach to hash
     similar signatures to the same buckets."""
-    def __init__(self, length, threshold):
+    def __init__(self, bandwidth):
         #self.length = length
         #self.threshold = threshold
-        self.bandwidth = get_bandwidth(length, threshold)
+        #self.bandwidth = get_bandwidth(length, threshold)
+        self.bandwidth = bandwidth
 
     def hash(self, sig):
         """Generate hashvals for this signature
@@ -172,11 +173,11 @@ class Cluster:
     2. Use LSH to map similar signatures to same buckets
     3. Use UnionFind to merge buckets containing same values
     """
-    def __init__(self, width=10, threshold=0.5):
+    def __init__(self, width=12, bandwidth=3):
         self.width = width
         self.unionfind = UnionFind()
         self.signer = MinHashSignature(width)
-        self.hasher = LSH(width, threshold)
+        self.hasher = LSH(bandwidth)
         self.hashmap = defaultdict(list)
 
     def calculate_bnmi(self, cluster_sets, items_to_shingles, min_cluster_size=2):

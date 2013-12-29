@@ -1,6 +1,6 @@
 import unittest
-from utils import randset, lapply
-from lsh import Cluster, jaccard_sim
+from utils import randset
+from lsh import Cluster, jaccard_sim, get_bandwidth
 
 
 class TestCluster(unittest.TestCase):
@@ -11,7 +11,7 @@ class TestCluster(unittest.TestCase):
         Manning C D, Raghavan P, Schutze H. Introduction to Information Retrieval, CUP 2009, p. 357.
         :return: None
         """
-        cluster = Cluster()
+        cluster = Cluster(width=10, bandwidth=2)
         cluster_sets = [set(["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"]),
                         set(["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"]),
                         set(["3.1", "3.2", "3.3", "3.4", "3.5"])]
@@ -42,21 +42,21 @@ class TestCluster(unittest.TestCase):
     def test_same_set(self):
         """A set should be clustered with itself"""
         s = randset()
-        cluster = Cluster()
+        cluster = Cluster(width=10, bandwidth=2)
         cluster.add_set(s)
         cluster.add_set(s)
         self.assertEqual(len(cluster.get_sets()), 1)
 
     def test_similar_sets(self):
         """Two similar sets should be clustered"""
-        cluster = Cluster()
+        cluster = Cluster(width=10, bandwidth=2)
         cluster.add_set("abcdefg")
         cluster.add_set("abcdefghi")
         self.assertEqual(len(cluster.get_sets()), 1)
 
     def test_dissimilar_sets(self):
         """Two non-similar sets should not be clustered"""
-        cluster = Cluster()
+        cluster = Cluster(width=10, bandwidth=2)
         cluster.add_set("12345abcdef")
         cluster.add_set("1234567890z")
         print cluster.get_sets()
@@ -77,7 +77,8 @@ class TestCluster(unittest.TestCase):
             # Find the threshold at which they cluster together
             for threshold in range(1, 100, 5):
                 threshold = float(threshold) / 100
-                cluster = Cluster(dim, threshold)
+                cluster = Cluster(width=dim,
+                                  bandwidth=get_bandwidth(dim, threshold))
                 cluster.add_set(sets[0])
                 cluster.add_set(sets[1])
                 if len(cluster.get_sets()) == 2:

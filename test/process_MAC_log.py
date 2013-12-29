@@ -15,7 +15,8 @@ class Options(argparse.Namespace):
     """Command-line option globals
     """
     file_path = "data/detail.log.1"
-    threshold = 0.50
+    width = 12
+    bandwidth = 3
     shingle_size = 4
     quiet = False
     min_cluster = 4
@@ -27,7 +28,8 @@ options = Options()
 class TestMacLog():
 
     def test_mac_log(self):
-        cluster_builder = lsh.Cluster(threshold=options.threshold)
+        cluster_builder = lsh.Cluster(width=options.width,
+                                      bandwidth=options.bandwidth)
         shingler = lsh.Shingler(options.shingle_size)
 
         posts_to_shingles = {}
@@ -106,11 +108,10 @@ if __name__ == '__main__':
     A sample Bash script illustrating how to run this, iterating over shingles of
     different sizes
 
-    threshold=0.9 && for i in 2 3 4 5 6 7 8
+    for i in 2 3 4 5 6 7 8
         do echo "$i"
         python process_MAC_log.py \
         --shingle_size $i \
-        --threshold "$threshold" \
         --quiet \
         --file data/detail.log.1 \
         | jq -c '.[].posts[] | select(.impermium.tag_details.bulk | length>0) | .post_id' \
@@ -126,12 +127,13 @@ if __name__ == '__main__':
                         help='shingle length (in tokens)', required=False)
     parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=4,
                         help='minimum cluster size for quality evaluation', required=False)
-    parser.add_argument('--threshold', type=float, dest='threshold', default=0.50,
-                        help='similarity threshold', required=False)
+    parser.add_argument('--width', type=int, dest='width', default=12,
+                        help='length of signature array', required=False)
+    parser.add_argument('--bandwidth', type=int, dest='bandwidth', default=3,
+                        help='rows per band', required=False)
     parser.add_argument('--quiet', action='store_true',
                         help='whether to be quiet', required=False)
     options = parser.parse_args()
 
-    #unittest.main()
     o = TestMacLog()
     o.test_mac_log()
