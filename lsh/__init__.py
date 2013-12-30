@@ -104,6 +104,10 @@ def get_bandwidth(n, threshold):
     return best
 
 
+def get_threshold(r, b):
+    return (1. / b) ** (1. / r)
+
+
 def get_uncertainty_index(cluster_sets, items_to_shingles, min_cluster_size=2):
     """Calculates Theil uncertainty index
 
@@ -240,7 +244,7 @@ class Cluster:
             self.unionfind.union(label, self.hashmap[value][0])
 
     def get_threshold(self):
-        return (1. / self.bands) ** (1. / self.hasher.bandwidth)
+        return get_threshold(self.hasher.bandwidth, self.bands)
 
     def get_sets(self):
         return self.unionfind.sets()
