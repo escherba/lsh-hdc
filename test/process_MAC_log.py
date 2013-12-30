@@ -50,7 +50,7 @@ class TestMacLog():
                     break
 
         sets = cluster_builder.get_sets()
-        bnmi = cluster_builder.calculate_bnmi(sets, posts_to_shingles,
+        bnmi = cluster_builder.get_uncertainty_index(sets, posts_to_shingles,
                                               min_cluster_size=options.min_cluster)
         cluster_sizes = map(len, filter(lambda x: len(x) > options.min_cluster, sets))
         num_clusters = len(cluster_sizes)

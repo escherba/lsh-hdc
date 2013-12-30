@@ -36,7 +36,7 @@ class TestCluster(unittest.TestCase):
             "3.4": set([("v",)]),
             "3.5": set([("v",)])
         }
-        bnmi = cluster.calculate_bnmi(cluster_sets, items_to_shingles)
+        bnmi = cluster.get_uncertainty_index(cluster_sets, items_to_shingles)
         self.assertAlmostEqual(bnmi, 0.370949657)
 
     def test_same_set(self):

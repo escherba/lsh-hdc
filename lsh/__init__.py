@@ -180,7 +180,7 @@ class Cluster:
         self.hasher = LSH(bandwidth)
         self.hashmap = defaultdict(list)
 
-    def calculate_bnmi(self, cluster_sets, items_to_shingles, min_cluster_size=2):
+    def get_uncertainty_index(self, cluster_sets, items_to_shingles, min_cluster_size=2):
         """Bitwise normalized mutual information index
         TODO: this could be moved to lsh module
         """
@@ -225,7 +225,7 @@ class Cluster:
         # Add to unionfind structure
         self.unionfind[label]
 
-        # Get signature
+        # Get signature vector
         sig = self.signer.get_signature(s)
 
         # Union labels with same LSH keys
