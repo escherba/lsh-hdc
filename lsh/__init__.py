@@ -29,8 +29,6 @@ class Shingler:
                         which shingles are formed.
         """
         if pattern is None:
-            # match any Unicode word optionally preceded by #, $, or @ characters
-            #
             """
             pattern = ur'(?u)\w+'
             pattern = ur'(?:\B[#@$£€¥₩฿])?(?u)\w+(?:[%\+]\B)?'
@@ -156,7 +154,8 @@ class Signature:
         self.hashes = self.hash_functions()
 
     def hash_functions(self):
-        """Returns dim different hash functions"""
+        """Returns an array of length self.width consisting of
+        different hash functions"""
         pass
 
     def get_signature(self, obj):
@@ -168,14 +167,15 @@ class MinHashSignature(Signature):
     """Creates signatures for sets/tuples using minhash."""
 
     def hash_functions(self):
-        """Return dim different hash functions"""
+        """Returns an array of length self.width consisting of
+        different hash functions"""
         def hash_factory(n):
             return lambda x: hash("salt" + str(n) + str(x) + "salt")
         return map(hash_factory, range(self.width))
 
     def get_signature(self, s):
-        """Returns minhash signature for set s -- which
-        is a list of list consisting of hashings for each value and has function"""
+        """Returns minhash signature for set s -- which is a list of lists
+        consisting of hashings for each value and has function"""
 
         if len(s) > 0:
             sig_fun = lambda f: min(imap(f, s))
