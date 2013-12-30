@@ -167,12 +167,18 @@ class MinHashSignature(Signature):
         """Return dim different hash functions"""
         def hash_factory(n):
             return lambda x: hash("salt" + str(n) + str(x) + "salt")
-        return [hash_factory(_) for _ in range(self.width)]
+        return map(hash_factory, range(self.width))
 
     def get_signature(self, s):
         """Returns minhash signature for set s -- which
         is a list of list consisting of hashings for each value and has function"""
-        return [min(hash_fun(value) for value in s) for hash_fun in self.hashes]
+
+        if len(s) > 0:
+            sig_fun = lambda f: min(imap(f, s))
+        else:
+            # support empty sets by treating them as empty strings
+            sig_fun = lambda f: f("")
+        return map(sig_fun, self.hashes)
 
 
 class LSH:

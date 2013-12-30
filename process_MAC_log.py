@@ -41,10 +41,8 @@ class TestMacLog():
                 content = obj["content"]
                 post_id = obj["post_id"]
                 shingles = shingler.get_shingles(content)
-                # TODO: no need for condition below
-                if len(shingles) > 0:
-                    cluster_builder.add_set(shingles, post_id)
-                    posts_to_shingles[post_id] = shingles
+                cluster_builder.add_set(shingles, post_id)
+                posts_to_shingles[post_id] = shingles
                 if (not options.head is None) and line_num > options.head:
                     break
 
