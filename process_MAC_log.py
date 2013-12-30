@@ -6,7 +6,7 @@ import json
 import operator
 from collections import defaultdict
 
-import lsh
+from lsh import Cluster, Shingler, get_uncertainty_index
 from test.utils import uniq_rev_index, sort_by_length
 
 
@@ -14,7 +14,7 @@ class Options(argparse.Namespace):
     """Command-line option globals
     """
     file_path = "data/detail.log.1"
-    width = 12
+    bands = 4
     bandwidth = 3
     shingle_size = 4
     quiet = False
@@ -27,9 +27,9 @@ options = Options()
 class TestMacLog():
 
     def test_mac_log(self):
-        cluster_builder = lsh.Cluster(width=options.width,
-                                      bandwidth=options.bandwidth)
-        shingler = lsh.Shingler(options.shingle_size)
+        cluster_builder = Cluster(bands=options.bands,
+                                  bandwidth=options.bandwidth)
+        shingler = Shingler(options.shingle_size)
 
         posts_to_shingles = {}
         with open(options.file_path) as mac_log:
@@ -49,15 +49,18 @@ class TestMacLog():
                     break
 
         sets = cluster_builder.get_sets()
-        bnmi = cluster_builder.get_uncertainty_index(sets, posts_to_shingles,
-                                              min_cluster_size=options.min_cluster)
+        try:
+            uindex = get_uncertainty_index(sets, posts_to_shingles,
+                                           min_cluster_size=options.min_cluster)
+        except ZeroDivisionError:
+            uindex = None
         cluster_sizes = map(len, filter(lambda x: len(x) > options.min_cluster, sets))
         num_clusters = len(cluster_sizes)
         points_in_clusters = sum(cluster_sizes)
         sys.stderr.write(json.dumps(
             {"num_clusters": num_clusters,
             "points_in_clusters": points_in_clusters,
-            "bnmi": bnmi}) + "\n")
+            "uindex": uindex}) + "\n")
 
         # clusters: cluster_id -> [ post_ids ]
         clusters = dict(enumerate(sort_by_length(sets)))
@@ -82,7 +85,8 @@ class TestMacLog():
                     impermium = json_obj\
                         .get("impermium", [])[1]\
                         .get("4.0")
-                except:
+                except AttributeError:
+                    # no impermium tags exist
                     impermium = None
                 cluster_id = reverse_index.get(post_id)
                 if not cluster_id is None:
@@ -126,8 +130,8 @@ if __name__ == '__main__':
                         help='shingle length (in tokens)', required=False)
     parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=4,
                         help='minimum cluster size for quality evaluation', required=False)
-    parser.add_argument('--width', type=int, dest='width', default=12,
-                        help='length of signature array', required=False)
+    parser.add_argument('--bands', type=int, dest='bands', default=4,
+                        help='number of bands', required=False)
     parser.add_argument('--bandwidth', type=int, dest='bandwidth', default=3,
                         help='rows per band', required=False)
     parser.add_argument('--quiet', action='store_true',
