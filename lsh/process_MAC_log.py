@@ -71,7 +71,7 @@ class TestMacLog():
 
         out = defaultdict(list)
 
-        with open("data/detail.log.1") as mac_log:
+        with open("test/data/detail.log.1") as mac_log:
             for line_num, line in enumerate(mac_log):
                 #if not line_num % 1000:
                 #    print "Reading line " + str(line_num)
