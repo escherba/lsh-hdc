@@ -49,7 +49,6 @@ class Shingler:
         self.html_parser = HTMLParser.HTMLParser()
 
     def normalize(self, text):
-        #TODO: consider using a try/catch block
         return self.html_parser.unescape(text).lower()
 
     def tokenize(self, text):
@@ -181,8 +180,7 @@ class Cluster:
         self.hashmap = defaultdict(list)
 
     def get_uncertainty_index(self, cluster_sets, items_to_shingles, min_cluster_size=2):
-        """Bitwise normalized mutual information index
-        TODO: this could be moved to lsh module
+        """Calculates Theil uncertainty index
         """
         def entropyN(N, n):
             n_ = float(n)
