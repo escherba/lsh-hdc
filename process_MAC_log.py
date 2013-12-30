@@ -37,9 +37,9 @@ class TestMacLog():
                 if (not options.quiet) and (not line_num % 10000):
                     sys.stderr.write("Processing line " + str(line_num) + "\n")
                 json_obj = json.loads(line)
-                obj = json_obj.get("object", {})
-                content = obj.get("content")
-                post_id = obj.get("post_id")
+                obj = json_obj["object"]
+                content = obj["content"]
+                post_id = obj["post_id"]
                 shingles = shingler.get_shingles(content)
                 # TODO: no need for condition below
                 if len(shingles) > 0:
@@ -78,9 +78,9 @@ class TestMacLog():
                 #if not line_num % 1000:
                 #    print "Reading line " + str(line_num)
                 json_obj = json.loads(line)
-                obj = json_obj.get("object", {})
-                content = obj.get("content")
-                post_id = obj.get("post_id")
+                obj = json_obj["object"]
+                content = obj["content"]
+                post_id = obj["post_id"]
                 try:
                     impermium = json_obj\
                         .get("impermium", [])[1]\
