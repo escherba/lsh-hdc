@@ -90,7 +90,7 @@ def get_bandwidth(n, threshold):
     n = b * r = #elements in signature
     """
 
-    best = n, 1
+    best = n
     min_err = float("inf")
     for r in range(1, n + 1):
         try:
@@ -102,6 +102,46 @@ def get_bandwidth(n, threshold):
             best = r
             min_err = err
     return best
+
+
+def get_uncertainty_index(cluster_sets, items_to_shingles, min_cluster_size=2):
+    """Calculates Theil uncertainty index
+
+    :throws ZeroDivisionError
+
+    """
+    def entropyN(N, n):
+        n_ = float(n)
+        if n_ > 0.0:
+            return - n_ * log(n_ / float(N))
+        else:
+            return 0.0
+
+    post_count = 0
+    cluster_count = 0
+    numerator = 0.0
+    multiverse = Counter()
+    for cluster_id, cluster in enumerate(cluster_sets):
+        cluster_size = len(cluster)
+        if cluster_size >= min_cluster_size:
+            universe = Counter()
+            for post_id in cluster:
+                universe.update(items_to_shingles[post_id])
+            numerator += \
+                sum(imap(partial(entropyN, cluster_size), universe.values())) \
+                / float(cluster_size)
+            multiverse.update(universe)
+            post_count += cluster_size
+            cluster_count += 1
+
+    denominator = float(cluster_count) * \
+        sum(imap(partial(entropyN, post_count), multiverse.values())) \
+        / float(post_count)
+
+    if numerator > 0.0:
+        return 1.0 - numerator / denominator
+    else:
+        return 1.0
 
 
 class Signature:
@@ -155,13 +195,6 @@ class LSH:
         for band in zip(*(iter(sig),) * self.bandwidth):
             yield hash("salt" + str(band) + "tlas")
 
-    '''
-    def get_threshold(self):
-        r = self.bandwidth
-        b = self.length / r
-        return (1. / b) ** (1. / r)
-    '''
-
 
 class Cluster:
     """Clusters sets with Jaccard similarity above threshold with high
@@ -172,48 +205,17 @@ class Cluster:
     2. Use LSH to map similar signatures to same buckets
     3. Use UnionFind to merge buckets containing same values
     """
-    def __init__(self, width=12, bandwidth=3):
-        self.width = width
+    def __init__(self, bands=4, bandwidth=3):
+        """
+
+        :param bands: Number of bands
+        :param bandwidth: Number of rows per band
+        """
+        self.bands = bands
         self.unionfind = UnionFind()
-        self.signer = MinHashSignature(width)
+        self.signer = MinHashSignature(bands * bandwidth)
         self.hasher = LSH(bandwidth)
         self.hashmap = defaultdict(list)
-
-    def get_uncertainty_index(self, cluster_sets, items_to_shingles, min_cluster_size=2):
-        """Calculates Theil uncertainty index
-        """
-        def entropyN(N, n):
-            n_ = float(n)
-            if n_ > 0.0:
-                return - n_ * log(n_ / float(N))
-            else:
-                return 0.0
-
-        post_count = 0
-        cluster_count = 0
-        numerator = 0.0
-        multiverse = Counter()
-        for cluster_id, cluster in enumerate(cluster_sets):
-            cluster_size = len(cluster)
-            if cluster_size >= min_cluster_size:
-                universe = Counter()
-                for post_id in cluster:
-                    universe.update(items_to_shingles[post_id])
-                numerator += \
-                    sum(imap(partial(entropyN, cluster_size), universe.values())) \
-                    / float(cluster_size)
-                multiverse.update(universe)
-                post_count += cluster_size
-                cluster_count += 1
-
-        denominator = float(cluster_count) * \
-            sum(imap(partial(entropyN, post_count), multiverse.values())) \
-            / float(post_count)
-
-        if numerator > 0.0:
-            return 1.0 - numerator / denominator
-        else:
-            return 1.0
 
     def add_set(self, s, label=None):
         # A label for this set
@@ -230,6 +232,9 @@ class Cluster:
         for value in self.hasher.hash(sig):
             self.hashmap[value].append(label)
             self.unionfind.union(label, self.hashmap[value][0])
+
+    def get_threshold(self):
+        return (1. / self.bands) ** (1. / self.hasher.bandwidth)
 
     def get_sets(self):
         return self.unionfind.sets()
