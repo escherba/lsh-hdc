@@ -4,11 +4,10 @@ import argparse
 import sys
 import json
 import operator
-from utils import sort_by_length
 from collections import defaultdict
 
 import lsh
-from utils import uniq_rev_index
+from test.utils import uniq_rev_index, sort_by_length
 
 
 class Options(argparse.Namespace):
