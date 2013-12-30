@@ -104,6 +104,10 @@ def get_bandwidth(n, threshold):
     return best
 
 
+def get_threshold(r, b):
+    return (1. / b) ** (1. / r)
+
+
 def get_uncertainty_index(cluster_sets, items_to_shingles, min_cluster_size=2):
     """Calculates Theil uncertainty index
 
@@ -167,12 +171,18 @@ class MinHashSignature(Signature):
         """Return dim different hash functions"""
         def hash_factory(n):
             return lambda x: hash("salt" + str(n) + str(x) + "salt")
-        return [hash_factory(_) for _ in range(self.width)]
+        return map(hash_factory, range(self.width))
 
     def get_signature(self, s):
         """Returns minhash signature for set s -- which
         is a list of list consisting of hashings for each value and has function"""
-        return [min(hash_fun(value) for value in s) for hash_fun in self.hashes]
+
+        if len(s) > 0:
+            sig_fun = lambda f: min(imap(f, s))
+        else:
+            # support empty sets by treating them as empty strings
+            sig_fun = lambda f: f("")
+        return map(sig_fun, self.hashes)
 
 
 class LSH:
@@ -234,7 +244,7 @@ class Cluster:
             self.unionfind.union(label, self.hashmap[value][0])
 
     def get_threshold(self):
-        return (1. / self.bands) ** (1. / self.hasher.bandwidth)
+        return get_threshold(self.hasher.bandwidth, self.bands)
 
     def get_sets(self):
         return self.unionfind.sets()

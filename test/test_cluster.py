@@ -5,7 +5,7 @@ from lsh import Cluster, jaccard_sim, get_bandwidth, get_uncertainty_index
 
 class TestCluster(unittest.TestCase):
 
-    def test_bnmi(self):
+    def test_uindex(self):
         """
         This example is taken from:
         Manning C D, Raghavan P, Schutze H. Introduction to Information Retrieval, CUP 2009, p. 357.
@@ -35,8 +35,17 @@ class TestCluster(unittest.TestCase):
             "3.4": set([("v",)]),
             "3.5": set([("v",)])
         }
-        index = get_uncertainty_index(cluster_sets, items_to_shingles)
-        self.assertAlmostEqual(index, 0.370949657)
+        uindex = get_uncertainty_index(cluster_sets, items_to_shingles)
+        self.assertAlmostEqual(uindex, 0.370949657)
+
+    def test_empty(self):
+        """Should place the two empty sets into a separate cluster"""
+        cluster = Cluster(bands=5, bandwidth=2)
+        cluster.add_set("abcdefg")
+        cluster.add_set("abcdefghi")
+        cluster.add_set("")
+        cluster.add_set("")
+        self.assertEqual(len(cluster.get_sets()), 2)
 
     def test_same_set(self):
         """A set should be clustered with itself"""
