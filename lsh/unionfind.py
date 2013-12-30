@@ -8,6 +8,8 @@ http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/215912
 with significant additional changes by D. Eppstein.
 """
 
+from collections import defaultdict
+
 
 class UnionFind:
     """Union-find data structure.
@@ -57,17 +59,19 @@ class UnionFind:
 
     def union(self, *objs):
         """Find the sets containing the objects and merge them all."""
+        weights_ = self.weights
+        parents_ = self.parents
         roots = [self[x] for x in objs]
-        heaviest = max([(self.weights[r], r) for r in roots])[1]
+        heaviest = max((weights_[r], r) for r in roots)[1]
         for r in roots:
             if r != heaviest:
-                self.weights[heaviest] += self.weights[r]
-                self.parents[r] = heaviest
+                weights_[heaviest] += weights_[r]
+                parents_[r] = heaviest
 
     def sets(self):
         """Return a list of each disjoint set"""
-        ret = {}
+        ret = defaultdict(list)
         for k, v in self.parents.iteritems():
-            ret.setdefault(v, []).append(k)
+            ret[v].append(k)
         return ret.values()
 
