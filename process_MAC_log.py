@@ -13,7 +13,7 @@ from test.utils import uniq_rev_index, sort_by_length
 class Options(argparse.Namespace):
     """Command-line option globals
     """
-    file_path = "data/detail.log.1"
+    file_path = "test/data/detail.log.1"
     bands = 4
     bandwidth = 3
     shingle_size = 4
@@ -59,8 +59,8 @@ class TestMacLog():
         points_in_clusters = sum(cluster_sizes)
         sys.stderr.write(json.dumps(
             {"num_clusters": num_clusters,
-            "points_in_clusters": points_in_clusters,
-            "uindex": uindex}) + "\n")
+             "points_in_clusters": points_in_clusters,
+             "uindex": uindex}) + "\n")
 
         # clusters: cluster_id -> [ post_ids ]
         clusters = dict(enumerate(sort_by_length(sets)))
@@ -73,7 +73,7 @@ class TestMacLog():
 
         out = defaultdict(list)
 
-        with open("test/data/detail.log.1") as mac_log:
+        with open(options.file_path) as mac_log:
             for line_num, line in enumerate(mac_log):
                 #if not line_num % 1000:
                 #    print "Reading line " + str(line_num)
