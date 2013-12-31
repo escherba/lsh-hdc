@@ -34,7 +34,9 @@ class UnionFind:
         self.parents = {}
 
     def __getitem__(self, obj):
-        """Find and return the name of the set containing the obj."""
+        """Find and return the name of the set containing the obj.
+        :rtype: object
+        """
         # check for previously unknown obj
         if obj not in self.parents:
             self.parents[obj] = obj
@@ -54,7 +56,10 @@ class UnionFind:
         return root
 
     def __iter__(self):
-        """Iterate through all items ever found or unioned by this structure"""
+        """Iterate through all items ever found or unioned by this structure
+
+        :rtype: collections.iterable
+        """
         return iter(self.parents)
 
     def union(self, *objs):
@@ -69,7 +74,9 @@ class UnionFind:
                 parents_[r] = heaviest
 
     def sets(self):
-        """Return a list of each disjoint set"""
+        """Return a list of each disjoint set
+        :rtype: list
+        """
         ret = defaultdict(list)
         for k, v in self.parents.iteritems():
             ret[v].append(k)

@@ -21,6 +21,9 @@ class Shingler:
         self.n = n
 
     def get_shingles(self, text):
+        """
+        :rtype : set
+        """
         pass
 
 
@@ -46,6 +49,7 @@ class WordShingler(Shingler):
         :param pattern: regex pattern that matches tokens from
                         which shingles are formed.
         """
+        Shingler.__init__(self, n)
         if pattern is None:
             """
             pattern = ur'(?u)\w+'
@@ -61,7 +65,6 @@ class WordShingler(Shingler):
                         )
                         '''
         self.r = re.compile(pattern, (re.VERBOSE | re.UNICODE))
-        self.n = n
         self.html_parser = HTMLParser.HTMLParser()
 
     def normalize(self, text):
@@ -199,12 +202,15 @@ class Signature:
         self.hashes = self.hash_functions()
 
     def hash_functions(self):
-        """Returns an array of length self.width consisting of
-        different hash functions"""
+        """Returns an array of length self.width consisting of different hash functions
+        :rtype : list
+        """
         pass
 
     def get_signature(self, obj):
-        """Return the signature for object"""
+        """Return the signature for object
+        :rtype : list
+        """
         pass
 
 
@@ -218,8 +224,6 @@ class MinHashSignature(Signature):
         Note: hash() is not as uniform as haslib.md5
         See http://michaelnielsen.org/blog/consistent-hashing/
         for examples
-
-        :rtype: list
         """
         def hash_factory(n):
             prefix = "salt" + str(n)
@@ -238,8 +242,6 @@ class MinHashSignature(Signature):
 
         TODO: test the hypothesis that k-smallest technique is suboptimal for
         small documents
-
-        :rtype: list
         """
 
         if len(s) > 0:
