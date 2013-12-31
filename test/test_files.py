@@ -1,5 +1,5 @@
 import unittest
-from lsh import Cluster, shingle, Shingler
+from lsh import Cluster, WordShingler, SimpleShingler
 
 
 class TestFiles(unittest.TestCase):
@@ -9,21 +9,28 @@ class TestFiles(unittest.TestCase):
         """
         names = open('data/perrys.csv', 'r').readlines()
         cluster = Cluster(bands=2, bandwidth=4)
+        shingler = SimpleShingler(3)
         for name in set(names):
-            cluster.add_set(shingle(name, 3), name)
-        self.assertEqual(len(cluster.get_sets()), 352, "len check failed")
+            cluster.add_set(shingler.get_shingles(name), name)
+        num_clusters = len(cluster.get_sets())
+        self.assertEqual(num_clusters, 352,
+                         "expected 352 clusters, got {}".format(num_clusters))
 
     def test_bills(self):
+        """
+        Should return 97 clusters of bills.
+        """
         lines = open('data/bills100.txt', 'r').readlines()
         cluster = Cluster(bands=2, bandwidth=4)
-        shingler = Shingler(4)
+        shingler = WordShingler(4)
         for line in lines[0:100]:
             label, text = line.split("|")
             s = shingler.get_shingles(text)
             if len(s) > 0:
                 cluster.add_set(s, label)
-        sets = cluster.get_sets()
-        self.assertEqual(len(sets), 97, "expected 97 sets")
+        num_clusters = len(cluster.get_sets())
+        self.assertEqual(num_clusters, 97,
+                         "expected 97 clusters, got {}".format(num_clusters))
 
 if __name__ == '__main__':
     unittest.main()
