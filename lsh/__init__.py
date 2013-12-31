@@ -6,19 +6,31 @@ Algorithms based on 'Mining of Massive Datasets'
 """
 
 import re
+import sys
 import HTMLParser
 from unionfind import UnionFind
 from functools import partial
 from itertools import imap
 from collections import defaultdict, Counter
 from math import log
-
-
-def shingle(text, n):
-    return set([text[i:i + n] for i in range(len(text) - n + 1)])
+from cityhash import CityHash64
 
 
 class Shingler:
+    def __init__(self, n):
+        self.n = n
+
+    def get_shingles(self, text):
+        pass
+
+
+class SimpleShingler(Shingler):
+    def get_shingles(self, text):
+        n_ = self.n
+        return set([text[i:i + n_] for i in range(len(text) - n_ + 1)])
+
+
+class WordShingler(Shingler):
     def __init__(self, n, pattern=None):
         """
 
@@ -72,7 +84,11 @@ class Shingler:
 
 
 def jaccard_sim(x, y):
-    """Jaccard similarity between two sets"""
+    """
+
+    :throws ZeroDivisionError:
+    :returns: Jaccard similarity of two sets
+    """
     set_x = set(x)
     set_y = set(y)
     return float(len(set_x & set_y)) / float(len(set_x | set_y))
@@ -107,10 +123,10 @@ def get_threshold(r, b):
 
 
 def get_uncertainty_index(cluster_sets, items_to_shingles, min_cluster_size=2):
-    """Calculates Theil uncertainty index
+    """
 
-    :throws ZeroDivisionError
-
+    :throws ZeroDivisionError:
+    :returns: Theil uncertainty index (a homogeneity measure)
     """
     def entropyN(N, n):
         n_ = float(n)
@@ -168,14 +184,30 @@ class MinHashSignature(Signature):
 
     def hash_functions(self):
         """Returns an array of length self.width consisting of
-        different hash functions"""
+        different hash functions
+
+        Note: hash() is not as uniform as haslib.md5
+        See http://michaelnielsen.org/blog/consistent-hashing/
+        for examples
+        """
         def hash_factory(n):
-            return lambda x: hash("salt" + str(n) + str(x) + "salt")
+            prefix = "salt" + str(n)
+            return lambda x: int(CityHash64(prefix + str(x) + "salt") % sys.maxint)
+            #return lambda x: int(long(md5(prefix + str(x) + "salt").hexdigest(), 16) % sys.maxint)
+            #return lambda x: hash(prefix + str(x) + "salt")  # int
         return map(hash_factory, range(self.width))
 
     def get_signature(self, s):
         """Returns minhash signature for set s -- which is a list of lists
-        consisting of hashings for each value and has function"""
+        consisting of hashings for each value and has function
+
+        Alternatively, we can choose k smallest hashes like so:
+
+            return heapq.smallest(k, imap(self.hashes[0], s))
+
+        TODO: test the hypothesis that k-smallest technique is suboptimal for
+        small documents
+        """
 
         if len(s) > 0:
             sig_fun = lambda f: min(imap(f, s))
@@ -201,9 +233,17 @@ class LSH:
         tuples such that:
         [1,2,3,4,5,6] -> [(1,2), (3,4), (5,6)] if bandwidth == 2
                       -> [(1,2,3), (4,5,6)]    if bandwidth == 3
+
+        Note: hash choice here doesn't matter (can use even poorly
+        distributed default hash function), but we use CityHash64
+        for consistency.
+
+        :return: 64-bit hash digest
+        :rtype: long
         """
         for band in zip(*(iter(sig),) * self.bandwidth):
-            yield hash("salt" + str(band) + "tlas")
+            yield int(CityHash64("salt" + str(band) + "salt") % sys.maxint)
+            #yield hash("salt" + str(band) + "tlas")
 
 
 class Cluster:

@@ -6,7 +6,7 @@ import json
 import operator
 from collections import defaultdict
 
-from lsh import Cluster, Shingler, get_uncertainty_index
+from lsh import Cluster, WordShingler, get_uncertainty_index
 from test.utils import uniq_rev_index, sort_by_length
 
 
@@ -29,7 +29,7 @@ class TestMacLog():
     def test_mac_log(self):
         cluster_builder = Cluster(bands=options.bands,
                                   bandwidth=options.bandwidth)
-        shingler = Shingler(options.shingle_size)
+        shingler = WordShingler(options.shingle_size)
 
         posts_to_shingles = {}
         with open(options.file_path) as mac_log:
