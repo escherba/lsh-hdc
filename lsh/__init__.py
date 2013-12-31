@@ -26,6 +26,12 @@ class Shingler:
 
 class SimpleShingler(Shingler):
     def get_shingles(self, text):
+        """
+
+        :param text:
+        :return: A set of shingles (tuples)
+        :rtype: set
+        """
         n_ = self.n
         return set([text[i:i + n_] for i in range(len(text) - n_ + 1)])
 
@@ -59,9 +65,21 @@ class WordShingler(Shingler):
         self.html_parser = HTMLParser.HTMLParser()
 
     def normalize(self, text):
+        """
+
+        :param text:
+        :return:
+        :rtype: unicode
+        """
         return self.html_parser.unescape(text).lower()
 
     def tokenize(self, text):
+        """
+
+        :param text:
+        :return:
+        :rtype: list
+        """
         return self.r.findall(self.normalize(text))
 
     def get_shingles(self, text):
@@ -88,6 +106,7 @@ def jaccard_sim(x, y):
 
     :throws ZeroDivisionError:
     :returns: Jaccard similarity of two sets
+    :rtype: float
     """
     set_x = set(x)
     set_y = set(y)
@@ -95,13 +114,15 @@ def jaccard_sim(x, y):
 
 
 def get_bandwidth(n, threshold):
-    """Approximates the bandwidth (number of rows in each band)
-    needed to get threshold.
+    """Approximates the bandwidth needed to achieve a threshold.
 
     Threshold t = (1/b) ** (1/r) where
     b = #bands
     r = #rows per band
     n = b * r = #elements in signature
+
+    :returns: number of rows per band
+    :rtype: int
     """
 
     best = n
@@ -119,6 +140,13 @@ def get_bandwidth(n, threshold):
 
 
 def get_threshold(r, b):
+    """
+
+    :param r: rows per band
+    :param b: number of bands
+    :return: threshold value
+    :rtype: float
+    """
     return (1. / b) ** (1. / r)
 
 
@@ -127,6 +155,7 @@ def get_uncertainty_index(cluster_sets, items_to_shingles, min_cluster_size=2):
 
     :throws ZeroDivisionError:
     :returns: Theil uncertainty index (a homogeneity measure)
+    :rtype: float
     """
     def entropyN(N, n):
         n_ = float(n)
@@ -189,6 +218,8 @@ class MinHashSignature(Signature):
         Note: hash() is not as uniform as haslib.md5
         See http://michaelnielsen.org/blog/consistent-hashing/
         for examples
+
+        :rtype: list
         """
         def hash_factory(n):
             prefix = "salt" + str(n)
@@ -207,6 +238,8 @@ class MinHashSignature(Signature):
 
         TODO: test the hypothesis that k-smallest technique is suboptimal for
         small documents
+
+        :rtype: list
         """
 
         if len(s) > 0:
@@ -239,7 +272,7 @@ class LSH:
         for consistency.
 
         :return: 64-bit hash digest
-        :rtype: long
+        :rtype: collections.iterable
         """
         for band in zip(*(iter(sig),) * self.bandwidth):
             yield int(CityHash64("salt" + str(band) + "salt") % sys.maxint)
@@ -284,7 +317,17 @@ class Cluster:
             self.unionfind.union(label, self.hashmap[value][0])
 
     def get_threshold(self):
+        """
+
+        :return: similarity threshold used for building clusters
+        :rtype: float
+        """
         return get_threshold(self.hasher.bandwidth, self.bands)
 
-    def get_sets(self):
+    def get_clusters(self):
+        """
+
+        :return: a list of sets representing clusters
+        :rtype: list
+        """
         return self.unionfind.sets()

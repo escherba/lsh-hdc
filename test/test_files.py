@@ -12,9 +12,9 @@ class TestFiles(unittest.TestCase):
         shingler = SimpleShingler(3)
         for name in set(names):
             cluster.add_set(shingler.get_shingles(name), name)
-        num_clusters = len(cluster.get_sets())
-        self.assertEqual(num_clusters, 352,
-                         "expected 352 clusters, got {}".format(num_clusters))
+        num_clusters = len(cluster.get_clusters())
+        self.assertEqual(num_clusters, 333,
+                         "expected 333 clusters, got {}".format(num_clusters))
 
     def test_bills(self):
         """
@@ -28,9 +28,9 @@ class TestFiles(unittest.TestCase):
             s = shingler.get_shingles(text)
             if len(s) > 0:
                 cluster.add_set(s, label)
-        num_clusters = len(cluster.get_sets())
-        self.assertEqual(num_clusters, 97,
-                         "expected 97 clusters, got {}".format(num_clusters))
+        num_clusters = len(cluster.get_clusters())
+        self.assertEqual(num_clusters, 96,
+                         "expected 96 clusters, got {}".format(num_clusters))
 
 if __name__ == '__main__':
     unittest.main()

@@ -46,7 +46,7 @@ class TestMacLog():
                 if (not options.head is None) and line_num > options.head:
                     break
 
-        sets = cluster_builder.get_sets()
+        sets = cluster_builder.get_clusters()
         try:
             uindex = get_uncertainty_index(sets, posts_to_shingles,
                                            min_cluster_size=options.min_cluster)
