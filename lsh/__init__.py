@@ -16,16 +16,50 @@ from math import log
 from cityhash import CityHash64
 
 
+def long2int(x):
+    """Lossily map a long type to the range of int
+
+    :param x: input long variable
+    :type x: long
+    :return: input mapped to int range
+    :rtype : int
+    """
+
+    smi1 = sys.maxint + 1
+    return int(x % (smi1 + smi1) - smi1)
+
+
+def chash(x):
+    """Convenience function for calling CityHash64
+
+    :param x: input string/hashable object
+    :type x: object
+    :return: integer
+    :rtype: int
+    """
+    #TODO: Convert to a C or Cython function and add to cityhash
+    return long2int(CityHash64(x + "salt"))
+
+
 class Shingler:
     def __init__(self, n):
         self.n = n
 
     def get_shingles(self, text):
+        """
+        :rtype : set
+        """
         pass
 
 
 class SimpleShingler(Shingler):
     def get_shingles(self, text):
+        """
+
+        :param text:
+        :return: A set of shingles (tuples)
+        :rtype: set
+        """
         n_ = self.n
         return set([text[i:i + n_] for i in range(len(text) - n_ + 1)])
 
@@ -40,6 +74,7 @@ class WordShingler(Shingler):
         :param pattern: regex pattern that matches tokens from
                         which shingles are formed.
         """
+        Shingler.__init__(self, n)
         if pattern is None:
             """
             pattern = ur'(?u)\w+'
@@ -55,13 +90,24 @@ class WordShingler(Shingler):
                         )
                         '''
         self.r = re.compile(pattern, (re.VERBOSE | re.UNICODE))
-        self.n = n
         self.html_parser = HTMLParser.HTMLParser()
 
     def normalize(self, text):
+        """
+
+        :param text:
+        :return:
+        :rtype: unicode
+        """
         return self.html_parser.unescape(text).lower()
 
     def tokenize(self, text):
+        """
+
+        :param text:
+        :return:
+        :rtype: list
+        """
         return self.r.findall(self.normalize(text))
 
     def get_shingles(self, text):
@@ -88,6 +134,7 @@ def jaccard_sim(x, y):
 
     :throws ZeroDivisionError:
     :returns: Jaccard similarity of two sets
+    :rtype: float
     """
     set_x = set(x)
     set_y = set(y)
@@ -95,13 +142,15 @@ def jaccard_sim(x, y):
 
 
 def get_bandwidth(n, threshold):
-    """Approximates the bandwidth (number of rows in each band)
-    needed to get threshold.
+    """Approximates the bandwidth needed to achieve a threshold.
 
     Threshold t = (1/b) ** (1/r) where
     b = #bands
     r = #rows per band
     n = b * r = #elements in signature
+
+    :returns: number of rows per band
+    :rtype: int
     """
 
     best = n
@@ -119,6 +168,13 @@ def get_bandwidth(n, threshold):
 
 
 def get_threshold(r, b):
+    """
+
+    :param r: rows per band
+    :param b: number of bands
+    :return: threshold value
+    :rtype: float
+    """
     return (1. / b) ** (1. / r)
 
 
@@ -127,6 +183,7 @@ def get_uncertainty_index(cluster_sets, items_to_shingles, min_cluster_size=2):
 
     :throws ZeroDivisionError:
     :returns: Theil uncertainty index (a homogeneity measure)
+    :rtype: float
     """
     def entropyN(N, n):
         n_ = float(n)
@@ -170,12 +227,15 @@ class Signature:
         self.hashes = self.hash_functions()
 
     def hash_functions(self):
-        """Returns an array of length self.width consisting of
-        different hash functions"""
+        """Returns an array of length self.width consisting of different hash functions
+        :rtype : list
+        """
         pass
 
     def get_signature(self, obj):
-        """Return the signature for object"""
+        """Return the signature for object
+        :rtype : list
+        """
         pass
 
 
@@ -192,9 +252,9 @@ class MinHashSignature(Signature):
         """
         def hash_factory(n):
             prefix = "salt" + str(n)
-            return lambda x: int(CityHash64(prefix + str(x) + "salt") % sys.maxint)
-            #return lambda x: int(long(md5(prefix + str(x) + "salt").hexdigest(), 16) % sys.maxint)
-            #return lambda x: hash(prefix + str(x) + "salt")  # int
+            return lambda x: chash(prefix + str(x))
+            #return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
+            #return lambda x: hash(prefix + str(x) + "salt")
         return map(hash_factory, range(self.width))
 
     def get_signature(self, s):
@@ -239,10 +299,10 @@ class LSH:
         for consistency.
 
         :return: 64-bit hash digest
-        :rtype: long
+        :rtype: collections.iterable
         """
         for band in zip(*(iter(sig),) * self.bandwidth):
-            yield int(CityHash64("salt" + str(band) + "salt") % sys.maxint)
+            yield chash("salt" + str(band))
             #yield hash("salt" + str(band) + "tlas")
 
 
@@ -284,7 +344,17 @@ class Cluster:
             self.unionfind.union(label, self.hashmap[value][0])
 
     def get_threshold(self):
+        """
+
+        :return: similarity threshold used for building clusters
+        :rtype: float
+        """
         return get_threshold(self.hasher.bandwidth, self.bands)
 
-    def get_sets(self):
+    def get_clusters(self):
+        """
+
+        :return: a list of sets representing clusters
+        :rtype: list
+        """
         return self.unionfind.sets()
