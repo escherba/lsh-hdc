@@ -13,8 +13,8 @@ class TestFiles(unittest.TestCase):
         for name in set(names):
             cluster.add_set(shingler.get_shingles(name), name)
         num_clusters = len(cluster.get_clusters())
-        self.assertEqual(num_clusters, 333,
-                         "expected 333 clusters, got {}".format(num_clusters))
+        self.assertEqual(num_clusters, 272,
+                         "expected 272 clusters, got {}".format(num_clusters))
 
     def test_bills(self):
         """
@@ -29,8 +29,8 @@ class TestFiles(unittest.TestCase):
             if len(s) > 0:
                 cluster.add_set(s, label)
         num_clusters = len(cluster.get_clusters())
-        self.assertEqual(num_clusters, 96,
-                         "expected 96 clusters, got {}".format(num_clusters))
+        self.assertEqual(num_clusters, 97,
+                         "expected 97 clusters, got {}".format(num_clusters))
 
 if __name__ == '__main__':
     unittest.main()

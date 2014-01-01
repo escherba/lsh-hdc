@@ -16,6 +16,31 @@ from math import log
 from cityhash import CityHash64
 
 
+def long2int(x):
+    """Lossily map a long type to the range of int
+
+    :param x: input long variable
+    :type x: long
+    :return: input mapped to int range
+    :rtype : int
+    """
+
+    smi1 = sys.maxint + 1
+    return int(x % (smi1 + smi1) - smi1)
+
+
+def chash(x):
+    """Convenience function for calling CityHash64
+
+    :param x: input string/hashable object
+    :type x: object
+    :return: integer
+    :rtype: int
+    """
+    #TODO: Convert to a C or Cython function and add to cityhash
+    return long2int(CityHash64(x + "salt"))
+
+
 class Shingler:
     def __init__(self, n):
         self.n = n
@@ -227,9 +252,9 @@ class MinHashSignature(Signature):
         """
         def hash_factory(n):
             prefix = "salt" + str(n)
-            return lambda x: int(CityHash64(prefix + str(x) + "salt") % sys.maxint)
-            #return lambda x: int(long(md5(prefix + str(x) + "salt").hexdigest(), 16) % sys.maxint)
-            #return lambda x: hash(prefix + str(x) + "salt")  # int
+            return lambda x: chash(prefix + str(x))
+            #return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
+            #return lambda x: hash(prefix + str(x) + "salt")
         return map(hash_factory, range(self.width))
 
     def get_signature(self, s):
@@ -277,7 +302,7 @@ class LSH:
         :rtype: collections.iterable
         """
         for band in zip(*(iter(sig),) * self.bandwidth):
-            yield int(CityHash64("salt" + str(band) + "salt") % sys.maxint)
+            yield chash("salt" + str(band))
             #yield hash("salt" + str(band) + "tlas")
 
 

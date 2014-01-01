@@ -66,10 +66,12 @@ class TestCluster(unittest.TestCase):
     def test_dissimilar_sets(self):
         """Two non-similar sets should not be clustered"""
         cluster = Cluster(bands=5, bandwidth=2)
-        cluster.add_set("12345abcdef")
+        cluster.add_set("12yu5abcdef")
         cluster.add_set("1234567890z")
         print cluster.get_clusters()
-        self.assertEqual(len(cluster.get_clusters()), 2)
+        num_clusters = len(cluster.get_clusters())
+        self.assertEqual(num_clusters, 2,
+                         "Expected 2 clusters, got {}".format(num_clusters))
 
     def test_cluster_threshold(self):
         """Expected error for threshold to similarity should be reasonable"""
