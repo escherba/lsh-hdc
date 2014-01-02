@@ -34,7 +34,7 @@ class UnionFind:
         self.parents = {}
 
     def __getitem__(self, obj):
-        """Find and return the name of the set containing the obj.
+        """Find and return the representative of the set containing obj.
         :rtype: object
         """
         # check for previously unknown obj
@@ -45,18 +45,22 @@ class UnionFind:
 
         # find path of objects leading to the root
         path = [obj]
+        last_root = obj
         root = self.parents[obj]
-        while root != path[-1]:
+        while root != last_root:
             path.append(root)
+            last_root = root
             root = self.parents[root]
 
-        # compress the path and return
+        # compress the path
         for ancestor in path:
             self.parents[ancestor] = root
+
+        #return the representative
         return root
 
     def __iter__(self):
-        """Iterate through all items ever found or unioned by this structure
+        """Iterate through all items ever found or union-ed by this structure
 
         :rtype: collections.iterable
         """
@@ -66,12 +70,12 @@ class UnionFind:
         """Find the sets containing the objects and merge them all."""
         weights_ = self.weights
         parents_ = self.parents
-        roots = [self[x] for x in objs]
-        heaviest = max((weights_[r], r) for r in roots)[1]
-        for r in roots:
-            if r != heaviest:
-                weights_[heaviest] += weights_[r]
-                parents_[r] = heaviest
+        roots = map(self.__getitem__, objs)
+        heaviest_root = max((weights_[r], r) for r in roots)[1]
+        for root in roots:
+            if root != heaviest_root:
+                weights_[heaviest_root] += weights_[root]
+                parents_[root] = heaviest_root
 
     def sets(self):
         """Return a list of each disjoint set
@@ -81,4 +85,3 @@ class UnionFind:
         for k, v in self.parents.iteritems():
             ret[v].append(k)
         return ret.values()
-

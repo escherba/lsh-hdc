@@ -9,10 +9,8 @@ import re
 import sys
 import HTMLParser
 from unionfind import UnionFind
-from functools import partial
 from itertools import imap
-from collections import defaultdict, Counter
-from math import log
+from collections import defaultdict
 from cityhash import CityHash64
 
 
@@ -38,7 +36,7 @@ def chash(x):
     :rtype: int
     """
     #TODO: Convert to a C or Cython function and add to cityhash
-    return long2int(CityHash64(x + "salt"))
+    return long2int(CityHash64(x))
 
 
 class Shingler:
@@ -178,47 +176,6 @@ def get_threshold(r, b):
     return (1. / b) ** (1. / r)
 
 
-def get_uncertainty_index(cluster_sets, items_to_shingles, min_cluster_size=2):
-    """
-
-    :throws ZeroDivisionError:
-    :returns: Theil uncertainty index (a homogeneity measure)
-    :rtype: float
-    """
-    def entropyN(N, n):
-        n_ = float(n)
-        if n_ > 0.0:
-            return - n_ * log(n_ / float(N))
-        else:
-            return 0.0
-
-    post_count = 0
-    cluster_count = 0
-    numerator = 0.0
-    multiverse = Counter()
-    for cluster_id, cluster in enumerate(cluster_sets):
-        cluster_size = len(cluster)
-        if cluster_size >= min_cluster_size:
-            universe = Counter()
-            for post_id in cluster:
-                universe.update(items_to_shingles[post_id])
-            numerator += \
-                sum(imap(partial(entropyN, cluster_size), universe.values())) \
-                / float(cluster_size)
-            multiverse.update(universe)
-            post_count += cluster_size
-            cluster_count += 1
-
-    denominator = float(cluster_count) * \
-        sum(imap(partial(entropyN, post_count), multiverse.values())) \
-        / float(post_count)
-
-    if numerator > 0.0:
-        return 1.0 - numerator / denominator
-    else:
-        return 1.0
-
-
 class Signature:
     """Signature Base class."""
 
@@ -252,7 +209,7 @@ class MinHashSignature(Signature):
         """
         def hash_factory(n):
             prefix = "salt" + str(n)
-            return lambda x: chash(prefix + str(x))
+            return lambda x: chash(prefix + str(x) + "salt")
             #return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
             #return lambda x: hash(prefix + str(x) + "salt")
         return map(hash_factory, range(self.width))
@@ -274,7 +231,7 @@ class MinHashSignature(Signature):
         else:
             # support empty sets by treating them as empty strings
             sig_fun = lambda f: f("")
-        return map(sig_fun, self.hashes)
+        return imap(sig_fun, self.hashes)
 
 
 class LSH:
@@ -302,7 +259,7 @@ class LSH:
         :rtype: collections.iterable
         """
         for band in zip(*(iter(sig),) * self.bandwidth):
-            yield chash("salt" + str(band))
+            yield chash("salt" + str(band) + "tlas")
             #yield hash("salt" + str(band) + "tlas")
 
 
@@ -328,20 +285,28 @@ class Cluster:
         self.hashmap = defaultdict(list)
 
     def add_set(self, s, label=None):
-        # A label for this set
+        # Set default label for this set
         if not label:
             label = s
 
-        # Add to unionfind structure
-        self.unionfind[label]
+        # Add to union-find structure
+        uf_ = self.unionfind
+        uf_.__getitem__(label)
 
-        # Get signature vector
-        sig = self.signer.get_signature(s)
+        # Get signature vector and hash it
+        sign_gen = self.signer.get_signature(s)
+        hash_gen = self.hasher.hash(sign_gen)
+        label_gen = imap(self.hashmap.__getitem__, hash_gen)
 
-        # Union labels with same LSH keys
-        for value in self.hasher.hash(sig):
-            self.hashmap[value].append(label)
-            self.unionfind.union(label, self.hashmap[value][0])
+        # Unite labels with same LSH keys
+        for label_list in label_gen:
+            if label_list:
+                first_label = label_list[0]
+                if label != first_label:
+                    label_list.append(label)
+                    uf_.union(first_label, label)
+            else:
+                label_list.append(label)
 
     def get_threshold(self):
         """

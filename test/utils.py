@@ -6,7 +6,38 @@ Testing utilities
 
 import random
 import operator
+import json
 from itertools import imap
+
+
+def getpropval(obj):
+    """
+
+    :return: a generator of properties and their values
+    """
+    return ((p, val) for p, val in ((p, getattr(obj, p)) for p in dir(obj))
+            if not callable(val) and p[0] != '_')
+
+
+class JsonRepr:
+
+    def as_dict(self):
+        """
+
+        :rtype : dict
+        """
+        return dict(getpropval(self))
+
+    def __repr__(self):
+        """
+
+        :rtype : str
+        """
+        return json.dumps(self.as_dict())
+
+    def assign(self, o):
+        for k, v in getpropval(o):
+            setattr(self, k, v)
 
 
 def first(it):

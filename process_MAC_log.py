@@ -4,13 +4,17 @@ import argparse
 import sys
 import json
 import operator
-from collections import defaultdict
+import calendar
+import dateutil.parser as dateutil_parser
+from collections import defaultdict, Counter
+from functools import partial
+from itertools import imap, chain
+from math import log
+from lsh import Cluster, WordShingler
+from test.utils import uniq_rev_index, sort_by_length, JsonRepr
 
-from lsh import Cluster, WordShingler, get_uncertainty_index
-from test.utils import uniq_rev_index, sort_by_length
 
-
-class Options(argparse.Namespace):
+class Options(JsonRepr):
     """Command-line option globals
     """
     file_path = "test/data/detail.log.1"
@@ -18,20 +22,127 @@ class Options(argparse.Namespace):
     bandwidth = 3
     shingle_size = 4
     quiet = False
+    no_user_id = False
     min_cluster = 4
     head = None
 
-options = Options()
+
+def mac_gather_stats(clusters, objects=None, shingles=None):
+    """
+
+    :throws ZeroDivisionError:
+    :returns: Theil uncertainty index (a homogeneity measure)
+    :rtype: dict
+    """
+    def entropy(N, n):
+        """
+
+        :param N: sample count
+        :param n: number of bits
+        :return: (Information) entropy
+        :rtype: float
+        """
+        n_ = float(n)
+        if n_ > 0.0:
+            ratio = n_ / float(N)
+            return - ratio * log(ratio)
+        else:
+            return 0.0
+
+    def average(l):
+        """Find average
+        :param l: a list of numbers
+        :type l: list
+        :returns: average
+        :rtype: float
+        """
+        xs = list(l)
+        return float(reduce(lambda x, y: x + y, xs)) / float(len(xs))
+
+    def sumsq(l):
+        """Sum of squares
+        :param l: a list of numbers
+        :type l: list
+        :returns: sum of squares
+        :rtype: float
+        """
+        xs = list(l)
+        avg = average(xs)
+        return sum((el - avg) ** 2 for el in xs)
+
+    def explained_var(l):
+        """Explained variance
+        :param l: a list of list
+        :type l: list
+        :returns: explained variance
+        :rtype: float
+        """
+        residual_var = sum(imap(sumsq, l))
+        total_var = sumsq(chain.from_iterable(l))
+        return 1.0 - residual_var / total_var
+
+    result = {}
+
+    post_count = 0
+    numerator = 0.0
+    multiverse = Counter()
+    all_times = []
+    cluster_count = len(clusters)
+
+    for cluster_id, cluster in enumerate(clusters):
+        universe = Counter()
+        times = []
+        for post_id in cluster:
+            if not objects is None:
+                obj = objects[post_id]
+                timestamp = obj[u'timestamp']
+                t = dateutil_parser.parse(timestamp)
+                times.append(calendar.timegm(t.utctimetuple()))
+            if not shingles is None:
+                universe.update(shingles[post_id])
+
+        cluster_size = len(cluster)
+        post_count += cluster_size
+        if not objects is None:
+            all_times.append(times)
+        if not shingles is None:
+            numerator += sum(imap(partial(entropy, cluster_size), universe.values()))
+            multiverse.update(universe)
+
+    if clusters and (not objects is None):
+        result['ss_index'] = explained_var(all_times)
+
+    if clusters and (not shingles is None):
+        denominator = float(cluster_count) * \
+            sum(imap(partial(entropy, post_count), multiverse.values()))
+        if numerator > 0.0:
+            uncertainty_index = 1.0 - numerator / denominator
+        else:
+            uncertainty_index = 1.0
+        result['uncertainty_index'] = uncertainty_index
+
+    result['num_clusters'] = cluster_count
+    result['points_in_clusters'] = post_count
+    return result
 
 
-class TestMacLog():
+def mac_get_post_id(obj, n):
+    return obj[u"post_id"] + '.' + str(n)
+
+
+class TestMacLog:
+
+    def __init__(self, options):
+        self.options = options
 
     def test_mac_log(self):
+        options = self.options
         cluster_builder = Cluster(bands=options.bands,
                                   bandwidth=options.bandwidth)
         shingler = WordShingler(options.shingle_size)
 
         posts_to_shingles = {}
+        data = {}
         with open(options.file_path) as mac_log:
             for line_num, line in enumerate(mac_log):
                 if (not options.quiet) and (not line_num % 10000):
@@ -39,32 +150,38 @@ class TestMacLog():
                 json_obj = json.loads(line)
                 obj = json_obj["object"]
                 content = obj["content"]
-                post_id = obj["post_id"]
+                post_id = mac_get_post_id(obj, line_num)
+                data[post_id] = obj
                 shingles = shingler.get_shingles(content)
+
+                # optionally add user_id as a shingle
+                if not options.no_user_id:
+                    shingles.add((obj["user_id"],))
+
                 cluster_builder.add_set(shingles, post_id)
                 posts_to_shingles[post_id] = shingles
                 if (not options.head is None) and line_num > options.head:
                     break
 
-        sets = cluster_builder.get_clusters()
+        sets = filter(lambda x: len(x) >= options.min_cluster,
+                      cluster_builder.get_clusters())
         try:
-            uindex = get_uncertainty_index(sets, posts_to_shingles,
-                                           min_cluster_size=options.min_cluster)
+            stats = mac_gather_stats(sets,
+                                     objects=data,
+                                     shingles=posts_to_shingles)
         except ZeroDivisionError:
-            uindex = None
-        cluster_sizes = map(len, filter(lambda x: len(x) > options.min_cluster, sets))
-        num_clusters = len(cluster_sizes)
-        points_in_clusters = sum(cluster_sizes)
+            stats = None
         sys.stderr.write(json.dumps(
-            {"num_clusters": num_clusters,
-             "points_in_clusters": points_in_clusters,
-             "uindex": uindex}) + "\n")
+            {"options": options.as_dict(),
+             "stats": stats}) + "\n")
 
         # clusters: cluster_id -> [ post_ids ]
         clusters = dict(enumerate(sort_by_length(sets)))
         self.output_clusters(clusters)
 
     def output_clusters(self, clusters, min_cluster_size=2):
+
+        options = self.options
 
         # reverse_index: post_id -> cluster_id
         reverse_index = uniq_rev_index(clusters)
@@ -77,24 +194,14 @@ class TestMacLog():
                 #    print "Reading line " + str(line_num)
                 json_obj = json.loads(line)
                 obj = json_obj["object"]
-                content = obj["content"]
-                post_id = obj["post_id"]
-                try:
-                    impermium = json_obj\
-                        .get("impermium", [])[1]\
-                        .get("4.0")
-                except AttributeError:
-                    # no impermium tags exist
-                    impermium = None
+                post_id = mac_get_post_id(obj, line_num)
                 cluster_id = reverse_index.get(post_id)
                 if not cluster_id is None:
                     cluster = clusters.get(cluster_id)
                     if not cluster is None:
                         if len(cluster) >= min_cluster_size:
                             out[cluster_id].append({"cluster_id": cluster_id,
-                                                    "post_id": post_id,
-                                                    "content": content,
-                                                    "impermium": impermium})
+                                                    "original": json_obj})
                 if (not options.head is None) and line_num > options.head:
                     break
 
@@ -134,7 +241,11 @@ if __name__ == '__main__':
                         help='rows per band', required=False)
     parser.add_argument('--quiet', action='store_true',
                         help='whether to be quiet', required=False)
-    options = parser.parse_args()
+    parser.add_argument('--no_user_id', action='store_true',
+                        help='do not use user_id field', required=False)
 
-    o = TestMacLog()
+    options = Options()
+    options.assign(parser.parse_args())
+
+    o = TestMacLog(options)
     o.test_mac_log()
