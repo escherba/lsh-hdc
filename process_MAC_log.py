@@ -43,6 +43,9 @@ class TestMacLog():
                 post_id = obj["post_id"]
                 data[post_id] = obj
                 shingles = shingler.get_shingles(content)
+                # add user id
+                #shingles.add((obj["user_id"]))
+
                 cluster_builder.add_set(shingles, post_id)
                 posts_to_shingles[post_id] = shingles
                 if (not options.head is None) and line_num > options.head:
