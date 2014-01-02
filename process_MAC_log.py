@@ -22,8 +22,7 @@ class Options(JsonRepr):
     bandwidth = 3
     shingle_size = 4
     quiet = False
-    user_id = False
-    post_title = False
+    no_user_id = False
     min_cluster = 4
     head = None
 
@@ -156,11 +155,8 @@ class TestMacLog:
                 shingles = shingler.get_shingles(content)
 
                 # optionally add user_id as a shingle
-                if options.user_id:
+                if not options.no_user_id:
                     shingles.add((obj["user_id"],))
-                # optionally add post_title as a shingle
-                if options.post_title:
-                    shingles.add((obj["post_title"],))
 
                 cluster_builder.add_set(shingles, post_id)
                 posts_to_shingles[post_id] = shingles
@@ -245,10 +241,8 @@ if __name__ == '__main__':
                         help='rows per band', required=False)
     parser.add_argument('--quiet', action='store_true',
                         help='whether to be quiet', required=False)
-    parser.add_argument('--user_id', action='store_true',
-                        help='whether to be use user_id field', required=False)
-    parser.add_argument('--post_title', action='store_true',
-                        help='whether to be use post_title field', required=False)
+    parser.add_argument('--no_user_id', action='store_true',
+                        help='do not use user_id field', required=False)
 
     options = Options()
     options.assign(parser.parse_args())
