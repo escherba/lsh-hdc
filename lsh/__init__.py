@@ -10,7 +10,7 @@ import sys
 import HTMLParser
 from unionfind import UnionFind
 from functools import partial
-from itertools import imap
+from itertools import imap, chain
 from collections import defaultdict, Counter
 from math import log
 from cityhash import CityHash64
@@ -187,21 +187,52 @@ def gather_stats(cluster_sets, objects=None, shingles=None, min_cluster_size=2):
     :returns: Theil uncertainty index (a homogeneity measure)
     :rtype: dict
     """
-    def entropyN(N, n):
+    def entropy(N, n):
+        """
+
+        :param N: sample count
+        :param n: number of bits
+        :return: (Information) entropy
+        :rtype: float
+        """
         n_ = float(n)
         if n_ > 0.0:
-            return - n_ * log(n_ / float(N))
+            ratio = n_ / float(N)
+            return - ratio * log(ratio)
         else:
             return 0.0
 
     def average(l):
+        """Find average
+        :param l: a list of numbers
+        :type l: list
+        :returns: average
+        :rtype: float
+        """
         xs = list(l)
         return float(reduce(lambda x, y: x + y, xs)) / float(len(xs))
 
     def sumsq(l):
+        """Sum of squares
+        :param l: a list of numbers
+        :type l: list
+        :returns: sum of squares
+        :rtype: float
+        """
         xs = list(l)
         avg = average(xs)
         return sum((el - avg) ** 2 for el in xs)
+
+    def explained_var(l):
+        """Explained variance
+        :param l: a list of list
+        :type l: list
+        :returns: explained variance
+        :rtype: float
+        """
+        residual_var = sum(imap(sumsq, l))
+        total_var = sumsq(chain.from_iterable(l))
+        return 1.0 - residual_var / total_var
 
     clusters = filter(lambda x: len(x) >= min_cluster_size, cluster_sets)
 
@@ -211,7 +242,6 @@ def gather_stats(cluster_sets, objects=None, shingles=None, min_cluster_size=2):
     numerator = 0.0
     multiverse = Counter()
     all_times = []
-    cluster_ss = 0.0
     cluster_count = len(clusters)
 
     for cluster_id, cluster in enumerate(clusters):
@@ -227,24 +257,19 @@ def gather_stats(cluster_sets, objects=None, shingles=None, min_cluster_size=2):
                 universe.update(shingles[post_id])
 
         if not objects is None:
-            all_times.extend(times)
-            cluster_ss += sumsq(times)
+            all_times.append(times)
         if not shingles is None:
             cluster_size = len(cluster)
-            numerator += \
-                sum(imap(partial(entropyN, cluster_size), universe.values())) \
-                / float(cluster_size)
+            numerator += sum(imap(partial(entropy, cluster_size), universe.values()))
             multiverse.update(universe)
             post_count += cluster_size
 
     if clusters and (not objects is None):
-        ss_index = 1.0 - cluster_ss / sumsq(all_times)
-        result['ss_index'] = ss_index
+        result['ss_index'] = explained_var(all_times)
 
     if clusters and (not shingles is None):
         denominator = float(cluster_count) * \
-            sum(imap(partial(entropyN, post_count), multiverse.values())) \
-            / float(post_count)
+            sum(imap(partial(entropy, post_count), multiverse.values()))
 
         if numerator > 0.0:
             result['uncertainty_index'] = 1.0 - numerator / denominator
