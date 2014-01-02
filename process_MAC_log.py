@@ -18,7 +18,8 @@ class Options(argparse.Namespace):
     bandwidth = 3
     shingle_size = 4
     quiet = False
-    min_cluster = 2
+    user_id = False
+    min_cluster = 4
     head = None
 
 options = Options()
@@ -43,9 +44,9 @@ class TestMacLog():
                 post_id = obj["post_id"]
                 data[post_id] = obj
                 shingles = shingler.get_shingles(content)
-                # add user id
-                #shingles.add((obj["user_id"]))
-
+                if options.user_id:
+                    # optionally add user id as a shingle
+                    shingles.add((obj["user_id"],))
                 cluster_builder.add_set(shingles, post_id)
                 posts_to_shingles[post_id] = shingles
                 if (not options.head is None) and line_num > options.head:
@@ -133,7 +134,7 @@ if __name__ == '__main__':
                         help='how many lines from file to process (all if not set)', required=False)
     parser.add_argument('--shingle_size', type=int, dest='shingle_size', default=4,
                         help='shingle length (in tokens)', required=False)
-    parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=2,
+    parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=4,
                         help='minimum cluster size for quality evaluation', required=False)
     parser.add_argument('--bands', type=int, dest='bands', default=4,
                         help='number of bands', required=False)
@@ -141,6 +142,8 @@ if __name__ == '__main__':
                         help='rows per band', required=False)
     parser.add_argument('--quiet', action='store_true',
                         help='whether to be quiet', required=False)
+    parser.add_argument('--user_id', action='store_true',
+                        help='whether to be use user_id field', required=False)
     options = parser.parse_args()
 
     o = TestMacLog()
