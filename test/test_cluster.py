@@ -1,10 +1,11 @@
 import unittest
 from utils import randset
-from lsh import Cluster, jaccard_sim, get_bandwidth, get_uncertainty_index
+from lsh import Cluster, jaccard_sim, get_bandwidth
 
 
 class TestCluster(unittest.TestCase):
 
+    '''
     def test_uindex(self):
         """
         This example is taken from:
@@ -38,6 +39,7 @@ class TestCluster(unittest.TestCase):
         }
         uindex = get_uncertainty_index(cluster_sets, items_to_shingles)
         self.assertAlmostEqual(uindex, 0.370949657)
+    '''
 
     def test_empty(self):
         """Should place the two empty sets into a separate cluster"""
