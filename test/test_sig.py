@@ -9,13 +9,13 @@ class TestSig(unittest.TestCase):
         """Signatures should have correct dimension"""
         dim = 100
         mh = MinHashSignature(dim)
-        self.assertEqual(dim, len(mh.get_signature(randset())))
+        self.assertEqual(dim, len(list(mh.get_signature(randset()))))
 
     def test_consistent_signature(self):
         """Signatures should be consistent"""
         mh = MinHashSignature(100)
         s = randset()
-        self.assertEqual(mh.get_signature(s), mh.get_signature(s))
+        self.assertEqual(list(mh.get_signature(s)), list(mh.get_signature(s)))
 
     def test_signature_similarity(self):
         """The probability that two sets' signatures match at some index

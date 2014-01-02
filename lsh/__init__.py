@@ -274,7 +274,7 @@ class MinHashSignature(Signature):
         else:
             # support empty sets by treating them as empty strings
             sig_fun = lambda f: f("")
-        return map(sig_fun, self.hashes)
+        return imap(sig_fun, self.hashes)
 
 
 class LSH:
@@ -328,20 +328,28 @@ class Cluster:
         self.hashmap = defaultdict(list)
 
     def add_set(self, s, label=None):
-        # A label for this set
+        # Set default label for this set
         if not label:
             label = s
 
-        # Add to unionfind structure
-        self.unionfind[label]
+        # Add to union-find structure
+        uf_ = self.unionfind
+        uf_.__getitem__(label)
 
-        # Get signature vector
-        sig = self.signer.get_signature(s)
+        # Get signature vector and hash it
+        sign_gen = self.signer.get_signature(s)
+        hash_gen = self.hasher.hash(sign_gen)
+        label_gen = imap(self.hashmap.__getitem__, hash_gen)
 
-        # Union labels with same LSH keys
-        for value in self.hasher.hash(sig):
-            self.hashmap[value].append(label)
-            self.unionfind.union(label, self.hashmap[value][0])
+        # Unite labels with same LSH keys
+        for label_list in label_gen:
+            if label_list:
+                first_label = label_list[0]
+                if label != first_label:
+                    label_list.append(label)
+                    uf_.union(first_label, label)
+            else:
+                label_list.append(label)
 
     def get_threshold(self):
         """
