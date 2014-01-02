@@ -38,7 +38,7 @@ def chash(x):
     :rtype: int
     """
     #TODO: Convert to a C or Cython function and add to cityhash
-    return long2int(CityHash64(x + "salt"))
+    return long2int(CityHash64(x))
 
 
 class Shingler:
@@ -252,7 +252,7 @@ class MinHashSignature(Signature):
         """
         def hash_factory(n):
             prefix = "salt" + str(n)
-            return lambda x: chash(prefix + str(x))
+            return lambda x: chash(prefix + str(x) + "salt")
             #return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
             #return lambda x: hash(prefix + str(x) + "salt")
         return map(hash_factory, range(self.width))
@@ -302,7 +302,7 @@ class LSH:
         :rtype: collections.iterable
         """
         for band in zip(*(iter(sig),) * self.bandwidth):
-            yield chash("salt" + str(band))
+            yield chash("salt" + str(band) + "tlas")
             #yield hash("salt" + str(band) + "tlas")
 
 

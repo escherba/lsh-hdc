@@ -66,7 +66,7 @@ class UnionFind:
         """Find the sets containing the objects and merge them all."""
         weights_ = self.weights
         parents_ = self.parents
-        roots = [self[x] for x in objs]
+        roots = map(self.__getitem__, objs)
         heaviest = max((weights_[r], r) for r in roots)[1]
         for r in roots:
             if r != heaviest:
@@ -81,4 +81,3 @@ class UnionFind:
         for k, v in self.parents.iteritems():
             ret[v].append(k)
         return ret.values()
-

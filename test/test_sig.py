@@ -22,7 +22,7 @@ class TestSig(unittest.TestCase):
         are equal is equal to the Jaccard similarity between the two"""
         dim = 100
         n_tests = 100
-        expected_error = 1 / sqrt(dim)  # Expected error is O(1/sqrt(dim))
+        expected_error = 1.0 / sqrt(dim)  # Expected error is O(1/sqrt(dim))
         mh = MinHashSignature(dim)
         err = 0.0
 
