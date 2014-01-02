@@ -6,7 +6,7 @@ import json
 import operator
 from collections import defaultdict
 
-from lsh import Cluster, WordShingler, get_uncertainty_index
+from lsh import Cluster, WordShingler, gather_stats
 from test.utils import uniq_rev_index, sort_by_length
 
 
@@ -18,7 +18,7 @@ class Options(argparse.Namespace):
     bandwidth = 3
     shingle_size = 4
     quiet = False
-    min_cluster = 4
+    min_cluster = 2
     head = None
 
 options = Options()
@@ -32,6 +32,7 @@ class TestMacLog():
         shingler = WordShingler(options.shingle_size)
 
         posts_to_shingles = {}
+        data = {}
         with open(options.file_path) as mac_log:
             for line_num, line in enumerate(mac_log):
                 if (not options.quiet) and (not line_num % 10000):
@@ -40,6 +41,7 @@ class TestMacLog():
                 obj = json_obj["object"]
                 content = obj["content"]
                 post_id = obj["post_id"]
+                data[post_id] = obj
                 shingles = shingler.get_shingles(content)
                 cluster_builder.add_set(shingles, post_id)
                 posts_to_shingles[post_id] = shingles
@@ -48,17 +50,19 @@ class TestMacLog():
 
         sets = cluster_builder.get_clusters()
         try:
-            uindex = get_uncertainty_index(sets, posts_to_shingles,
-                                           min_cluster_size=options.min_cluster)
+            stats = gather_stats(sets,
+                                 objects=data,
+                                 shingles=posts_to_shingles,
+                                 min_cluster_size=options.min_cluster)
         except ZeroDivisionError:
-            uindex = None
+            stats = None
         cluster_sizes = map(len, filter(lambda x: len(x) > options.min_cluster, sets))
         num_clusters = len(cluster_sizes)
         points_in_clusters = sum(cluster_sizes)
         sys.stderr.write(json.dumps(
             {"num_clusters": num_clusters,
              "points_in_clusters": points_in_clusters,
-             "uindex": uindex}) + "\n")
+             "stats": stats}) + "\n")
 
         # clusters: cluster_id -> [ post_ids ]
         clusters = dict(enumerate(sort_by_length(sets)))
@@ -126,7 +130,7 @@ if __name__ == '__main__':
                         help='how many lines from file to process (all if not set)', required=False)
     parser.add_argument('--shingle_size', type=int, dest='shingle_size', default=4,
                         help='shingle length (in tokens)', required=False)
-    parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=4,
+    parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=2,
                         help='minimum cluster size for quality evaluation', required=False)
     parser.add_argument('--bands', type=int, dest='bands', default=4,
                         help='number of bands', required=False)

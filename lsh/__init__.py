@@ -14,6 +14,8 @@ from itertools import imap
 from collections import defaultdict, Counter
 from math import log
 from cityhash import CityHash64
+import calendar
+import dateutil.parser
 
 
 def long2int(x):
@@ -178,12 +180,12 @@ def get_threshold(r, b):
     return (1. / b) ** (1. / r)
 
 
-def get_uncertainty_index(cluster_sets, items_to_shingles, min_cluster_size=2):
+def gather_stats(cluster_sets, objects=None, shingles=None, min_cluster_size=2):
     """
 
     :throws ZeroDivisionError:
     :returns: Theil uncertainty index (a homogeneity measure)
-    :rtype: float
+    :rtype: dict
     """
     def entropyN(N, n):
         n_ = float(n)
@@ -192,31 +194,64 @@ def get_uncertainty_index(cluster_sets, items_to_shingles, min_cluster_size=2):
         else:
             return 0.0
 
+    def average(l):
+        xs = list(l)
+        return float(reduce(lambda x, y: x + y, xs)) / float(len(xs))
+
+    def sumsq(l):
+        xs = list(l)
+        avg = average(xs)
+        return sum((el - avg) ** 2 for el in xs)
+
+    clusters = filter(lambda x: len(x) >= min_cluster_size, cluster_sets)
+
+    result = {}
+
     post_count = 0
-    cluster_count = 0
     numerator = 0.0
     multiverse = Counter()
-    for cluster_id, cluster in enumerate(cluster_sets):
-        cluster_size = len(cluster)
-        if cluster_size >= min_cluster_size:
-            universe = Counter()
-            for post_id in cluster:
-                universe.update(items_to_shingles[post_id])
+    all_times = []
+    cluster_ss = 0.0
+    cluster_count = len(clusters)
+
+    for cluster_id, cluster in enumerate(clusters):
+        universe = Counter()
+        times = []
+        for post_id in cluster:
+            if not objects is None:
+                obj = objects[post_id]
+                timestamp = obj[u'timestamp']
+                t = dateutil.parser.parse(timestamp)
+                times.append(calendar.timegm(t.utctimetuple()))
+            if not shingles is None:
+                universe.update(shingles[post_id])
+
+        if not objects is None:
+            all_times.extend(times)
+            cluster_ss += sumsq(times)
+        if not shingles is None:
+            cluster_size = len(cluster)
             numerator += \
                 sum(imap(partial(entropyN, cluster_size), universe.values())) \
                 / float(cluster_size)
             multiverse.update(universe)
             post_count += cluster_size
-            cluster_count += 1
 
-    denominator = float(cluster_count) * \
-        sum(imap(partial(entropyN, post_count), multiverse.values())) \
-        / float(post_count)
+    if clusters and (not objects is None):
+        ss_index = 1.0 - cluster_ss / sumsq(all_times)
+        result['ss_index'] = ss_index
 
-    if numerator > 0.0:
-        return 1.0 - numerator / denominator
-    else:
-        return 1.0
+    if clusters and (not shingles is None):
+        denominator = float(cluster_count) * \
+            sum(imap(partial(entropyN, post_count), multiverse.values())) \
+            / float(post_count)
+
+        if numerator > 0.0:
+            result['uncertainty_index'] = 1.0 - numerator / denominator
+        else:
+            result['uncertainty_index'] = 1.0
+
+    return result
 
 
 class Signature:
