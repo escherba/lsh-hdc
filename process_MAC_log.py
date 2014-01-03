@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 __author__ = 'escherba'
 
 import argparse
@@ -7,7 +8,7 @@ import calendar
 import dateutil.parser as dateutil_parser
 from collections import Counter
 from functools import partial
-from itertools import imap, chain
+from itertools import imap, chain, islice
 from math import log
 from lsh import Cluster, WordShingler
 from test.utils import sort_by_length, JsonRepr
@@ -28,7 +29,29 @@ class Options(JsonRepr):
     #alias = False
 
 
-def mac_gather_stats(clusters, objects=None, shingles=None):
+def mac_get_post_id(json_obj, n):
+    return json_obj[u'object'][u'post_id'] + '.' + str(n)
+
+
+def get_shingles(shingler, obj, options):
+    content = obj[u'content']
+    shingles = shingler.get_shingles(content)
+
+    # optionally add user_id as a shingle
+    if not options.no_user_id:
+        shingles.add((obj[u'user_id'],))
+
+    '''
+    if options.timestamp:
+        shingles.add((obj[u'timestamp'],))
+
+    if options.alias and u'alias' in obj:
+        shingles.add((obj[u'alias'],))
+    '''
+    return shingles
+
+
+def mac_gather_stats(clusters, options=None):
     """
 
     :throws ZeroDivisionError:
@@ -88,15 +111,17 @@ def mac_gather_stats(clusters, objects=None, shingles=None):
     numerator = 0.0
     multiverse = Counter()
     all_times = []
-    cluster_count = len(clusters)
+    cluster_count = 0
     tag_counter = Counter()
+    shingler = WordShingler(options.shingle_size)
 
-    for cluster_id, cluster in enumerate(clusters):
+    for cluster_id, cluster in enumerate(islice(clusters, 0, options.head)):
         universe = Counter()
         times = []
-        for post_id in cluster:
-            if not objects is None:
-                json_obj = objects[post_id]
+        cluster_size = len(cluster)
+        if cluster_size >= options.min_cluster:
+            cluster_count += 1
+            for post_id, json_obj in cluster[u'posts'].iteritems():
                 try:
                     tags = json_obj[u'impermium'][1][u'4.0'][u'tags']
                 except KeyError:
@@ -105,153 +130,153 @@ def mac_gather_stats(clusters, objects=None, shingles=None):
                     tags = []
                 for tag in tags:
                     tag_counter[tag] += 1
-                timestamp = json_obj[u'object'][u'timestamp']
+                obj = json_obj[u'object']
+                timestamp = obj[u'timestamp']
                 t = dateutil_parser.parse(timestamp)
                 times.append(calendar.timegm(t.utctimetuple()))
-            if not shingles is None:
-                universe.update(shingles[post_id])
+                shingles = get_shingles(shingler, obj, options)
+                universe.update(shingles)
 
-        cluster_size = len(cluster)
-        post_count += cluster_size
-        if not objects is None:
+            post_count += cluster_size
             all_times.append(times)
-        if not shingles is None:
-            numerator += sum(imap(partial(entropy, cluster_size), universe.values()))
+            numerator += sum(imap(partial(entropy, cluster_size),
+                                  universe.values()))
             multiverse.update(universe)
 
-    if clusters and (not objects is None):
-        result['time_coeff'] = explained_var(all_times)
-
-    if clusters and (not shingles is None):
+    # Calculate uncertainty index
+    print multiverse
+    uncertainty_index = None
+    try:
         denominator = float(cluster_count) * \
             sum(imap(partial(entropy, post_count), multiverse.values()))
-        if numerator > 0.0:
-            uncertainty_index = 1.0 - numerator / denominator
-        else:
-            uncertainty_index = 1.0
+        uncertainty_index = 1.0 - numerator / denominator
+    except ZeroDivisionError:
+        pass
+    finally:
         result['uncertainty_index'] = uncertainty_index
 
+    # Calculate variance ratio
+    time_coeff = None
+    try:
+        time_coeff = explained_var(all_times)
+    except ZeroDivisionError:
+        pass
+    except TypeError:
+        pass
+    finally:
+        result['time_coeff'] = time_coeff
+
+    # Set the rest of the variables
     result['num_clusters'] = cluster_count
     result['num_comments_in_clusters'] = post_count
     result['num_tags'] = tag_counter
     return result
 
 
-def mac_get_post_id(json_obj, n):
-    return json_obj[u'object'][u'post_id'] + '.' + str(n)
-
-
-class TestMacLog:
-
-    def __init__(self, options):
-        self.options = options
-
-    def test_mac_log(self):
-        options = self.options
-        cluster_builder = Cluster(bands=options.bands,
-                                  bandwidth=options.bandwidth)
-        shingler = WordShingler(options.shingle_size)
-
-        posts_to_shingles = {}
-        data = {}
-        with open(options.file_path) as mac_log:
-            for line_num, line in enumerate(mac_log):
-                if (not options.quiet) and (not line_num % 10000):
-                    sys.stderr.write("Processing line " + str(line_num) + "\n")
-                json_obj = json.loads(line)
-                obj = json_obj[u'object']
-                content = obj[u'content']
-                post_id = mac_get_post_id(json_obj, line_num)
-                data[post_id] = json_obj
-                shingles = shingler.get_shingles(content)
-
-                # optionally add user_id as a shingle
-                if not options.no_user_id:
-                    shingles.add((obj[u'user_id'],))
-
-                '''
-                if options.timestamp:
-                    shingles.add((obj[u'timestamp'],))
-
-                if options.alias and u'alias' in obj:
-                    shingles.add((obj[u'alias'],))
-                '''
-
-                cluster_builder.add_set(shingles, post_id)
-                posts_to_shingles[post_id] = shingles
-                if (not options.head is None) and line_num > options.head:
-                    break
-
-        unfiltered_sets = cluster_builder.get_clusters()
-        filtered_sets = filter(lambda x: len(x) >= options.min_cluster, unfiltered_sets)
-        try:
-            stats = mac_gather_stats(filtered_sets,
-                                     objects=data,
-                                     shingles=posts_to_shingles)
-        except ZeroDivisionError:
-            stats = None
-        sys.stderr.write(json.dumps(
-            {"options": options.as_dict(),
-             "stats": stats}) + "\n")
-
-        self.output_clusters(unfiltered_sets, data)
-
-    def output_clusters(self, unfiltered_sets, data):
-        out = []
+def cluster_from_mac_log(options):
+    def output_clusters(unfiltered_sets, data):
         for cluster_id, cluster in enumerate(sort_by_length(unfiltered_sets)):
             posts = {}
             for post_id in cluster:
                 if post_id in posts:
+                    # guarantee that post_id occurs only once
                     raise KeyError
                 else:
                     posts[post_id] = data[post_id]
-            out.append({
+            d = {
                 "cluster_id": cluster_id,
                 "length": len(cluster),
                 "posts": posts
-            })
-        print json.dumps(out)
+            }
+            print json.dumps(d)
+            yield d
+
+    cluster_builder = Cluster(bands=options.bands,
+                              bandwidth=options.bandwidth)
+    shingler = WordShingler(options.shingle_size)
+
+    data = {}
+    with open(options.file_path) as mac_log:
+        for line_num, line in enumerate(mac_log):
+            if (not options.quiet) and (not line_num % 10000):
+                sys.stderr.write("Processing line " + str(line_num) + "\n")
+            json_obj = json.loads(line)
+            post_id = mac_get_post_id(json_obj, line_num)
+            cluster_builder.add_set(get_shingles(shingler, json_obj[u'object'], options), post_id)
+            data[post_id] = json_obj
+            if (not options.head is None) and line_num > options.head:
+                break
+
+    stats = mac_gather_stats(output_clusters(cluster_builder.get_clusters(), data),
+                             options=options)
+    sys.stderr.write(json.dumps(
+        {"options": options.as_dict(),
+         "stats": stats}) + "\n")
+
+
+def process_mac_log(args):
+    """Process a MAC log"""
+    options = Options()
+    options.assign(args)
+    cluster_from_mac_log(options)
+
+
+def summarize_file(args):
+    """Summarize an intermediate"""
+    def read_intermediate(file_path):
+        with open(file_path) as mac_log:
+            for line in mac_log:
+                yield json.loads(line)
+
+    options = Options()
+    options.assign(args)
+    stats = mac_gather_stats(read_intermediate(options.file_path),
+                             options=options)
+    sys.stderr.write(json.dumps(
+        {"options": options.as_dict(),
+         "stats": stats}) + "\n")
 
 
 if __name__ == '__main__':
     """
-    A sample Bash script illustrating how to run this, iterating over shingles of
-    different sizes
+    A sample bash-script illustrating how to run this
 
-    for i in 2 3 4 5 6 7 8
-        do echo "$i"
-        python process_MAC_log.py \
-        --shingle_size $i \
+    python process_MAC_log.py \
+        --shingle_size 4 \
         --quiet \
-        --file data/detail.log.1 \
-        | jq -c '.[].posts[] | select(.impermium.tag_details.bulk | length>0) | .post_id' \
-        | wc -l
-    done
+        --file data/detail.log.1 > /dev/null
     """
     parser = argparse.ArgumentParser(description='Perform clustering.')
-    parser.add_argument('--file', type=str, dest='file_path', required=True,
-                        help='Path to log file to process (required)')
-    parser.add_argument('--head', type=int, dest='head', default=None,
-                        help='how many lines from file to process (all if not set)', required=False)
-    parser.add_argument('--shingle_size', type=int, dest='shingle_size', default=4,
-                        help='shingle length (in tokens)', required=False)
-    parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=4,
-                        help='minimum cluster size for quality evaluation', required=False)
-    parser.add_argument('--bands', type=int, dest='bands', default=4,
-                        help='number of bands', required=False)
-    parser.add_argument('--bandwidth', type=int, dest='bandwidth', default=3,
-                        help='rows per band', required=False)
+
+    # add common arguments up here
     parser.add_argument('--quiet', action='store_true',
                         help='whether to be quiet', required=False)
-    parser.add_argument('--no_user_id', action='store_true',
-                        help='do not use user_id field', required=False)
-    #parser.add_argument('--timestamp', action='store_true',
-    #                    help='use timestamp field', required=False)
-    #parser.add_argument('--alias', action='store_true',
-    #                    help='use alias field', required=False)
+    parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=4,
+                        help='minimum cluster size for quality evaluation', required=False)
+    parser.add_argument('--head', type=int, dest='head', default=None,
+                        help='how many lines from file to process (all if not set)', required=False)
+    parser.add_argument('--file', type=str, dest='file_path', required=True,
+                        help='Path to log file to process (required)')
 
-    options = Options()
-    options.assign(parser.parse_args())
+    # for specialized functionality, use subparsers
+    subparsers = parser.add_subparsers()
 
-    o = TestMacLog(options)
-    o.test_mac_log()
+    # subparser: cluster
+    parser_cluster = subparsers.add_parser('cluster', help='cluster a MAC log file and produce an intermediate')
+    parser_cluster.add_argument('--shingle_size', type=int, dest='shingle_size', default=4,
+                                help='shingle length (in tokens)', required=False)
+    parser_cluster.add_argument('--bands', type=int, dest='bands', default=4,
+                                help='number of bands', required=False)
+    parser_cluster.add_argument('--bandwidth', type=int, dest='bandwidth', default=3,
+                                help='rows per band', required=False)
+    parser_cluster.add_argument('--no_user_id', action='store_true',
+                                help='exclude user_id field', required=False)
+    parser_cluster.set_defaults(func=process_mac_log)
+
+    # subparser: summarize
+    parser_summarize = subparsers.add_parser('summarize', help='summarize an intermediate')
+    parser_summarize.set_defaults(func=summarize_file)
+
+    # standard arg processing...
+    args = parser.parse_args()
+    args.func(args)
