@@ -102,6 +102,8 @@ def mac_gather_stats(clusters, objects=None, shingles=None):
                     tags = json_obj[u'impermium'][1][u'4.0'][u'tags']
                 except KeyError:
                     tags = []
+                except TypeError:
+                    tags = []
                 for tag in tags:
                     tag_counter[tag] += 1
                 timestamp = json_obj[u'object'][u'timestamp']
@@ -131,8 +133,8 @@ def mac_gather_stats(clusters, objects=None, shingles=None):
         result['uncertainty_index'] = uncertainty_index
 
     result['num_clusters'] = cluster_count
-    result['points_in_clusters'] = post_count
-    result['tag_count'] = tag_counter
+    result['num_comments_in_clusters'] = post_count
+    result['num_tags'] = tag_counter
     return result
 
 
