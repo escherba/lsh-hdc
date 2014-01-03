@@ -138,8 +138,8 @@ def mac_gather_stats(clusters, objects=None, shingles=None):
     return result
 
 
-def mac_get_post_id(obj, n):
-    return obj[u'post_id'] + '.' + str(n)
+def mac_get_post_id(json_obj, n):
+    return json_obj[u'object'][u'post_id'] + '.' + str(n)
 
 
 class TestMacLog:
@@ -162,7 +162,7 @@ class TestMacLog:
                 json_obj = json.loads(line)
                 obj = json_obj[u'object']
                 content = obj[u'content']
-                post_id = mac_get_post_id(obj, line_num)
+                post_id = mac_get_post_id(json_obj, line_num)
                 data[post_id] = json_obj
                 shingles = shingler.get_shingles(content)
 
@@ -183,10 +183,10 @@ class TestMacLog:
                 if (not options.head is None) and line_num > options.head:
                     break
 
-        sets = filter(lambda x: len(x) >= options.min_cluster,
-                      cluster_builder.get_clusters())
+        unfiltered_sets = cluster_builder.get_clusters()
+        filtered_sets = filter(lambda x: len(x) >= options.min_cluster, unfiltered_sets)
         try:
-            stats = mac_gather_stats(sets,
+            stats = mac_gather_stats(filtered_sets,
                                      objects=data,
                                      shingles=posts_to_shingles)
         except ZeroDivisionError:
@@ -195,40 +195,23 @@ class TestMacLog:
             {"options": options.as_dict(),
              "stats": stats}) + "\n")
 
-        # clusters: cluster_id -> [ post_ids ]
-        clusters = dict(enumerate(sort_by_length(sets)))
-        self.output_clusters(clusters)
+        self.output_clusters(unfiltered_sets, data)
 
-    def output_clusters(self, clusters, min_cluster_size=2):
-
-        options = self.options
-
-        # reverse_index: post_id -> cluster_id
-        reverse_index = uniq_rev_index(clusters)
-
-        out = defaultdict(list)
-
-        with open(options.file_path) as mac_log:
-            for line_num, line in enumerate(mac_log):
-                #if not line_num % 1000:
-                #    print "Reading line " + str(line_num)
-                json_obj = json.loads(line)
-                obj = json_obj[u'object']
-                post_id = mac_get_post_id(obj, line_num)
-                cluster_id = reverse_index.get(post_id)
-                if not cluster_id is None:
-                    cluster = clusters.get(cluster_id)
-                    if not cluster is None:
-                        if len(cluster) >= min_cluster_size:
-                            out[cluster_id].append({"cluster_id": cluster_id,
-                                                    "original": json_obj})
-                if (not options.head is None) and line_num > options.head:
-                    break
-
-        sorted_list = list({"cluster_id": k, "length": l, "posts": v} for k, v, l
-                           in sorted(((k, v, len(v)) for k, v in out.items()),
-                                     key=operator.itemgetter(2), reverse=True))
-        print json.dumps(sorted_list)
+    def output_clusters(self, unfiltered_sets, data):
+        out = []
+        for cluster_id, cluster in enumerate(sort_by_length(unfiltered_sets)):
+            posts = {}
+            for post_id in cluster:
+                if post_id in posts:
+                    raise KeyError
+                else:
+                    posts[post_id] = data[post_id]
+            out.append({
+                "cluster_id": cluster_id,
+                "length": len(cluster),
+                "posts": posts
+            })
+        print json.dumps(out)
 
 
 if __name__ == '__main__':
