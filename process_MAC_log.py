@@ -130,15 +130,11 @@ def mac_gather_stats(clusters, options=None):
             for post_id, json_obj in posts.iteritems():
                 try:
                     tags = json_obj[u'impermium'][1][u'4.0'][u'tags']
-                except KeyError:
+                except (KeyError, TypeError):
                     tags = []
-                except TypeError:
-                    tags = []
-                for tag in tags:
-                    tag_counter[tag] += 1
-                timestamp = json_obj[u'object'][u'timestamp']
-                t = dateutil_parser.parse(timestamp)
-                times.append(calendar.timegm(t.utctimetuple()))
+                tag_counter.update(tags)
+                timestamp = dateutil_parser.parse(json_obj[u'object'][u'timestamp'])
+                times.append(calendar.timegm(timestamp.utctimetuple()))
                 universe.update(shingler.shingles_from_mac(json_obj))
 
             post_count += cluster_size
