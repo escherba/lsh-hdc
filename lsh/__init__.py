@@ -77,7 +77,6 @@ class WordShingler(Shingler):
             """
             pattern = ur'(?u)\w+'
             pattern = ur'(?:\B[#@$£€¥₩฿])?(?u)\w+(?:[%\+]\B)?'
-            """
             pattern = ur'''
                         (?:                # Either URL
                         http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+
@@ -87,6 +86,8 @@ class WordShingler(Shingler):
                         (?:[%\+]\B)?       # optionally followed by percentage or plus signs
                         )
                         '''
+            """
+            pattern = ur'(?u)\w+'
         self.r = re.compile(pattern, (re.VERBOSE | re.UNICODE))
         self.html_parser = HTMLParser.HTMLParser()
 
