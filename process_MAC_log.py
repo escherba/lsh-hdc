@@ -18,13 +18,15 @@ class Options(JsonRepr):
     """Command-line option globals
     """
     file_path = "test/data/detail.log.1"
-    bands = 4
+    bands = 3
     bandwidth = 3
-    shingle_size = 4
+    shingle_size = 3
     quiet = False
     no_user_id = False
-    min_cluster = 4
+    min_cluster = 6
     head = None
+    #timestamp = False
+    #alias = False
 
 
 def mac_gather_stats(clusters, objects=None, shingles=None):
@@ -88,14 +90,21 @@ def mac_gather_stats(clusters, objects=None, shingles=None):
     multiverse = Counter()
     all_times = []
     cluster_count = len(clusters)
+    tag_counter = Counter()
 
     for cluster_id, cluster in enumerate(clusters):
         universe = Counter()
         times = []
         for post_id in cluster:
             if not objects is None:
-                obj = objects[post_id]
-                timestamp = obj[u'timestamp']
+                json_obj = objects[post_id]
+                try:
+                    tags = json_obj[u'impermium'][1][u'4.0'][u'tags']
+                except KeyError:
+                    tags = []
+                for tag in tags:
+                    tag_counter[tag] += 1
+                timestamp = json_obj[u'object'][u'timestamp']
                 t = dateutil_parser.parse(timestamp)
                 times.append(calendar.timegm(t.utctimetuple()))
             if not shingles is None:
@@ -110,7 +119,7 @@ def mac_gather_stats(clusters, objects=None, shingles=None):
             multiverse.update(universe)
 
     if clusters and (not objects is None):
-        result['ss_index'] = explained_var(all_times)
+        result['time_coeff'] = explained_var(all_times)
 
     if clusters and (not shingles is None):
         denominator = float(cluster_count) * \
@@ -123,11 +132,12 @@ def mac_gather_stats(clusters, objects=None, shingles=None):
 
     result['num_clusters'] = cluster_count
     result['points_in_clusters'] = post_count
+    result['tag_count'] = tag_counter
     return result
 
 
 def mac_get_post_id(obj, n):
-    return obj[u"post_id"] + '.' + str(n)
+    return obj[u'post_id'] + '.' + str(n)
 
 
 class TestMacLog:
@@ -148,15 +158,23 @@ class TestMacLog:
                 if (not options.quiet) and (not line_num % 10000):
                     sys.stderr.write("Processing line " + str(line_num) + "\n")
                 json_obj = json.loads(line)
-                obj = json_obj["object"]
-                content = obj["content"]
+                obj = json_obj[u'object']
+                content = obj[u'content']
                 post_id = mac_get_post_id(obj, line_num)
-                data[post_id] = obj
+                data[post_id] = json_obj
                 shingles = shingler.get_shingles(content)
 
                 # optionally add user_id as a shingle
                 if not options.no_user_id:
-                    shingles.add((obj["user_id"],))
+                    shingles.add((obj[u'user_id'],))
+
+                '''
+                if options.timestamp:
+                    shingles.add((obj[u'timestamp'],))
+
+                if options.alias and u'alias' in obj:
+                    shingles.add((obj[u'alias'],))
+                '''
 
                 cluster_builder.add_set(shingles, post_id)
                 posts_to_shingles[post_id] = shingles
@@ -193,7 +211,7 @@ class TestMacLog:
                 #if not line_num % 1000:
                 #    print "Reading line " + str(line_num)
                 json_obj = json.loads(line)
-                obj = json_obj["object"]
+                obj = json_obj[u'object']
                 post_id = mac_get_post_id(obj, line_num)
                 cluster_id = reverse_index.get(post_id)
                 if not cluster_id is None:
@@ -243,6 +261,10 @@ if __name__ == '__main__':
                         help='whether to be quiet', required=False)
     parser.add_argument('--no_user_id', action='store_true',
                         help='do not use user_id field', required=False)
+    #parser.add_argument('--timestamp', action='store_true',
+    #                    help='use timestamp field', required=False)
+    #parser.add_argument('--alias', action='store_true',
+    #                    help='use alias field', required=False)
 
     options = Options()
     options.assign(parser.parse_args())
