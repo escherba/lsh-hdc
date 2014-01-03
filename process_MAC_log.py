@@ -8,7 +8,7 @@ import calendar
 import dateutil.parser as dateutil_parser
 from collections import Counter
 from functools import partial
-from itertools import imap, chain, islice
+from itertools import imap, islice
 from math import log
 from lsh import Cluster, WordShingler
 from test.utils import sort_by_length, JsonRepr, smart_open
@@ -56,6 +56,113 @@ class MACShingler(WordShingler):
         return shingles
 
 
+def entropy(N, n):
+    """
+
+    :param N: sample count
+    :param n: number of bits
+    :return: (Information) entropy
+    :rtype: float
+    """
+    n_ = float(n)
+    if n_ > 0.0:
+        ratio = n_ / float(N)
+        return - ratio * log(ratio)
+    else:
+        return 0.0
+
+
+def average(l):
+    """Find average
+    :param l: a list of numbers
+    :type l: list
+    :returns: average
+    :rtype: float
+    """
+    xs = list(l)
+    return float(reduce(lambda x, y: x + y, xs)) / float(len(xs))
+
+
+def sumsq(l):
+    """Sum of squares
+    :param l: a list of numbers
+    :type l: list
+    :returns: sum of squares
+    :rtype: float
+    """
+    xs = list(l)
+    avg = average(xs)
+    return sum((el - avg) ** 2 for el in xs)
+
+
+class Summarizer:
+    def add_object(self, *args, **kwargs):
+        pass
+
+    def get_result(self):
+        pass
+
+
+class TimeVarianceSummarizer(Summarizer):
+    def __init__(self):
+        self.residual = 0.0
+        self.all = []
+
+    def add_object(self, obj):
+        """
+
+        :param obj: a list
+        :type obj: list
+        """
+        self.residual += sumsq(obj)
+        self.all.extend(obj)
+
+    def get_result(self):
+        """
+
+        :rtype : float
+        """
+        try:
+            result = 1.0 - self.residual / sumsq(self.all)
+        except ZeroDivisionError:
+            result = None
+        return result
+
+
+class UncertaintySummarizer(Summarizer):
+    def __init__(self):
+        self.multiverse = Counter()
+        self.numerator = 0.0
+        self.cluster_count = 0
+        self.post_count = 0
+
+    def add_object(self, obj, cluster_size):
+        """
+
+        :param obj: a mapping from keys to counts
+        :type obj: collections.Counter
+        """
+        self.numerator += \
+            sum(imap(partial(entropy, cluster_size), obj.values()))
+        self.multiverse.update(obj)
+        self.cluster_count += 1
+        self.post_count += cluster_size
+
+    def get_result(self):
+        """
+
+        :rtype : float
+        """
+        try:
+            denominator = float(self.cluster_count) * \
+                sum(imap(partial(entropy, self.post_count),
+                         self.multiverse.values()))
+            result = 1.0 - self.numerator / denominator
+        except ZeroDivisionError:
+            result = None
+        return result
+
+
 def mac_gather_stats(clusters, options=None):
     """
 
@@ -63,62 +170,13 @@ def mac_gather_stats(clusters, options=None):
     :returns: Theil uncertainty index (a homogeneity measure)
     :rtype: dict
     """
-    def entropy(N, n):
-        """
 
-        :param N: sample count
-        :param n: number of bits
-        :return: (Information) entropy
-        :rtype: float
-        """
-        n_ = float(n)
-        if n_ > 0.0:
-            ratio = n_ / float(N)
-            return - ratio * log(ratio)
-        else:
-            return 0.0
-
-    def average(l):
-        """Find average
-        :param l: a list of numbers
-        :type l: list
-        :returns: average
-        :rtype: float
-        """
-        xs = list(l)
-        return float(reduce(lambda x, y: x + y, xs)) / float(len(xs))
-
-    def sumsq(l):
-        """Sum of squares
-        :param l: a list of numbers
-        :type l: list
-        :returns: sum of squares
-        :rtype: float
-        """
-        xs = list(l)
-        avg = average(xs)
-        return sum((el - avg) ** 2 for el in xs)
-
-    def explained_var(l):
-        """Explained variance
-        :param l: a list of list
-        :type l: list
-        :returns: explained variance
-        :rtype: float
-        """
-        residual_var = sum(imap(sumsq, l))
-        total_var = sumsq(chain.from_iterable(l))
-        return 1.0 - residual_var / total_var
-
-    result = {}
-
-    post_count = 0
-    numerator = 0.0
-    multiverse = Counter()
-    all_times = []
     cluster_count = 0
+    post_count = 0
     tag_counter = Counter()
     shingler = MACShingler(options)
+    usumm = UncertaintySummarizer()
+    tcoef = TimeVarianceSummarizer()
 
     for cluster_id, cluster in enumerate(islice(clusters, 0, options.head)):
         universe = Counter()
@@ -138,38 +196,16 @@ def mac_gather_stats(clusters, options=None):
                 universe.update(shingler.shingles_from_mac(json_obj))
 
             post_count += cluster_size
-            all_times.append(times)
-            numerator += sum(imap(partial(entropy, cluster_size),
-                                  universe.values()))
-            multiverse.update(universe)
+            tcoef.add_object(times)
+            usumm.add_object(universe, cluster_size)
 
-    # Calculate uncertainty index
-    uncertainty_index = None
-    try:
-        denominator = float(cluster_count) * \
-            sum(imap(partial(entropy, post_count), multiverse.values()))
-        uncertainty_index = 1.0 - numerator / denominator
-    except ZeroDivisionError:
-        pass
-    finally:
-        result['uncertainty_index'] = uncertainty_index
-
-    # Calculate variance ratio
-    time_coeff = None
-    try:
-        time_coeff = explained_var(all_times)
-    except ZeroDivisionError:
-        pass
-    except TypeError:
-        pass
-    finally:
-        result['time_coeff'] = time_coeff
-
-    # Set the rest of the variables
-    result['num_clusters'] = cluster_count
-    result['num_comments_in_clusters'] = post_count
-    result['num_tags'] = tag_counter
-    return result
+    return {
+        'uncertainty_index': usumm.get_result(),
+        'time_coeff': tcoef.get_result(),
+        'num_clusters': cluster_count,
+        'num_comments_in_clusters': post_count,
+        'impermium_tags': tag_counter
+    }
 
 
 def cluster_from_mac_log(options):
