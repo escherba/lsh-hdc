@@ -1,14 +1,14 @@
 __author__ = 'escherba'
 
 import unittest
-from utils import uniq_rev_index
+from utils import sort_by_length
 
 
 class MyTestCase(unittest.TestCase):
-    def test_rev_index_lengths(self):
-        d = {"x": [1, 2, 3], "y": [4, 5, 6, 9]}
-        e = uniq_rev_index(d)
-        self.assertEqual(len(e), sum(map(len, d.values())))
+    def test_sort_by_length(self):
+        test_case = ["abraca", "abracadabra", "a", "aba"]
+        result = sort_by_length(test_case)
+        self.assertEqual(list(result), ["abracadabra", "abraca", "aba", "a"])
 
 
 if __name__ == '__main__':

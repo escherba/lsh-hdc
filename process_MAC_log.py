@@ -3,15 +3,14 @@ __author__ = 'escherba'
 import argparse
 import sys
 import json
-import operator
 import calendar
 import dateutil.parser as dateutil_parser
-from collections import defaultdict, Counter
+from collections import Counter
 from functools import partial
 from itertools import imap, chain
 from math import log
 from lsh import Cluster, WordShingler
-from test.utils import uniq_rev_index, sort_by_length, JsonRepr
+from test.utils import sort_by_length, JsonRepr
 
 
 class Options(JsonRepr):

@@ -91,26 +91,6 @@ def sigsim(x, y, dim):
     return float(sum(imap(operator.eq, x, y))) / float(dim)
 
 
-def uniq_rev_index(d):
-    """ (key -> [ value ]) -> (value -> key)
-
-    Convert key -> [ value ] mapping to
-    value -> key. Assume unique values
-    (no value assigned to more than one key)
-
-    :rtype: dict
-    """
-
-    result = {}
-    for key, values in d.iteritems():
-        for value in values:
-            if value in result:
-                raise KeyError
-            else:
-                result[value] = key
-    return result
-
-
 def sort_by_length(els, reverse=True):
     """Given a list of els, sort its elements by len()
     in descending order. Returns a generator
