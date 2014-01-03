@@ -11,13 +11,14 @@ from functools import partial
 from itertools import imap, chain, islice
 from math import log
 from lsh import Cluster, WordShingler
-from test.utils import sort_by_length, JsonRepr
+from test.utils import sort_by_length, JsonRepr, smart_open
 
 
 class Options(JsonRepr):
     """Command-line option globals
     """
-    file_path = "test/data/detail.log.1"
+    file_path = None
+    output_path = None
     bands = 3
     bandwidth = 3
     shingle_size = 3
@@ -118,10 +119,11 @@ def mac_gather_stats(clusters, options=None):
     for cluster_id, cluster in enumerate(islice(clusters, 0, options.head)):
         universe = Counter()
         times = []
-        cluster_size = len(cluster)
+        posts = cluster[u'posts']
+        cluster_size = len(posts)
         if cluster_size >= options.min_cluster:
             cluster_count += 1
-            for post_id, json_obj in cluster[u'posts'].iteritems():
+            for post_id, json_obj in posts.iteritems():
                 try:
                     tags = json_obj[u'impermium'][1][u'4.0'][u'tags']
                 except KeyError:
@@ -144,7 +146,6 @@ def mac_gather_stats(clusters, options=None):
             multiverse.update(universe)
 
     # Calculate uncertainty index
-    print multiverse
     uncertainty_index = None
     try:
         denominator = float(cluster_count) * \
@@ -175,21 +176,22 @@ def mac_gather_stats(clusters, options=None):
 
 def cluster_from_mac_log(options):
     def output_clusters(unfiltered_sets, data):
-        for cluster_id, cluster in enumerate(sort_by_length(unfiltered_sets)):
-            posts = {}
-            for post_id in cluster:
-                if post_id in posts:
-                    # guarantee that post_id occurs only once
-                    raise KeyError
-                else:
-                    posts[post_id] = data[post_id]
-            d = {
-                "cluster_id": cluster_id,
-                "length": len(cluster),
-                "posts": posts
-            }
-            print json.dumps(d)
-            yield d
+        with smart_open(options.output_path) as fh:
+            for cluster_id, cluster in enumerate(sort_by_length(unfiltered_sets)):
+                posts = {}
+                for post_id in cluster:
+                    if post_id in posts:
+                        # guarantee that post_id occurs only once
+                        raise KeyError
+                    else:
+                        posts[post_id] = data[post_id]
+                d = {
+                    "cluster_id": cluster_id,
+                    "length": len(cluster),
+                    "posts": posts
+                }
+                print >>fh, json.dumps(d)
+                yield d
 
     cluster_builder = Cluster(bands=options.bands,
                               bandwidth=options.bandwidth)
@@ -197,17 +199,16 @@ def cluster_from_mac_log(options):
 
     data = {}
     with open(options.file_path) as mac_log:
-        for line_num, line in enumerate(mac_log):
+        for line_num, line in enumerate(islice(mac_log, 0, options.head)):
             if (not options.quiet) and (not line_num % 10000):
                 sys.stderr.write("Processing line " + str(line_num) + "\n")
             json_obj = json.loads(line)
             post_id = mac_get_post_id(json_obj, line_num)
             cluster_builder.add_set(get_shingles(shingler, json_obj[u'object'], options), post_id)
             data[post_id] = json_obj
-            if (not options.head is None) and line_num > options.head:
-                break
 
-    stats = mac_gather_stats(output_clusters(cluster_builder.get_clusters(), data),
+    clusters = cluster_builder.get_clusters()
+    stats = mac_gather_stats(output_clusters(clusters, data),
                              options=options)
     sys.stderr.write(json.dumps(
         {"options": options.as_dict(),
@@ -271,6 +272,8 @@ if __name__ == '__main__':
                                 help='rows per band', required=False)
     parser_cluster.add_argument('--no_user_id', action='store_true',
                                 help='exclude user_id field', required=False)
+    parser_cluster.add_argument('--output', type=str, dest='output_path', required=False,
+                                help='Path to output')
     parser_cluster.set_defaults(func=process_mac_log)
 
     # subparser: summarize

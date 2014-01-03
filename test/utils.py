@@ -7,7 +7,23 @@ Testing utilities
 import random
 import operator
 import json
+import sys
+import contextlib
 from itertools import imap
+
+
+@contextlib.contextmanager
+def smart_open(filename=None):
+    if filename and filename != '-':
+        fh = open(filename, 'w')
+    else:
+        fh = sys.stdout
+
+    try:
+        yield fh
+    finally:
+        if fh is not sys.stdout:
+            fh.close()
 
 
 def getpropval(obj):
