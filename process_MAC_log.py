@@ -34,22 +34,26 @@ def mac_get_post_id(json_obj, n):
     return json_obj[u'object'][u'post_id'] + '.' + str(n)
 
 
-def get_shingles(shingler, obj, options):
-    content = obj[u'content']
-    shingles = shingler.get_shingles(content)
+class MACShingler(WordShingler):
 
-    # optionally add user_id as a shingle
-    if not options.no_user_id:
-        shingles.add((obj[u'user_id'],))
+    def __init__(self, options):
+        WordShingler.__init__(self, options.shingle_size)
+        self.options = options
 
-    '''
-    if options.timestamp:
-        shingles.add((obj[u'timestamp'],))
+    def shingles_from_mac(self, mac_obj):
+        obj = mac_obj[u'object']
+        content = obj[u'content']
+        shingles = self.get_shingles(content)
+        if not self.options.no_user_id:
+            shingles.add((obj[u'user_id'],))
 
-    if options.alias and u'alias' in obj:
-        shingles.add((obj[u'alias'],))
-    '''
-    return shingles
+        #if options.timestamp:
+        #    shingles.add((obj[u'timestamp'],))
+
+        #if options.alias and u'alias' in obj:
+        #    shingles.add((obj[u'alias'],))
+
+        return shingles
 
 
 def mac_gather_stats(clusters, options=None):
@@ -114,7 +118,7 @@ def mac_gather_stats(clusters, options=None):
     all_times = []
     cluster_count = 0
     tag_counter = Counter()
-    shingler = WordShingler(options.shingle_size)
+    shingler = MACShingler(options)
 
     for cluster_id, cluster in enumerate(islice(clusters, 0, options.head)):
         universe = Counter()
@@ -132,12 +136,10 @@ def mac_gather_stats(clusters, options=None):
                     tags = []
                 for tag in tags:
                     tag_counter[tag] += 1
-                obj = json_obj[u'object']
-                timestamp = obj[u'timestamp']
+                timestamp = json_obj[u'object'][u'timestamp']
                 t = dateutil_parser.parse(timestamp)
                 times.append(calendar.timegm(t.utctimetuple()))
-                shingles = get_shingles(shingler, obj, options)
-                universe.update(shingles)
+                universe.update(shingler.shingles_from_mac(json_obj))
 
             post_count += cluster_size
             all_times.append(times)
@@ -195,7 +197,7 @@ def cluster_from_mac_log(options):
 
     cluster_builder = Cluster(bands=options.bands,
                               bandwidth=options.bandwidth)
-    shingler = WordShingler(options.shingle_size)
+    shingler = MACShingler(options)
 
     data = {}
     with open(options.file_path) as mac_log:
@@ -204,7 +206,7 @@ def cluster_from_mac_log(options):
                 sys.stderr.write("Processing line " + str(line_num) + "\n")
             json_obj = json.loads(line)
             post_id = mac_get_post_id(json_obj, line_num)
-            cluster_builder.add_set(get_shingles(shingler, json_obj[u'object'], options), post_id)
+            cluster_builder.add_set(shingler.shingles_from_mac(json_obj), post_id)
             data[post_id] = json_obj
 
     clusters = cluster_builder.get_clusters()
