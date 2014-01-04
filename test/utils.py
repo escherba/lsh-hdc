@@ -7,7 +7,23 @@ Testing utilities
 import random
 import operator
 import json
+import sys
+import contextlib
 from itertools import imap
+
+
+@contextlib.contextmanager
+def smart_open(filename=None):
+    if filename and filename != '-':
+        fh = open(filename, 'w')
+    else:
+        fh = sys.stdout
+
+    try:
+        yield fh
+    finally:
+        if fh is not sys.stdout:
+            fh.close()
 
 
 def getpropval(obj):
@@ -89,26 +105,6 @@ def randset():
 def sigsim(x, y, dim):
     """Return the similarity of the two signatures"""
     return float(sum(imap(operator.eq, x, y))) / float(dim)
-
-
-def uniq_rev_index(d):
-    """ (key -> [ value ]) -> (value -> key)
-
-    Convert key -> [ value ] mapping to
-    value -> key. Assume unique values
-    (no value assigned to more than one key)
-
-    :rtype: dict
-    """
-
-    result = {}
-    for key, values in d.iteritems():
-        for value in values:
-            if value in result:
-                raise KeyError
-            else:
-                result[value] = key
-    return result
 
 
 def sort_by_length(els, reverse=True):
