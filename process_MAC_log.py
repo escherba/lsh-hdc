@@ -24,7 +24,7 @@ class Options(JsonRepr):
     shingle_size = 3
     quiet = False
     no_user_id = False
-    min_cluster = 6
+    min_cluster = 3
     head = None
     #timestamp = False
     #alias = False
@@ -286,7 +286,7 @@ if __name__ == '__main__':
     # add common arguments up here
     parser.add_argument('--quiet', action='store_true',
                         help='whether to be quiet', required=False)
-    parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=4,
+    parser.add_argument('--min_cluster', type=int, dest='min_cluster', default=3,
                         help='minimum cluster size for quality evaluation', required=False)
     parser.add_argument('--head', type=int, dest='head', default=None,
                         help='how many lines from file to process (all if not set)', required=False)
@@ -298,9 +298,9 @@ if __name__ == '__main__':
 
     # subparser: cluster
     parser_cluster = subparsers.add_parser('cluster', help='cluster a MAC log file and produce an intermediate')
-    parser_cluster.add_argument('--shingle_size', type=int, dest='shingle_size', default=4,
+    parser_cluster.add_argument('--shingle_size', type=int, dest='shingle_size', default=3,
                                 help='shingle length (in tokens)', required=False)
-    parser_cluster.add_argument('--bands', type=int, dest='bands', default=4,
+    parser_cluster.add_argument('--bands', type=int, dest='bands', default=3,
                                 help='number of bands', required=False)
     parser_cluster.add_argument('--bandwidth', type=int, dest='bandwidth', default=3,
                                 help='rows per band', required=False)
