@@ -256,7 +256,7 @@ def process_mac_log(args):
     cluster_from_mac_log(options)
 
 
-def summarize_file(args):
+def summary_file(args):
     """Summarize an intermediate"""
     def read_intermediate(file_path):
         with open(file_path) as mac_log:
@@ -310,9 +310,9 @@ if __name__ == '__main__':
                                 help='Path to output')
     parser_cluster.set_defaults(func=process_mac_log)
 
-    # subparser: summarize
-    parser_summarize = subparsers.add_parser('summarize', help='summarize an intermediate')
-    parser_summarize.set_defaults(func=summarize_file)
+    # subparser: summary
+    parser_summary = subparsers.add_parser('summary', help='summary an intermediate')
+    parser_summary.set_defaults(func=summary_file)
 
     # standard arg processing...
     args = parser.parse_args()
