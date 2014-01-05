@@ -10,7 +10,9 @@ def entropy(N, n):
     """Calculate Shannon entropy given n, N
 
     :param N: sample count
+    :type N: int
     :param n: number of bits
+    :type n: int
     :return: (Information) entropy
     :rtype: float
     """
