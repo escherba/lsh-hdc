@@ -11,7 +11,7 @@ from functools import partial
 from itertools import imap, islice
 from math import log
 from lsh import Cluster, WordShingler
-from test.utils import sort_by_length, JsonRepr, smart_open
+from test.utils import sort_by_length, JsonRepr
 
 
 class Options(JsonRepr):
@@ -209,23 +209,21 @@ def mac_gather_stats(clusters, options=None):
 
 
 def cluster_from_mac_log(options):
+
     def output_clusters(unfiltered_sets, data):
-        with smart_open(options.output_path) as fh:
-            for cluster_id, cluster in enumerate(sort_by_length(unfiltered_sets)):
-                posts = {}
-                for post_id in cluster:
-                    if post_id in posts:
-                        # guarantee that post_id occurs only once
-                        raise KeyError
-                    else:
-                        posts[post_id] = data[post_id]
-                d = {
-                    "cluster_id": cluster_id,
-                    "length": len(cluster),
-                    "posts": posts
-                }
-                print >>fh, json.dumps(d)
-                yield d
+        if options.output_path:
+            fh = open(options.output_path, 'w')
+        else:
+            fh = None
+        for cluster_id, cluster in enumerate(sort_by_length(unfiltered_sets)):
+            parcel = {
+                "cluster_id": cluster_id,
+                "length": len(cluster),
+                "posts": {post_id: data[post_id] for post_id in cluster}
+            }
+            if fh:
+                print >>fh, json.dumps(parcel)
+            yield parcel
 
     cluster_builder = Cluster(bands=options.bands,
                               bandwidth=options.bandwidth)
@@ -242,8 +240,8 @@ def cluster_from_mac_log(options):
             data[post_id] = json_obj
 
     clusters = cluster_builder.get_clusters()
-    stats = mac_gather_stats(output_clusters(clusters, data),
-                             options=options)
+    transformed_clusers = output_clusters(clusters, data)
+    stats = mac_gather_stats(transformed_clusers, options=options)
     sys.stderr.write(json.dumps(
         {"options": options.as_dict(),
          "stats": stats}) + "\n")
