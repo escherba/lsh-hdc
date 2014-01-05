@@ -247,30 +247,49 @@ def cluster_from_mac_log(options):
                     options=options)
 
 
-def process_mac_log(args):
-    """Process a MAC log"""
+def get_options(args):
+    """Merge options with defaults
+
+    :param args: command-line arguments parsed by argparse
+    :type args: argparse.Namespace
+    :returns: an instance of Options class
+    :rtype : instance
+    """
     options = Options()
     options.assign(args)
-    cluster_from_mac_log(options)
+    return options
+
+
+def cluster_mac_log(args):
+    """Cluster entrypoint
+
+    Processes a MAC log
+    :param args: command-line arguments parsed by argparse
+    :type args: argparse.Namespace
+    """
+    cluster_from_mac_log(get_options(args))
 
 
 def summarize_mac_log(args):
-    """Summarize an intermediate"""
-    options = Options()
-    options.assign(args)
+    """Summary entrypoint
+
+    Summarize an intermediate
+    :param args: command-line arguments parsed by argparse
+    :type args: argparse.Namespace
+    """
+    options = get_options(args)
     print_mac_stats(read_json_file(options.file_path),
                     options=options)
 
 
 if __name__ == '__main__':
-    """
-    A sample bash-script illustrating how to run this
-
-    python process_MAC_log.py \
-        --shingle_size 4 \
-        --quiet \
-        --file data/detail.log.1 > /dev/null
-    """
+    # A sample bash-script illustrating how to run this
+    #
+    # python process_MAC_log.py \
+    #     --shingle_size 4 \
+    #     --quiet \
+    #     --file data/detail.log.1 > /dev/null
+    #
     parser = argparse.ArgumentParser(description='Perform clustering.')
 
     # add common arguments up here
@@ -298,7 +317,7 @@ if __name__ == '__main__':
                                 help='exclude user_id field', required=False)
     parser_cluster.add_argument('--output', type=str, dest='output_path', required=False,
                                 help='Path to output')
-    parser_cluster.set_defaults(func=process_mac_log)
+    parser_cluster.set_defaults(func=cluster_mac_log)
 
     # subparser: summary
     parser_summary = subparsers.add_parser('summary', help='summary an intermediate')
