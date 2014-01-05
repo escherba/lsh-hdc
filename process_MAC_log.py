@@ -98,7 +98,7 @@ class Summarizer:
     def add_object(self, *args, **kwargs):
         pass
 
-    def get_result(self):
+    def get_summary(self):
         pass
 
 
@@ -116,7 +116,7 @@ class TimeVarianceSummarizer(Summarizer):
         self.residual += sumsq(obj)
         self.all.extend(obj)
 
-    def get_result(self):
+    def get_summary(self):
         """
 
         :rtype : float
@@ -147,7 +147,7 @@ class UncertaintySummarizer(Summarizer):
         self.cluster_count += 1
         self.post_count += cluster_size
 
-    def get_result(self):
+    def get_summary(self):
         """
 
         :rtype : float
@@ -201,8 +201,8 @@ def print_mac_stats(clusters, options=None):
     print json.dumps({
         'options': options.as_dict(),
         'stats': {
-            'uncertainty_index': usumm.get_result(),
-            'time_coeff': tcoef.get_result(),
+            'uncertainty_index': usumm.get_summary(),
+            'time_coeff': tcoef.get_summary(),
             'num_clusters': cluster_count,
             'num_comments_in_clusters': post_count,
             'impermium_tags': tag_counter
