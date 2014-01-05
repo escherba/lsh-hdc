@@ -7,10 +7,9 @@ import json
 import calendar
 import dateutil.parser as dateutil_parser
 from collections import Counter
-from functools import partial
-from itertools import imap, islice
-from math import log
+from itertools import islice
 from lsh import Cluster, WordShingler
+from lsh.stats import UncertaintySummarizer, VarianceSummarizer
 from test.utils import sort_by_length, JsonRepr, read_json_file
 
 
@@ -55,113 +54,6 @@ class MACShingler(WordShingler):
         return shingles
 
 
-def entropy(N, n):
-    """
-
-    :param N: sample count
-    :param n: number of bits
-    :return: (Information) entropy
-    :rtype: float
-    """
-    n_ = float(n)
-    if n_ > 0.0:
-        ratio = n_ / float(N)
-        return - ratio * log(ratio)
-    else:
-        return 0.0
-
-
-def average(l):
-    """Find average
-    :param l: a list of numbers
-    :type l: list
-    :returns: average
-    :rtype: float
-    """
-    xs = list(l)
-    return float(reduce(lambda x, y: x + y, xs)) / float(len(xs))
-
-
-def sumsq(l):
-    """Sum of squares
-    :param l: a list of numbers
-    :type l: list
-    :returns: sum of squares
-    :rtype: float
-    """
-    xs = list(l)
-    avg = average(xs)
-    return sum((el - avg) ** 2 for el in xs)
-
-
-class Summarizer:
-    def add_object(self, *args, **kwargs):
-        pass
-
-    def get_summary(self):
-        pass
-
-
-class TimeVarianceSummarizer(Summarizer):
-    def __init__(self):
-        self.residual = 0.0
-        self.all = []
-
-    def add_object(self, obj):
-        """
-
-        :param obj: a list
-        :type obj: list
-        """
-        self.residual += sumsq(obj)
-        self.all.extend(obj)
-
-    def get_summary(self):
-        """
-
-        :rtype : float
-        """
-        try:
-            result = 1.0 - self.residual / sumsq(self.all)
-        except ZeroDivisionError:
-            result = None
-        return result
-
-
-class UncertaintySummarizer(Summarizer):
-    def __init__(self):
-        self.multiverse = Counter()
-        self.numerator = 0.0
-        self.cluster_count = 0
-        self.post_count = 0
-
-    def add_object(self, obj, cluster_size):
-        """
-
-        :param obj: a mapping from keys to counts
-        :type obj: collections.Counter
-        """
-        self.numerator += \
-            sum(imap(partial(entropy, cluster_size), obj.values()))
-        self.multiverse.update(obj)
-        self.cluster_count += 1
-        self.post_count += cluster_size
-
-    def get_summary(self):
-        """
-
-        :rtype : float
-        """
-        try:
-            denominator = float(self.cluster_count) * \
-                sum(imap(partial(entropy, self.post_count),
-                         self.multiverse.values()))
-            result = 1.0 - self.numerator / denominator
-        except ZeroDivisionError:
-            result = None
-        return result
-
-
 def print_mac_stats(clusters, options=None):
     """
 
@@ -175,7 +67,7 @@ def print_mac_stats(clusters, options=None):
     tag_counter = Counter()
     shingler = MACShingler(options)
     usumm = UncertaintySummarizer()
-    tcoef = TimeVarianceSummarizer()
+    tcoef = VarianceSummarizer()
 
     for cluster_id, cluster in enumerate(islice(clusters, 0, options.head)):
         universe = Counter()
