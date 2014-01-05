@@ -10,6 +10,12 @@ import json
 from itertools import imap
 
 
+def read_json_file(file_path):
+    with open(file_path, 'r') as json_file:
+        for line in json_file:
+            yield json.loads(line)
+
+
 def getpropval(obj):
     """
 

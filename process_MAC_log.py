@@ -11,7 +11,7 @@ from functools import partial
 from itertools import imap, islice
 from math import log
 from lsh import Cluster, WordShingler
-from test.utils import sort_by_length, JsonRepr
+from test.utils import sort_by_length, JsonRepr, read_json_file
 
 
 class Options(JsonRepr):
@@ -42,8 +42,7 @@ class MACShingler(WordShingler):
 
     def shingles_from_mac(self, mac_obj):
         obj = mac_obj[u'object']
-        content = obj[u'content']
-        shingles = self.get_shingles(content)
+        shingles = self.get_shingles(obj[u'content'])
         if not self.options.no_user_id:
             shingles.add((obj[u'user_id'],))
 
@@ -163,7 +162,7 @@ class UncertaintySummarizer(Summarizer):
         return result
 
 
-def mac_gather_stats(clusters, options=None):
+def print_mac_stats(clusters, options=None):
     """
 
     :throws ZeroDivisionError:
@@ -199,13 +198,16 @@ def mac_gather_stats(clusters, options=None):
             tcoef.add_object(times)
             usumm.add_object(universe, cluster_size)
 
-    return {
-        'uncertainty_index': usumm.get_result(),
-        'time_coeff': tcoef.get_result(),
-        'num_clusters': cluster_count,
-        'num_comments_in_clusters': post_count,
-        'impermium_tags': tag_counter
-    }
+    print json.dumps({
+        'options': options.as_dict(),
+        'stats': {
+            'uncertainty_index': usumm.get_result(),
+            'time_coeff': tcoef.get_result(),
+            'num_clusters': cluster_count,
+            'num_comments_in_clusters': post_count,
+            'impermium_tags': tag_counter
+        }
+    })
 
 
 def cluster_from_mac_log(options):
@@ -241,10 +243,8 @@ def cluster_from_mac_log(options):
 
     clusters = cluster_builder.get_clusters()
     transformed_clusers = output_clusters(clusters, data)
-    stats = mac_gather_stats(transformed_clusers, options=options)
-    sys.stderr.write(json.dumps(
-        {"options": options.as_dict(),
-         "stats": stats}) + "\n")
+    print_mac_stats(transformed_clusers,
+                    options=options)
 
 
 def process_mac_log(args):
@@ -254,20 +254,12 @@ def process_mac_log(args):
     cluster_from_mac_log(options)
 
 
-def summary_file(args):
+def summarize_mac_log(args):
     """Summarize an intermediate"""
-    def read_intermediate(file_path):
-        with open(file_path) as mac_log:
-            for line in mac_log:
-                yield json.loads(line)
-
     options = Options()
     options.assign(args)
-    stats = mac_gather_stats(read_intermediate(options.file_path),
-                             options=options)
-    sys.stderr.write(json.dumps(
-        {"options": options.as_dict(),
-         "stats": stats}) + "\n")
+    print_mac_stats(read_json_file(options.file_path),
+                    options=options)
 
 
 if __name__ == '__main__':
@@ -310,7 +302,7 @@ if __name__ == '__main__':
 
     # subparser: summary
     parser_summary = subparsers.add_parser('summary', help='summary an intermediate')
-    parser_summary.set_defaults(func=summary_file)
+    parser_summary.set_defaults(func=summarize_mac_log)
 
     # standard arg processing...
     args = parser.parse_args()
