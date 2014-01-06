@@ -107,7 +107,7 @@ class WordShingler(Shingler):
         :return:
         :rtype: list
         """
-        return self.r.findall(self.normalize(text))
+        return self.r.findall(text)
 
     def get_shingles(self, text):
         """Get shingles (n-grams) from text
@@ -119,7 +119,8 @@ class WordShingler(Shingler):
         """
         n_ = self.n
         shingles = set()
-        tokens = self.tokenize(text)
+        normalized_text = self.normalize(text)
+        tokens = self.tokenize(normalized_text)
         if len(tokens) >= n_:
             for offset in xrange(len(tokens) - n_ + 1):
                 shingles.add(tuple(tokens[offset:(offset + n_)]))
