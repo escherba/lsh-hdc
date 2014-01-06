@@ -22,11 +22,12 @@ class Options(JsonRepr):
     bandwidth = 3
     shingle_size = 3
     quiet = False
-    no_user_id = False
     min_cluster = 3
     head = None
-    #timestamp = False
-    #alias = False
+
+    user_id = False
+    timestamp = False
+    alias = False
 
 
 def mac_get_post_id(json_obj, n):
@@ -43,14 +44,15 @@ class MACShingler(WordShingler):
     def shingles_from_mac(self, mac_obj):
         obj = mac_obj[u'object']
         shingles = self.get_shingles(obj[u'content'])
-        if not self.options.no_user_id:
+
+        if self.options.user_id:
             shingles.add((obj[u'user_id'],))
 
-        #if options.timestamp:
-        #    shingles.add((obj[u'timestamp'],))
+        if self.options.timestamp:
+            shingles.add((obj[u'timestamp'],))
 
-        #if options.alias and u'alias' in obj:
-        #    shingles.add((obj[u'alias'],))
+        if self.options.alias and u'alias' in obj:
+            shingles.add((obj[u'alias'],))
 
         return shingles
 
@@ -203,8 +205,14 @@ if __name__ == '__main__':
                                 help='number of bands', required=False)
     parser_cluster.add_argument('--bandwidth', type=int, dest='bandwidth', default=3,
                                 help='rows per band', required=False)
-    parser_cluster.add_argument('--no_user_id', action='store_true',
-                                help='exclude user_id field', required=False)
+
+    parser_cluster.add_argument('--user_id', action='store_true',
+                                help='include user_id field', required=False)
+    parser_cluster.add_argument('--alias', action='store_true',
+                                help='include alias field', required=False)
+    parser_cluster.add_argument('--timestamp', action='store_true',
+                                help='include timestamp field', required=False)
+
     parser_cluster.add_argument('--output', type=str, dest='output_path', required=False,
                                 help='Path to output')
     parser_cluster.set_defaults(func=cluster_mac_log)
