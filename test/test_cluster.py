@@ -5,42 +5,6 @@ from lsh import Cluster, jaccard_sim, get_bandwidth
 
 class TestCluster(unittest.TestCase):
 
-    '''
-    def test_uindex(self):
-        """
-        This example is taken from:
-        Manning C D, Raghavan P, Schutze H. Introduction to Information
-        Retrieval, CUP 2009, p. 357.
-        :return: None
-        """
-        cluster_sets = [{"1.1", "1.2", "1.3", "1.4", "1.5", "1.6"},
-                        {"2.1", "2.2", "2.3", "2.4", "2.5", "2.6"},
-                        {"3.1", "3.2", "3.3", "3.4", "3.5"}]
-        items_to_shingles = {
-            "1.1": {("x",)},
-            "1.2": {("x",)},
-            "1.3": {("x",)},
-            "1.4": {("x",)},
-            "1.5": {("x",)},
-            "1.6": {("o",)},
-
-            "2.1": {("x",)},
-            "2.2": {("o",)},
-            "2.3": {("o",)},
-            "2.4": {("o",)},
-            "2.5": {("v",)},
-            "2.6": {("o",)},
-
-            "3.1": {("x",)},
-            "3.2": {("x",)},
-            "3.3": {("v",)},
-            "3.4": {("v",)},
-            "3.5": {("v",)}
-        }
-        uindex = get_uncertainty_index(cluster_sets, items_to_shingles)
-        self.assertAlmostEqual(uindex, 0.370949657)
-    '''
-
     def test_empty(self):
         """Should place the two empty sets into a separate cluster"""
         cluster = Cluster(bands=5, bandwidth=2)

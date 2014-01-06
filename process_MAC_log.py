@@ -7,11 +7,10 @@ import json
 import calendar
 import dateutil.parser as dateutil_parser
 from collections import Counter
-from functools import partial
-from itertools import imap, islice
-from math import log
+from itertools import islice
 from lsh import Cluster, WordShingler
-from test.utils import sort_by_length, JsonRepr
+from lsh.stats import UncertaintySummarizer, VarianceSummarizer
+from test.utils import sort_by_length, JsonRepr, read_json_file
 
 
 class Options(JsonRepr):
@@ -42,8 +41,7 @@ class MACShingler(WordShingler):
 
     def shingles_from_mac(self, mac_obj):
         obj = mac_obj[u'object']
-        content = obj[u'content']
-        shingles = self.get_shingles(content)
+        shingles = self.get_shingles(obj[u'content'])
         if not self.options.no_user_id:
             shingles.add((obj[u'user_id'],))
 
@@ -56,114 +54,7 @@ class MACShingler(WordShingler):
         return shingles
 
 
-def entropy(N, n):
-    """
-
-    :param N: sample count
-    :param n: number of bits
-    :return: (Information) entropy
-    :rtype: float
-    """
-    n_ = float(n)
-    if n_ > 0.0:
-        ratio = n_ / float(N)
-        return - ratio * log(ratio)
-    else:
-        return 0.0
-
-
-def average(l):
-    """Find average
-    :param l: a list of numbers
-    :type l: list
-    :returns: average
-    :rtype: float
-    """
-    xs = list(l)
-    return float(reduce(lambda x, y: x + y, xs)) / float(len(xs))
-
-
-def sumsq(l):
-    """Sum of squares
-    :param l: a list of numbers
-    :type l: list
-    :returns: sum of squares
-    :rtype: float
-    """
-    xs = list(l)
-    avg = average(xs)
-    return sum((el - avg) ** 2 for el in xs)
-
-
-class Summarizer:
-    def add_object(self, *args, **kwargs):
-        pass
-
-    def get_result(self):
-        pass
-
-
-class TimeVarianceSummarizer(Summarizer):
-    def __init__(self):
-        self.residual = 0.0
-        self.all = []
-
-    def add_object(self, obj):
-        """
-
-        :param obj: a list
-        :type obj: list
-        """
-        self.residual += sumsq(obj)
-        self.all.extend(obj)
-
-    def get_result(self):
-        """
-
-        :rtype : float
-        """
-        try:
-            result = 1.0 - self.residual / sumsq(self.all)
-        except ZeroDivisionError:
-            result = None
-        return result
-
-
-class UncertaintySummarizer(Summarizer):
-    def __init__(self):
-        self.multiverse = Counter()
-        self.numerator = 0.0
-        self.cluster_count = 0
-        self.post_count = 0
-
-    def add_object(self, obj, cluster_size):
-        """
-
-        :param obj: a mapping from keys to counts
-        :type obj: collections.Counter
-        """
-        self.numerator += \
-            sum(imap(partial(entropy, cluster_size), obj.values()))
-        self.multiverse.update(obj)
-        self.cluster_count += 1
-        self.post_count += cluster_size
-
-    def get_result(self):
-        """
-
-        :rtype : float
-        """
-        try:
-            denominator = float(self.cluster_count) * \
-                sum(imap(partial(entropy, self.post_count),
-                         self.multiverse.values()))
-            result = 1.0 - self.numerator / denominator
-        except ZeroDivisionError:
-            result = None
-        return result
-
-
-def mac_gather_stats(clusters, options=None):
+def print_mac_stats(clusters, options=None):
     """
 
     :throws ZeroDivisionError:
@@ -176,7 +67,7 @@ def mac_gather_stats(clusters, options=None):
     tag_counter = Counter()
     shingler = MACShingler(options)
     usumm = UncertaintySummarizer()
-    tcoef = TimeVarianceSummarizer()
+    tcoef = VarianceSummarizer()
 
     for cluster_id, cluster in enumerate(islice(clusters, 0, options.head)):
         universe = Counter()
@@ -199,13 +90,16 @@ def mac_gather_stats(clusters, options=None):
             tcoef.add_object(times)
             usumm.add_object(universe, cluster_size)
 
-    return {
-        'uncertainty_index': usumm.get_result(),
-        'time_coeff': tcoef.get_result(),
-        'num_clusters': cluster_count,
-        'num_comments_in_clusters': post_count,
-        'impermium_tags': tag_counter
-    }
+    print json.dumps({
+        'options': options.as_dict(),
+        'stats': {
+            'uncertainty_index': usumm.get_summary(),
+            'time_coeff': tcoef.get_summary(),
+            'num_clusters': cluster_count,
+            'num_comments_in_clusters': post_count,
+            'impermium_tags': tag_counter
+        }
+    })
 
 
 def cluster_from_mac_log(options):
@@ -241,44 +135,53 @@ def cluster_from_mac_log(options):
 
     clusters = cluster_builder.get_clusters()
     transformed_clusers = output_clusters(clusters, data)
-    stats = mac_gather_stats(transformed_clusers, options=options)
-    sys.stderr.write(json.dumps(
-        {"options": options.as_dict(),
-         "stats": stats}) + "\n")
+    print_mac_stats(transformed_clusers,
+                    options=options)
 
 
-def process_mac_log(args):
-    """Process a MAC log"""
+def get_options(args):
+    """Merge options with defaults
+
+    :param args: command-line arguments parsed by argparse
+    :type args: argparse.Namespace
+    :returns: an instance of Options class
+    :rtype : instance
+    """
     options = Options()
     options.assign(args)
-    cluster_from_mac_log(options)
+    return options
 
 
-def summary_file(args):
-    """Summarize an intermediate"""
-    def read_intermediate(file_path):
-        with open(file_path) as mac_log:
-            for line in mac_log:
-                yield json.loads(line)
+def cluster_mac_log(args):
+    """Cluster entrypoint
 
-    options = Options()
-    options.assign(args)
-    stats = mac_gather_stats(read_intermediate(options.file_path),
-                             options=options)
-    sys.stderr.write(json.dumps(
-        {"options": options.as_dict(),
-         "stats": stats}) + "\n")
+    Processes a MAC log
+    :param args: command-line arguments parsed by argparse
+    :type args: argparse.Namespace
+    """
+    cluster_from_mac_log(get_options(args))
+
+
+def summarize_mac_log(args):
+    """Summary entrypoint
+
+    Summarize an intermediate
+    :param args: command-line arguments parsed by argparse
+    :type args: argparse.Namespace
+    """
+    options = get_options(args)
+    print_mac_stats(read_json_file(options.file_path),
+                    options=options)
 
 
 if __name__ == '__main__':
-    """
-    A sample bash-script illustrating how to run this
-
-    python process_MAC_log.py \
-        --shingle_size 4 \
-        --quiet \
-        --file data/detail.log.1 > /dev/null
-    """
+    # A sample bash-script illustrating how to run this
+    #
+    # python process_MAC_log.py \
+    #     --shingle_size 4 \
+    #     --quiet \
+    #     --file data/detail.log.1 > /dev/null
+    #
     parser = argparse.ArgumentParser(description='Perform clustering.')
 
     # add common arguments up here
@@ -306,11 +209,11 @@ if __name__ == '__main__':
                                 help='exclude user_id field', required=False)
     parser_cluster.add_argument('--output', type=str, dest='output_path', required=False,
                                 help='Path to output')
-    parser_cluster.set_defaults(func=process_mac_log)
+    parser_cluster.set_defaults(func=cluster_mac_log)
 
     # subparser: summary
     parser_summary = subparsers.add_parser('summary', help='summary an intermediate')
-    parser_summary.set_defaults(func=summary_file)
+    parser_summary.set_defaults(func=summarize_mac_log)
 
     # standard arg processing...
     args = parser.parse_args()
