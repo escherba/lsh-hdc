@@ -7,14 +7,16 @@ class TestFiles(unittest.TestCase):
         """
         Should return 352 clusters of names.
         """
-        names = open('data/perrys.csv', 'r').readlines()
+        with open('data/perrys.csv', 'r') as f:
+            # strip off newline characters
+            names = [line.rstrip() for line in f]
         cluster = Cluster(bands=2, bandwidth=4)
         shingler = SimpleShingler(3)
         for name in set(names):
             cluster.add_set(shingler.get_shingles(name), name)
         num_clusters = len(cluster.get_clusters())
-        self.assertEqual(num_clusters, 272,
-                         "expected 272 clusters, got {}".format(num_clusters))
+        self.assertEqual(num_clusters, 212,
+                         "expected 212 clusters, got {}".format(num_clusters))
 
     def test_bills(self):
         """
