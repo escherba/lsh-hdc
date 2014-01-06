@@ -28,6 +28,7 @@ class Options(JsonRepr):
     user_id = False
     timestamp = False
     alias = False
+    enduser_ip = False
 
 
 def mac_get_post_id(json_obj, n):
@@ -53,6 +54,9 @@ class MACShingler(WordShingler):
 
         if self.options.alias and u'alias' in obj:
             shingles.add((obj[u'alias'],))
+
+        if self.options.enduser_ip and u'enduser_ip' in obj:
+            shingles.add((obj[u'enduser_ip'],))
 
         return shingles
 
@@ -218,6 +222,8 @@ if __name__ == '__main__':
                                 help='include alias field', required=False)
     parser_cluster.add_argument('--timestamp', action='store_true',
                                 help='include timestamp field', required=False)
+    parser_cluster.add_argument('--enduser_ip', action='store_true',
+                                help='include end-user IP address', required=False)
 
     parser_cluster.add_argument('--output', type=str, dest='output_path', required=False,
                                 help='Path to output')
