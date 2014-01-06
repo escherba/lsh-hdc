@@ -210,7 +210,7 @@ class MinHashSignature(Signature):
         for examples
         """
         def hash_factory(n):
-            prefix = "salt" + str(n)
+            prefix = "salt" + repr(n)
             return lambda x: chash(prefix + str(x) + "salt")
             #return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
             #return lambda x: hash(prefix + str(x) + "salt")
@@ -261,8 +261,8 @@ class LSH:
         :rtype: collections.iterable
         """
         for band in zip(*(iter(sig),) * self.bandwidth):
-            yield chash("salt" + str(band) + "tlas")
-            #yield hash("salt" + str(band) + "tlas")
+            yield chash("salt" + repr(band) + "tlas")
+            #yield hash("salt" + repr(band) + "tlas")
 
 
 class Cluster:
