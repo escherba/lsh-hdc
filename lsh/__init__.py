@@ -209,9 +209,9 @@ class MinHashSignature(Signature):
         See http://michaelnielsen.org/blog/consistent-hashing/
         for examples
         """
-        def hash_factory(n):
-            prefix = "salt" + repr(n)
-            return lambda x: chash(prefix + str(x) + "salt")
+        def hash_factory(seed):
+            salt_seed = "salt" + repr(seed)
+            return lambda x: chash(salt_seed + str(x) + "salt")
             #return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
             #return lambda x: hash(prefix + str(x) + "salt")
         return map(hash_factory, range(self.width))
