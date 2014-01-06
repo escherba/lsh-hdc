@@ -67,13 +67,15 @@ def print_mac_stats(clusters, options=None):
     shingler = MACShingler(options)
     usumm = UncertaintySummarizer()
     tcoef = VarianceSummarizer()
+    usersumm = UncertaintySummarizer()
 
-    for cluster_id, cluster in enumerate(islice(clusters, 0, options.head)):
-        universe = Counter()
-        times = []
+    for cluster in islice(clusters, 0, options.head):
         posts = cluster[u'posts']
         cluster_size = len(posts)
         if cluster_size >= options.min_cluster:
+            times = []
+            universe = Counter()
+            user_universe = Counter()
             cluster_count += 1
             for post_id, json_obj in posts.iteritems():
                 try:
@@ -81,13 +83,16 @@ def print_mac_stats(clusters, options=None):
                 except (KeyError, TypeError):
                     tags = []
                 tag_counter.update(tags)
-                timestamp = dateutil_parser.parse(json_obj[u'object'][u'timestamp'])
+                obj = json_obj[u'object']
+                timestamp = dateutil_parser.parse(obj[u'timestamp'])
                 times.append(calendar.timegm(timestamp.utctimetuple()))
                 universe.update(shingler.shingles_from_mac(json_obj))
+                user_universe[obj[u'user_id']] += 1
 
             post_count += cluster_size
             tcoef.add_object(times)
             usumm.add_object(universe, cluster_size)
+            usersumm.add_object(user_universe, cluster_size)
 
     print json.dumps({
         'options': options.as_dict(),
@@ -96,7 +101,8 @@ def print_mac_stats(clusters, options=None):
             'time_coeff': tcoef.get_summary(),
             'num_clusters': cluster_count,
             'num_comments_in_clusters': post_count,
-            'impermium_tags': tag_counter
+            'impermium_tags': tag_counter,
+            'user_uncertainty': usersumm.get_summary()
         }
     })
 
