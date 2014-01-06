@@ -9,10 +9,8 @@ class TestCluster(unittest.TestCase):
 
     def test_uindex(self):
         """
-        This example is taken from:
-        Manning C D, Raghavan P, Schutze H. Introduction to Information
-        Retrieval, CUP 2009, p. 357.
-        :return: None
+        Example from Manning et al. Introduction to Information Retrieval.
+        CUP. 2009, p. 357.
         """
         uindex = UncertaintySummarizer()
         uindex.add_object(Counter({'x': 5, 'o': 1}), 6)
