@@ -30,6 +30,7 @@ class Options(JsonRepr):
 
 
 def mac_get_post_id(json_obj, n):
+    """Get post_id field from a JSON object"""
     return json_obj[u'object'][u'post_id'] + '.' + str(n)
 
 
@@ -55,11 +56,7 @@ class MACShingler(WordShingler):
 
 
 def print_mac_stats(clusters, options=None):
-    """
-
-    :throws ZeroDivisionError:
-    :returns: Theil uncertainty index (a homogeneity measure)
-    :rtype: dict
+    """Process a bunch of clusters and print some stats
     """
 
     cluster_count = 0
@@ -103,7 +100,8 @@ def print_mac_stats(clusters, options=None):
 
 
 def cluster_from_mac_log(options):
-
+    """Generate a list of clusters from a MAC log and summarize them
+    """
     def output_clusters(unfiltered_sets, data):
         if options.output_path:
             fh = open(options.output_path, 'w')
