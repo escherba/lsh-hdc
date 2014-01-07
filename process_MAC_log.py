@@ -9,7 +9,8 @@ import dateutil.parser as dateutil_parser
 from collections import Counter
 from itertools import islice
 from lsh import Cluster, WordShingler
-from lsh.stats import UncertaintySummarizer, VarianceSummarizer
+from lsh.stats import UncertaintySummarizer, \
+    ExplainedVarianceSummarizer, VarianceSummarizer
 from test.utils import sort_by_length, JsonRepr, read_json_file
 
 
@@ -70,8 +71,9 @@ def print_mac_stats(clusters, options=None):
     tag_counter = Counter()
     shingler = MACShingler(options)
     usumm = UncertaintySummarizer()
-    tcoef = VarianceSummarizer()
+    tcoef = ExplainedVarianceSummarizer()
     usersumm = UncertaintySummarizer()
+    varsumm = VarianceSummarizer()
 
     for cluster in islice(clusters, 0, options.head):
         posts = cluster[u'posts']
@@ -89,12 +91,14 @@ def print_mac_stats(clusters, options=None):
                 tag_counter.update(tags)
                 obj = json_obj[u'object']
                 timestamp = dateutil_parser.parse(obj[u'timestamp'])
-                times.append(calendar.timegm(timestamp.utctimetuple()))
+                actual_time = calendar.timegm(timestamp.utctimetuple())
+                times.append(actual_time)
                 universe.update(shingler.shingles_from_mac(json_obj))
                 user_universe[obj[u'user_id']] += 1
 
             post_count += cluster_size
             tcoef.add_object(times)
+            varsumm.add_object(times)
             usumm.add_object(universe, cluster_size)
             usersumm.add_object(user_universe, cluster_size)
 
@@ -106,7 +110,8 @@ def print_mac_stats(clusters, options=None):
             'num_clusters': cluster_count,
             'num_comments_in_clusters': post_count,
             'impermium_tags': tag_counter,
-            'user_uncertainty': usersumm.get_summary()
+            'user_uncertainty': usersumm.get_summary(),
+            'times_var': varsumm.get_summary()
         }
     })
 

@@ -2,7 +2,7 @@ __author__ = 'escherba'
 
 import unittest
 
-from lsh.stats import UncertaintySummarizer, VarianceSummarizer
+from lsh.stats import UncertaintySummarizer, ExplainedVarianceSummarizer
 from collections import Counter
 
 
@@ -43,7 +43,7 @@ class MyTestCase(unittest.TestCase):
         """Expect higher index with better clustering
         """
 
-        summ1 = VarianceSummarizer()
+        summ1 = ExplainedVarianceSummarizer()
         summ1.add_object([1, 2, 3])
         summ1.add_object([2, 3, 4])
         summ1.add_object([3, 4, 5])
@@ -52,7 +52,7 @@ class MyTestCase(unittest.TestCase):
         # different means but same intra-cluster variance
         self.assertAlmostEqual(var1, 0.5)
 
-        summ2 = VarianceSummarizer()
+        summ2 = ExplainedVarianceSummarizer()
         summ2.add_object([1, 2, 3])
         summ2.add_object([0, 2, 4])
         summ2.add_object([-1, 2, 5])
@@ -62,7 +62,7 @@ class MyTestCase(unittest.TestCase):
         # (worst possible clustering)
         self.assertAlmostEqual(var2, 0.0)
 
-        summ3 = VarianceSummarizer()
+        summ3 = ExplainedVarianceSummarizer()
         summ3.add_object([10, 10, 10])
         summ3.add_object([20, 20, 20])
         summ3.add_object([30, 30, 30])

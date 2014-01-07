@@ -1,7 +1,7 @@
 from collections import Counter
 from functools import partial
 from itertools import imap
-from math import log
+from math import log, sqrt
 
 __author__ = 'escherba'
 
@@ -58,6 +58,29 @@ class Summarizer:
 
 
 class VarianceSummarizer(Summarizer):
+    def __init__(self):
+        self.total_ss = 0.0
+        self.N = 0
+
+    def add_object(self, obj):
+        """
+
+        :param obj: a list of numbers
+        :type obj: list
+        """
+        self.total_ss += sumsq(obj)
+        self.N += len(obj)
+
+    def get_summary(self):
+        """Return (biased) estimator of weighted variance
+
+        :return: weighted variance
+        :rtype: float
+        """
+        return self.total_ss / float(self.N)
+
+
+class ExplainedVarianceSummarizer(Summarizer):
     def __init__(self):
         self.residual = 0.0
         self.all = []
