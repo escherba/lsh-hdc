@@ -9,8 +9,8 @@ import dateutil.parser as dateutil_parser
 from collections import Counter
 from itertools import islice
 from lsh import Cluster, WordShingler
-from lsh.stats import UncertaintySummarizer, MADRatioSummarizer, \
-    ExplainedVarianceSummarizer, VarianceSummarizer
+from lsh.stats import UncertaintySummarizer, \
+    MADSummarizer, MADRatioSummarizer
 from test.utils import sort_by_length, JsonRepr, read_json_file
 
 
@@ -71,9 +71,8 @@ def print_mac_stats(clusters, options=None):
     tag_counter = Counter()
     shingler = MACShingler(options)
     usumm = UncertaintySummarizer()
-    tcoef = ExplainedVarianceSummarizer()
     usersumm = UncertaintySummarizer()
-    varsumm = VarianceSummarizer()
+    varsumm = MADSummarizer()
     madsumm = MADRatioSummarizer()
 
     for cluster in islice(clusters, 0, options.head):
@@ -98,7 +97,6 @@ def print_mac_stats(clusters, options=None):
                 user_universe[obj[u'user_id']] += 1
 
             post_count += cluster_size
-            tcoef.add_object(times)
             varsumm.add_object(times)
             madsumm.add_object(times)
             usumm.add_object(universe, cluster_size)
@@ -112,9 +110,8 @@ def print_mac_stats(clusters, options=None):
             'num_comments_in_clusters': post_count,
             'impermium_tags': tag_counter,
             'user_uncertainty': usersumm.get_summary(),
-            'time_coeff': tcoef.get_summary(),
-            'time_var': varsumm.get_summary(),
-            'time_mad': madsumm.get_summary()
+            'time_mad': varsumm.get_summary(),
+            'time_madratio': madsumm.get_summary()
         }
     })
 
