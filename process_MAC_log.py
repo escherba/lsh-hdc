@@ -5,11 +5,13 @@ import argparse
 import sys
 import json
 import calendar
+from datetime import timedelta, datetime
 import dateutil.parser as dateutil_parser
 from collections import Counter
 from itertools import islice
 from lsh import Cluster, WordShingler
-from lsh.stats import UncertaintySummarizer, VarianceSummarizer
+from lsh.stats import UncertaintySummarizer, \
+    MADSummarizer, MADRatioSummarizer, median, mad
 from test.utils import sort_by_length, JsonRepr, read_json_file
 
 
@@ -28,6 +30,7 @@ class Options(JsonRepr):
     user_id = False
     timestamp = False
     alias = False
+    enduser_ip = False
 
 
 def mac_get_post_id(json_obj, n):
@@ -54,7 +57,24 @@ class MACShingler(WordShingler):
         if self.options.alias and u'alias' in obj:
             shingles.add((obj[u'alias'],))
 
+        if self.options.enduser_ip and u'enduser_ip' in obj:
+            shingles.add((obj[u'enduser_ip'],))
+
         return shingles
+
+
+def print_time_stats(cluster_size, times):
+    o_med = int(median(times))
+    o_mad = int(mad(times))
+    print json.dumps({"cluster_size": cluster_size,
+                      "pretty": {
+                                "med_timestamp": datetime.fromtimestamp(o_med).strftime('%Y-%m-%d %H:%M:%S'),
+                                "med_abs_dev": str(timedelta(seconds=o_mad))
+                      },
+                      "o_med": o_med,
+                      "o_mad": o_mad,
+                      "times": times,
+                      })
 
 
 def print_mac_stats(clusters, options=None):
@@ -66,8 +86,9 @@ def print_mac_stats(clusters, options=None):
     tag_counter = Counter()
     shingler = MACShingler(options)
     usumm = UncertaintySummarizer()
-    tcoef = VarianceSummarizer()
     usersumm = UncertaintySummarizer()
+    varsumm = MADSummarizer()
+    madsumm = MADRatioSummarizer()
 
     for cluster in islice(clusters, 0, options.head):
         posts = cluster[u'posts']
@@ -77,7 +98,7 @@ def print_mac_stats(clusters, options=None):
             universe = Counter()
             user_universe = Counter()
             cluster_count += 1
-            for post_id, json_obj in posts.iteritems():
+            for json_obj in posts:
                 try:
                     tags = json_obj[u'impermium'][1][u'4.0'][u'tags']
                 except (KeyError, TypeError):
@@ -85,24 +106,30 @@ def print_mac_stats(clusters, options=None):
                 tag_counter.update(tags)
                 obj = json_obj[u'object']
                 timestamp = dateutil_parser.parse(obj[u'timestamp'])
-                times.append(calendar.timegm(timestamp.utctimetuple()))
+                actual_time = calendar.timegm(timestamp.utctimetuple())
+                times.append(actual_time)
                 universe.update(shingler.shingles_from_mac(json_obj))
                 user_universe[obj[u'user_id']] += 1
 
-            post_count += cluster_size
-            tcoef.add_object(times)
+            # for plotting time histograms
+            print_time_stats(cluster_size, times)
+
+            varsumm.add_object(times)
+            madsumm.add_object(times)
             usumm.add_object(universe, cluster_size)
             usersumm.add_object(user_universe, cluster_size)
+            post_count += cluster_size
 
     print json.dumps({
         'options': options.as_dict(),
         'stats': {
             'uncertainty_index': usumm.get_summary(),
-            'time_coeff': tcoef.get_summary(),
             'num_clusters': cluster_count,
             'num_comments_in_clusters': post_count,
             'impermium_tags': tag_counter,
-            'user_uncertainty': usersumm.get_summary()
+            'user_uncertainty': usersumm.get_summary(),
+            'time_mad': varsumm.get_summary(),
+            'time_madratio': madsumm.get_summary()
         }
     })
 
@@ -119,7 +146,8 @@ def cluster_from_mac_log(options):
             parcel = {
                 "cluster_id": cluster_id,
                 "length": len(cluster),
-                "posts": {post_id: data[post_id] for post_id in cluster}
+                "posts": [data[pid] for pid in cluster]
+                #"posts": {post_id: data[post_id] for post_id in cluster}
             }
             if fh:
                 print >>fh, json.dumps(parcel)
@@ -218,6 +246,8 @@ if __name__ == '__main__':
                                 help='include alias field', required=False)
     parser_cluster.add_argument('--timestamp', action='store_true',
                                 help='include timestamp field', required=False)
+    parser_cluster.add_argument('--enduser_ip', action='store_true',
+                                help='include end-user IP address', required=False)
 
     parser_cluster.add_argument('--output', type=str, dest='output_path', required=False,
                                 help='Path to output')
