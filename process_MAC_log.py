@@ -5,12 +5,13 @@ import argparse
 import sys
 import json
 import calendar
+from datetime import timedelta, datetime
 import dateutil.parser as dateutil_parser
 from collections import Counter
 from itertools import islice
 from lsh import Cluster, WordShingler
 from lsh.stats import UncertaintySummarizer, \
-    MADSummarizer, MADRatioSummarizer
+    MADSummarizer, MADRatioSummarizer, median, mad
 from test.utils import sort_by_length, JsonRepr, read_json_file
 
 
@@ -62,6 +63,20 @@ class MACShingler(WordShingler):
         return shingles
 
 
+def print_time_stats(cluster_size, times):
+    o_med = int(median(times))
+    o_mad = int(mad(times))
+    print json.dumps({"cluster_size": cluster_size,
+                      "pretty": {
+                                "med_timestamp": datetime.fromtimestamp(o_med).strftime('%Y-%m-%d %H:%M:%S'),
+                                "med_abs_dev": str(timedelta(seconds=o_mad))
+                      },
+                      "o_med": o_med,
+                      "o_mad": o_mad,
+                      "times": times,
+                      })
+
+
 def print_mac_stats(clusters, options=None):
     """Process a bunch of clusters and print some stats
     """
@@ -83,7 +98,7 @@ def print_mac_stats(clusters, options=None):
             universe = Counter()
             user_universe = Counter()
             cluster_count += 1
-            for post_id, json_obj in posts.iteritems():
+            for json_obj in posts:
                 try:
                     tags = json_obj[u'impermium'][1][u'4.0'][u'tags']
                 except (KeyError, TypeError):
@@ -96,11 +111,14 @@ def print_mac_stats(clusters, options=None):
                 universe.update(shingler.shingles_from_mac(json_obj))
                 user_universe[obj[u'user_id']] += 1
 
-            post_count += cluster_size
+            # for plotting time histograms
+            print_time_stats(cluster_size, times)
+
             varsumm.add_object(times)
             madsumm.add_object(times)
             usumm.add_object(universe, cluster_size)
             usersumm.add_object(user_universe, cluster_size)
+            post_count += cluster_size
 
     print json.dumps({
         'options': options.as_dict(),
@@ -128,7 +146,8 @@ def cluster_from_mac_log(options):
             parcel = {
                 "cluster_id": cluster_id,
                 "length": len(cluster),
-                "posts": {post_id: data[post_id] for post_id in cluster}
+                "posts": [data[pid] for pid in cluster]
+                #"posts": {post_id: data[post_id] for post_id in cluster}
             }
             if fh:
                 print >>fh, json.dumps(parcel)
