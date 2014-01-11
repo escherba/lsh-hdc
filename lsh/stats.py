@@ -107,7 +107,8 @@ class MADSummarizer(Summarizer):
         self.weights.append(len(obj))
 
     def get_summary(self):
-        """
+        """Calculate median absolute deviation ratio
+        http://en.wikipedia.org/wiki/Median_absolute_deviation
 
         :rtype : float
         """
@@ -131,13 +132,12 @@ class MADRatioSummarizer(Summarizer):
         self.weights.append(len(obj))
 
     def get_summary(self):
-        """Calculate median absolute deviation
-        http://en.wikipedia.org/wiki/Median_absolute_deviation
+        """Calculate square of median absolute deviation ratio
 
         :rtype : float
         """
-        return 1.0 - weighted_median(self.mad_values, self.weights) \
-               / mad(self.total_values)
+        return 1.0 - (weighted_median(self.mad_values, self.weights)
+                      / mad(self.total_values)) ** 2
 
 
 class VarianceSummarizer(Summarizer):
