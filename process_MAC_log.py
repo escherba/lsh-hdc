@@ -4,9 +4,9 @@ __author__ = 'escherba'
 import argparse
 import sys
 import json
-import calendar
+from calendar import timegm
 from datetime import timedelta, datetime
-import dateutil.parser as dateutil_parser
+from dateutil.parser import parse as dateutil_parse
 from collections import Counter
 from itertools import islice
 from lsh import Cluster, WordShingler
@@ -24,6 +24,8 @@ class Options(JsonRepr):
     bandwidth = 3
     shingle_size = 3
     quiet = False
+    pretty = False
+    extra = False
     min_cluster = 3
     head = None
 
@@ -63,32 +65,67 @@ class MACShingler(WordShingler):
         return shingles
 
 
-def print_time_stats(cluster_size, times):
+def print_time_stats(**kwargs):
+
+    def pretty_timestamp(ts):
+        """
+
+        :param ts:
+        :type ts: int
+        :rtype : str
+        """
+        return datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+
+    def pretty_timedelta(td):
+        """
+
+        :param td:
+        :type td: int
+        :rtype : str
+        """
+        return str(timedelta(seconds=td))
+
+    cluster_size = kwargs['cluster_size']
+    times = kwargs['times']
     o_med = int(median(times))
     o_mad = int(mad(times))
-    print json.dumps({"cluster_size": cluster_size,
-                      "pretty": {
-                                "med_timestamp": datetime.fromtimestamp(o_med).strftime('%Y-%m-%d %H:%M:%S'),
-                                "med_abs_dev": str(timedelta(seconds=o_mad))
-                      },
-                      "o_med": o_med,
-                      "o_mad": o_mad,
-                      "times": times,
-                      })
+    if kwargs['pretty']:
+        summary_obj = {"cluster_size": cluster_size,
+                       "timestamps_median": pretty_timestamp(o_med),
+                       "timestamps_mad": pretty_timedelta(o_mad),
+                       "timestamps": map(pretty_timestamp, times),
+                       }
+    else:
+        summary_obj = {"cluster_size": cluster_size,
+                       "timestamps_median": o_med,
+                       "timestamps_mad": o_mad,
+                       "timestamps": times,
+                       }
+    print json.dumps(summary_obj)
 
 
 def print_mac_stats(clusters, options=None):
     """Process a bunch of clusters and print some stats
     """
 
+    def epoch_time(u):
+        """
+
+        :param u: unicode string representing a timestamp
+        :type u: str,unicode
+        :returns: timestamp since Unix epoch, in seconds
+        :rtype : int
+        """
+        return timegm(dateutil_parse(u).utctimetuple())
+
     cluster_count = 0
     post_count = 0
-    tag_counter = Counter()
     shingler = MACShingler(options)
     usumm = UncertaintySummarizer()
     usersumm = UncertaintySummarizer()
     varsumm = MADSummarizer()
     madsumm = MADRatioSummarizer()
+    unique_posts = dict()
 
     for cluster in islice(clusters, 0, options.head):
         posts = cluster[u'posts']
@@ -103,16 +140,17 @@ def print_mac_stats(clusters, options=None):
                     tags = json_obj[u'impermium'][1][u'4.0'][u'tags']
                 except (KeyError, TypeError):
                     tags = []
-                tag_counter.update(tags)
                 obj = json_obj[u'object']
-                timestamp = dateutil_parser.parse(obj[u'timestamp'])
-                actual_time = calendar.timegm(timestamp.utctimetuple())
-                times.append(actual_time)
+                unique_posts[obj[u'post_id']] = tags
+                times.append(epoch_time(obj[u'timestamp']))
                 universe.update(shingler.shingles_from_mac(json_obj))
                 user_universe[obj[u'user_id']] += 1
 
             # for plotting time histograms
-            print_time_stats(cluster_size, times)
+            if options.extra:
+                print_time_stats(cluster_size=cluster_size,
+                                 times=times,
+                                 pretty=options.pretty)
 
             varsumm.add_object(times)
             madsumm.add_object(times)
@@ -120,12 +158,18 @@ def print_mac_stats(clusters, options=None):
             usersumm.add_object(user_universe, cluster_size)
             post_count += cluster_size
 
+    # in order to avoid counting non-unique post twice,
+    # collect tags separately from the main loop
+    tag_counter = Counter()
+    for tags in unique_posts.values():
+        tag_counter.update(tags)
+
     print json.dumps({
         'options': options.as_dict(),
         'stats': {
             'uncertainty_index': usumm.get_summary(),
             'num_clusters': cluster_count,
-            'num_comments_in_clusters': post_count,
+            'num_comments_in_clusters': len(unique_posts),
             'impermium_tags': tag_counter,
             'user_uncertainty': usersumm.get_summary(),
             'time_mad': varsumm.get_summary(),
@@ -227,6 +271,10 @@ if __name__ == '__main__':
                         help='how many lines from file to process (all if not set)', required=False)
     parser.add_argument('--file', type=str, dest='file_path', required=True,
                         help='Path to log file to process (required)')
+    parser.add_argument('--extra', action='store_true',
+                        help='whether to show extra output', required=False)
+    parser.add_argument('--pretty', action='store_true',
+                        help='whether to show pretty output', required=False)
 
     # for specialized functionality, use subparsers
     subparsers = parser.add_subparsers()
