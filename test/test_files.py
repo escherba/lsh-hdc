@@ -1,5 +1,5 @@
 import unittest
-from lsh import Cluster, WordShingler, SimpleShingler
+from lsh import Cluster, WordShingler, Shingler
 
 
 class TestFiles(unittest.TestCase):
@@ -11,7 +11,7 @@ class TestFiles(unittest.TestCase):
             # strip off newline characters
             names = [line.rstrip() for line in f]
         cluster = Cluster(bands=2, bandwidth=4)
-        shingler = SimpleShingler(3)
+        shingler = Shingler(3)
         for name in set(names):
             cluster.add_set(shingler.get_shingles(name), name)
         num_clusters = len(cluster.get_clusters())

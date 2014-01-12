@@ -12,6 +12,7 @@ from unionfind import UnionFind
 from itertools import imap
 from collections import defaultdict
 from cityhash import CityHash64
+from abc import abstractmethod
 
 
 def long2int(x):
@@ -39,18 +40,19 @@ def chash(x):
     return long2int(CityHash64(x))
 
 
+def shinglify(tokens, shingle_size=2):
+    token_count = len(tokens)
+    if token_count >= shingle_size:
+        for offset in xrange(token_count - shingle_size + 1):
+            yield tuple(tokens[offset:(offset + shingle_size)])
+    else:
+        yield tuple(tokens)
+
+
 class Shingler:
     def __init__(self, n):
         self.n = n
 
-    def get_shingles(self, text):
-        """
-        :rtype : set
-        """
-        pass
-
-
-class SimpleShingler(Shingler):
     def get_shingles(self, text):
         """
 
@@ -58,8 +60,7 @@ class SimpleShingler(Shingler):
         :return: A set of shingles (tuples)
         :rtype: set
         """
-        n_ = self.n
-        return set([text[i:i + n_] for i in range(len(text) - n_ + 1)])
+        return set(shinglify(text, shingle_size=self.n))
 
 
 class WordShingler(Shingler):
@@ -117,16 +118,9 @@ class WordShingler(Shingler):
         :return: a collection of shingles found
         :rtype: set
         """
-        n_ = self.n
-        shingles = set()
         normalized_text = self.normalize(text)
         tokens = self.tokenize(normalized_text)
-        if len(tokens) >= n_:
-            for offset in xrange(len(tokens) - n_ + 1):
-                shingles.add(tuple(tokens[offset:(offset + n_)]))
-        else:
-            shingles.add(tuple(tokens))
-        return shingles
+        return set(shinglify(tokens, self.n))
 
 
 def jaccard_sim(x, y):
@@ -185,17 +179,17 @@ class Signature:
         self.width = width
         self.hashes = self.hash_functions()
 
+    @abstractmethod
     def hash_functions(self):
         """Returns an array of length self.width consisting of different hash functions
         :rtype : list
         """
-        pass
 
+    @abstractmethod
     def get_signature(self, obj):
         """Return the signature for object
         :rtype : list
         """
-        pass
 
 
 class MinHashSignature(Signature):
