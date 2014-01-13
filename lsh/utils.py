@@ -1,7 +1,7 @@
 """
 utils.py
 
-Testing utilities
+utilities
 """
 
 import random

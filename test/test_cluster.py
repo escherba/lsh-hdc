@@ -1,5 +1,5 @@
 import unittest
-from utils import randset
+from lsh.utils import randset
 from lsh import Cluster, jaccard_sim, get_bandwidth
 
 

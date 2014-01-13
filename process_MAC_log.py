@@ -6,13 +6,15 @@ import sys
 import json
 from calendar import timegm
 from datetime import timedelta, datetime
-from dateutil.parser import parse as dateutil_parse
 from collections import Counter
 from itertools import islice
+
+from dateutil.parser import parse as dateutil_parse
+
 from lsh import Cluster, WordShingler
 from lsh.stats import UncertaintySummarizer, \
     MADSummarizer, MADRatioSummarizer, median, mad
-from test.utils import sort_by_length, JsonRepr, read_json_file
+from lsh.utils import sort_by_length, JsonRepr, read_json_file
 
 
 class Options(JsonRepr):
