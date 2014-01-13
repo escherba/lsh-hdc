@@ -1,8 +1,11 @@
 #!/usr/bin/env python2
 
-from test.utils import read_json_file
 from itertools import islice
+
 import matplotlib.pyplot as plt
+
+from lsh.utils import read_json_file
+
 
 for o in islice(read_json_file('examples/times.txt'), 10):
     times = o.get('timestamps', [])

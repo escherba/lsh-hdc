@@ -1,7 +1,7 @@
 __author__ = 'escherba'
 
 import unittest
-from utils import sort_by_length
+from lsh.utils import sort_by_length
 
 
 class MyTestCase(unittest.TestCase):

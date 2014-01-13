@@ -8,11 +8,13 @@ Algorithms based on 'Mining of Massive Datasets'
 import re
 import sys
 import HTMLParser
-from unionfind import UnionFind
-from itertools import imap
+from itertools import imap, izip
 from collections import defaultdict
 from cityhash import CityHash64
 from abc import abstractmethod
+
+from .unionfind import UnionFind
+from .utils import lapply
 
 
 def long2int(x):
@@ -278,7 +280,7 @@ class Cluster:
         self.unionfind = UnionFind()
         self.signer = MinHashSignature(bands * bandwidth)
         self.hasher = LSH(bandwidth)
-        self.hashmap = defaultdict(list)
+        self.hashmaps = lapply(bands, defaultdict, list)
 
     def add_set(self, s, label=None):
         # Set default label for this set
@@ -290,9 +292,9 @@ class Cluster:
         uf_.__getitem__(label)
 
         # Get signature vector and hash it
-        sign_gen = self.signer.get_signature(s)
-        hash_gen = self.hasher.hash(sign_gen)
-        label_gen = imap(self.hashmap.__getitem__, hash_gen)
+        sign_gen = list(self.signer.get_signature(s))
+        hash_gen = list(self.hasher.hash(sign_gen))
+        label_gen = (hf[hs] for hf, hs in izip(self.hashmaps, hash_gen))
 
         # Unite labels with same LSH keys
         for label_list in label_gen:

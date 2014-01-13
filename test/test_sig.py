@@ -1,6 +1,6 @@
 import unittest
 from math import sqrt
-from utils import randset, sigsim
+from lsh.utils import randset, sigsim
 from lsh import MinHashSignature, jaccard_sim
 
 
