@@ -13,7 +13,7 @@ from collections import defaultdict
 from cityhash import CityHash64
 from abc import abstractmethod
 
-from .unionfind import UnionFind
+from omnihack.unionfind import UnionFind
 from .utils import lapply
 
 
