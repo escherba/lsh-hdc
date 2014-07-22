@@ -1,5 +1,6 @@
 import unittest
 from lsh import Cluster, WordShingler, Shingler
+from pkg_resources import resource_filename
 
 
 class TestFiles(unittest.TestCase):
@@ -7,8 +8,8 @@ class TestFiles(unittest.TestCase):
         """
         Should return 352 clusters of names.
         """
-        with open('data/perrys.csv', 'r') as f:
-            # strip off newline characters
+        filename = resource_filename(__name__, 'data/perrys.csv')
+        with open(filename, 'r') as f:
             names = [line.rstrip() for line in f]
         cluster = Cluster(bands=2, bandwidth=4)
         shingler = Shingler(3)
@@ -22,7 +23,9 @@ class TestFiles(unittest.TestCase):
         """
         Should return 97 clusters of bills.
         """
-        lines = open('data/bills100.txt', 'r').readlines()
+        filename = resource_filename(__name__, 'data/bills100.txt')
+        with open(filename, 'r') as fh:
+            lines = fh.readlines()
         cluster = Cluster(bands=2, bandwidth=4)
         shingler = WordShingler(4)
         for line in lines[0:100]:

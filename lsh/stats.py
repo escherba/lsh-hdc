@@ -2,9 +2,18 @@ from collections import Counter
 from functools import partial
 from itertools import imap
 from math import log, fabs
-from numpy import median
 
 __author__ = 'escherba'
+
+
+def median(xs):
+    xss = sorted(xs)
+    length = len(xss)
+    half_length = length / 2
+    if length % 2:
+        return xss[half_length]
+    else:
+        return (xss[half_length] + xss[half_length - 1]) / 2.0
 
 
 def entropy(N, n):

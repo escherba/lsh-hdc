@@ -1,5 +1,16 @@
 *.pyc
-*.swp
+*.orig
+*.sw[op]
 
 .idea/
 examples/
+
+.ropeproject/
+
+env/
+
+*.egg-info/
+*.egg/
+*.egg
+nosetests.xml
+.coverage
