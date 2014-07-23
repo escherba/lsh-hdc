@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.0.18"
+__version__ = "0.0.19"
 
 
 """
@@ -16,11 +16,12 @@ import heapq
 from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from collections import defaultdict
-from cityhash import CityHash64, CityHash128
 from abc import abstractmethod
-from lsh.unionfind import UnionFind
-from lsh.utils import totuple, tsorted
 from HTMLParser import HTMLParser
+
+from cityhash import CityHash64, CityHash128
+from pymaptools import UnionFind
+from lsh.utils import totuple, tsorted
 
 
 LOG = getLogger(__name__)

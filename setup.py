@@ -8,12 +8,13 @@ requirements = resource_string(
 dev_requirements = resource_string(
     __name__, 'dev_requirements.txt').splitlines()
 
-# match -f, -e, and so on
-match_prefix = partial(re.match, re.compile('^\s*-[a-z]\s+'))
+# regex for finding URLs in strings
+GRUBER_URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
+contains_url = partial(re.findall, GRUBER_URLINTEXT_PAT)
 
-dependency_links = filter(match_prefix, requirements)
-install_requires = filter(lambda r: not match_prefix(r), requirements)
-tests_require = filter(lambda r: not match_prefix(r), dev_requirements)
+dependency_links = filter(contains_url, requirements)
+install_requires = filter(lambda r: not contains_url(r), requirements)
+tests_require = filter(lambda r: not contains_url(r), dev_requirements)
 
 
 setup(
