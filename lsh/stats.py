@@ -7,13 +7,17 @@ __author__ = 'escherba'
 
 
 def median(xs):
+    """
+    :param xs: A list of numbers
+    :type xs: list
+    :return:  Median
+    :rtype : float
+    """
     xss = sorted(xs)
     length = len(xss)
-    half_length = length / 2
-    if length % 2:
-        return xss[half_length]
-    else:
-        return (xss[half_length] + xss[half_length - 1]) / 2.0
+    if not length % 2:
+        return (xss[length / 2] + xss[length / 2 - 1]) / 2.0
+    return xss[length / 2]
 
 
 def entropy(N, n):
@@ -93,7 +97,8 @@ def mad(v):
     return median([fabs(x - m) for x in v])
 
 
-class Summarizer:
+class Summarizer(object):
+
     def add_object(self, *args, **kwargs):
         pass
 
@@ -232,3 +237,90 @@ class UncertaintySummarizer(Summarizer):
         except ZeroDivisionError:
             result = None
         return result
+
+
+class FeatureClusterSummarizer:
+
+    def __init__(self):
+        self.label2features = dict()
+
+    def add_features(self, label, features):
+        if label in self.label2features:
+            raise RuntimeError("Duplicate label")
+        self.label2features[label] = features
+
+    def summarize_clusters(self, clusters):
+        s = UncertaintySummarizer()
+        for cluster in clusters:
+            universe = Counter()
+            for label in cluster:
+                features = self.label2features[label]
+                universe.update(features)
+            s.add_object(universe, len(cluster))
+        return s.get_summary()
+
+
+class StatResult:
+    def __init__(self):
+        self.TP = 0
+        self.FP = 0
+        self.FN = 0
+        self.TN = 0
+
+    def get_recall(self, pretty=False):
+        """
+        :rtype : float, str
+        """
+        try:
+            result = float(self.TP) / (self.TP + self.FN)
+        except ZeroDivisionError:
+            result = float('nan')
+        return '{:.1%}'.format(result) if pretty else result
+
+    def get_precision(self, pretty=False):
+        """
+        :rtype : float, str
+        """
+        try:
+            result = float(self.TP) / (self.TP + self.FP)
+        except ZeroDivisionError:
+            result = float('nan')
+        return '{:.1%}'.format(result) if pretty else result
+
+    def __repr__(self):
+        return str(dict(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN))
+
+    def dict(self):
+        """
+        :rtype : dict
+        """
+        return dict(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
+
+
+def get_stats(clusters, pred, threshold=3):
+    """
+    :param clusters: A list of clusters (list of lists)
+    :type clusters: list
+    :param pred: A predicate that acts on a label and returns
+                 True or False
+    :type pred: function
+    :param threshold: Threshold at which we call a cluster
+    :type threshold: 3
+    :return: an instance of StatResult
+    :rtype: StatResult
+    """
+    c = StatResult()
+    for i, cluster in enumerate(clusters):
+        if len(cluster) >= threshold:
+            for label in cluster:
+                if pred(label):
+                    c.TP += 1  # TRUE POSITIVES
+                else:
+                    c.FP += 1  # FALSE POSITIVES
+        else:
+            for label in cluster:
+                if pred(label):
+                    c.FN += 1  # FALSE NEGATIVES
+                else:
+                    c.TN += 1  # TRUE NEGATIVES
+    return c

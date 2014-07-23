@@ -1,2 +1,2 @@
 -e git+https://github.com/escherba/cityhash.git#egg=cityhash
--e git+https://github.com/escherba/omnihack.git#egg=omnihack
+-e git+https://github.com/escherba/pymaptools.git#egg=pymaptools

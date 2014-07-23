@@ -7,7 +7,7 @@ class TestCluster(unittest.TestCase):
 
     def test_empty(self):
         """Should place the two empty sets into a separate cluster"""
-        cluster = Cluster(bands=5, bandwidth=2)
+        cluster = Cluster(width=10, bandwidth=2)
         cluster.add_set("abcdefg")
         cluster.add_set("abcdefghi")
         cluster.add_set("")
@@ -17,21 +17,21 @@ class TestCluster(unittest.TestCase):
     def test_same_set(self):
         """A set should be clustered with itself"""
         s = randset()
-        cluster = Cluster(bands=5, bandwidth=2)
+        cluster = Cluster(width=10, bandwidth=2)
         cluster.add_set(s)
         cluster.add_set(s)
         self.assertEqual(len(cluster.get_clusters()), 1)
 
     def test_similar_sets(self):
         """Two similar sets should be clustered"""
-        cluster = Cluster(bands=5, bandwidth=2)
+        cluster = Cluster(width=10, bandwidth=2)
         cluster.add_set("abcdefg")
         cluster.add_set("abcdefghi")
         self.assertEqual(len(cluster.get_clusters()), 1)
 
     def test_dissimilar_sets(self):
         """Two non-similar sets should not be clustered"""
-        cluster = Cluster(bands=5, bandwidth=2)
+        cluster = Cluster(width=10, bandwidth=2)
         cluster.add_set("12yu5abcdef")
         cluster.add_set("1234567890z")
         print cluster.get_clusters()
@@ -56,7 +56,7 @@ class TestCluster(unittest.TestCase):
                 threshold = float(threshold) / 100
                 bandwidth = get_bandwidth(dim, threshold)
                 num_bands = int(dim / bandwidth)
-                cluster = Cluster(bands=num_bands,
+                cluster = Cluster(width=num_bands * bandwidth,
                                   bandwidth=bandwidth)
                 cluster.add_set(sets[0])
                 cluster.add_set(sets[1])

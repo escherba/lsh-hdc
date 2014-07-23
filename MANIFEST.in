@@ -1,1 +1,3 @@
 include tests/data/*
+include requirements.txt
+include dev_requirements.txt
