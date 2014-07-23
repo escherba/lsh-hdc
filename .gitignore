@@ -8,6 +8,7 @@ examples/
 .ropeproject/
 
 env/
+bin
 
 *.egg-info/
 *.egg/

@@ -1,0 +1,4 @@
+nose
+coverage
+nosexcover
+mock

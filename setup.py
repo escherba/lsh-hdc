@@ -1,34 +1,35 @@
+import re
+from functools import partial
 from setuptools import setup, find_packages
 from pkg_resources import resource_string
 
+requirements = resource_string(
+    __name__, 'requirements.txt').splitlines()
+dev_requirements = resource_string(
+    __name__, 'dev_requirements.txt').splitlines()
 
-tests_require = [
-    'nose>=1.0',
-    'coverage',
-    'nosexcover',
-    'mock>=1.0'
-]
+# regex for finding URLs in strings
+GRUBER_URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
+contains_url = partial(re.findall, GRUBER_URLINTEXT_PAT)
+
+dependency_links = filter(contains_url, requirements)
+install_requires = filter(lambda r: not contains_url(r), requirements)
+tests_require = filter(lambda r: not contains_url(r), dev_requirements)
+
 
 setup(
     name="lsh-hdc",
-    version="0.0.1",
+    version="0.0.19",
     author="Eugene Scherba",
     author_email="escherba@livefyre.com",
-    url='https://github.com/escherba/lsh-hdc',
-    keywords="LSH-based high-dimensional clustering",
+    description=("Algorithms for locality-sensitive hashing on text data"),
+    url='https://github.com/Livefyre/lfpylib/tree/lsh/lsh',
     packages=find_packages(exclude=['tests', 'scripts']),
-    license='LICENSE',
-    setup_requires=tests_require,
-    extras_require={
-        'plot': [
-            'matplotlib>=1.3.1'
-        ],
-        'dev': [
-            'ipython>=2.1.0'
-        ] + tests_require
-    },
-    test_suite='nose.collector',
+    long_description="LSH algo that uses MinHash signatures",
+    install_requires=install_requires,
+    dependency_links=dependency_links,
     tests_require=tests_require,
-    description="High-dimensional clustering using locality-sensitive hashing",
-    long_description=resource_string(__name__, 'README.md')
+    test_suite='nose.collector',
+    classifiers=[
+    ],
 )

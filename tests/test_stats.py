@@ -6,7 +6,7 @@ from lsh.stats import UncertaintySummarizer, ExplainedVarianceSummarizer
 from collections import Counter
 
 
-class MyTestCase(unittest.TestCase):
+class TestStats(unittest.TestCase):
     def test_uncertainty_index(self):
         """Expect higher index with better clustering
         """

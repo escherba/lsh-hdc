@@ -1,13 +1,24 @@
 """
 utils.py
 
-utilities
+Various utilities
 """
 
 import random
 import operator
 import json
+import string
 from itertools import imap
+
+
+def totuple(a):
+    """convert possible scalar to tuple"""
+    return a if type(a) == tuple else (a,)
+
+
+def tsorted(a):
+    """Sort a tuple"""
+    return tuple(sorted(a))
 
 
 def read_json_file(file_path):
@@ -107,6 +118,14 @@ def randset():
     return tuple(set(gapply(n, random.choice, range(k))))
 
 
+alphabet = string.ascii_lowercase + string.ascii_uppercase + string.digits
+
+
+def randstr(n):
+    """Return a random string of length n"""
+    return ''.join(random.choice(alphabet) for _ in xrange(n))
+
+
 def sigsim(x, y, dim):
     """Return the similarity of the two signatures
     :param x: signature 1
@@ -134,4 +153,3 @@ def sort_by_length(els, reverse=True):
     return imap(first,
                 sorted(((s, len(s)) for s in els),
                        key=operator.itemgetter(1), reverse=reverse))
-
