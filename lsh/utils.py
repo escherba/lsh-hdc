@@ -6,6 +6,29 @@ import json
 import string
 from itertools import imap
 from abc import abstractmethod
+from HTMLParser import HTMLParser
+
+
+class Normalizer(object):
+    """Abstract tokenizer interface"""
+
+    @abstractmethod
+    def normalize(self, text):
+        """Tokenize text"""
+
+
+class HTMLNormalizer(Normalizer):
+    def __init__(self):
+        self.html_parser = HTMLParser()
+
+    def normalize(self, text):
+        """
+        :param text: Input text
+        :return: str, unicode
+        :return: normalized text
+        :rtype: str, unicode
+        """
+        return self.html_parser.unescape(text).lower()
 
 
 class Tokenizer(object):

@@ -1,0 +1,52 @@
+model:
+  redis_url: "redis://127.0.0.1/3"
+  redis_options:
+    enabled: false
+    db_offset: 9  # Redis DB offset
+    namespace: "MH."  # Key prefix in redis
+
+  max_returned: 10  # Max number of items returned from the cluster.
+  reset_on_init: true  # Clear all buckets on init.
+  use_adaptive_clock: true  # whether to use real clock or adaptive
+
+  kmin: 4  # number of minima (k) in minhash
+  sig_width: 16  # Length of minhash signature. Must be a multiple of kmin. Should usually also be a multiple of lsh_bandwidth.
+  min_support: 1  # Minimum number of matching keys (>=1)
+
+  windowing:
+    num_buckets: 6  # Number of time buckets
+    window_size: 3600  # Duration of a window in seconds
+  lsh_options:
+    bandwidth: 3  # Rows per LSH band. Setting this to 1 effectively turns off LSH (do not try this in production...)
+    scheme: "b2"  # LSH banding scheme. Use a0 for non-overlapping bands, a1 for circularly overlapping, ax (where x is bandwidth)
+  shingler:
+    span: 3       # Length of shingles (in words)
+    skip: 0       # How many words to skip
+    unique: true  # Discard duplicates
+  sketch:
+    enabled: true
+    algorithm: "simhash"  # [simhash, minhash]
+    size: 2  # Length of sketch vector, in bytes
+    resemblance: 0.75  # Minimum Hamming similarity of bit vectors (set to zero to remove this constraint)
+    shingler:
+      span: 3       # Length of shingles (in words)
+      skip: 1       # How many words to skip
+      unique: true  # Discard duplicates
+
+
+logging:
+    version: 1
+    formatters:
+      simple:
+        format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    handlers:
+      console:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: simple
+        stream: ext://sys.stderr
+    loggers:
+      bulk_svc:
+        level: DEBUG
+        handlers: [console]
+        propagate: no

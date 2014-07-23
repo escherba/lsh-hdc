@@ -1,49 +1,131 @@
 import unittest
-import os
 import sys
 import json
+import yaml
+from itertools import imap
+from operator import itemgetter
+from logging import getLogger, config as logging_config
+from functools import partial
 from itertools import islice
-from lsh import Cluster, Shingler, MinHashSignature, LSHC, \
-    SimHashSignature, Normalizer
-from lsh.utils import RegexTokenizer
+from pkg_resources import resource_filename
+
+from content_rules import ContentFilter
+from lsh import Shingler, MinHashSignature, LSHC, SimHashSignature, \
+    MinHashSketchSignature, MinHashCluster as Cluster, Cluster as SimpleCluster
+from lsh.utils import RegexTokenizer, HTMLNormalizer, read_json_file
 from lsh.stats import FeatureClusterSummarizer, get_stats
+from pymaptools.utils import deepupdate
+
+get_resource_name = partial(resource_filename, __name__)
+
+mac_config_filename = get_resource_name('config/mac.yaml')
+mac_config = yaml.load(open(mac_config_filename, 'r'))
+logging_config.dictConfig(mac_config['logging'])
+LOG = getLogger(__name__)
 
 
-def abs_path(rel_path):
-    return os.path.join(os.path.dirname(__file__), rel_path)
+class SketchModel(object):
+    """A pseudo-enum of supported models"""
+    simhash = 0
+    minhash = 1
 
 
 class TestFiles(unittest.TestCase):
 
-    def test_unicode_tokenizer(self):
+    def prepare_for_mac(self, cfg_override=None, logger=LOG):
+
+        self.resource_file = get_resource_name('data/unicode.json')
+
+        # cfg_override overrides everything specified in the local config file
+        cfg = mac_config['model']
+        if cfg_override is not None:
+            deepupdate(cfg, cfg_override)
+        self.cfg = cfg  # for record-keeping
+
+        common_kwargs = dict(
+            normalizer=HTMLNormalizer(),
+            tokenizer=RegexTokenizer()
+        )
+
+        # Set options
+        self.logger = logger
+        self.max_returned = cfg['max_returned']
+        self.content_filter = ContentFilter(cfg)
+        self.min_support = cfg['min_support']
+
+        # Configure minhash signer
+        sig_width = cfg['sig_width']
+        lsh_hasher = LSHC(width=sig_width, **cfg['lsh_options'])
+        self.signer = MinHashSignature(sig_width,
+                                       lsh_hasher=lsh_hasher,
+                                       kmin=cfg['kmin'])
+
+        # Configure shingler
+        cfg_key_shingle = cfg['shingler']
+        cfg_key_shingle.update(common_kwargs)
+        self.shingler = Shingler(**cfg_key_shingle)
+
+        # Configure sketch comparison algorithm
+        cfg_sketch = cfg['sketch']
+        self.sketch_enabled = cfg_sketch['enabled']
+        if self.sketch_enabled:
+            algorithm_name = cfg_sketch['algorithm']
+            try:
+                sketch_algorithm = getattr(SketchModel, algorithm_name)
+            except AttributeError:
+                raise RuntimeError("Unknown sketch model specified: '%s'"
+                                   % algorithm_name)
+            sketch_bits = cfg_sketch['size'] * 8
+            cfg_sketch_shingle = cfg_sketch['shingler']
+            cfg_sketch_shingle.update(common_kwargs)
+            self.sketch_shingler = Shingler(**cfg_sketch_shingle)
+            self.sketch_resemblance = cfg_sketch['resemblance']
+            if sketch_algorithm == SketchModel.simhash:
+                self.sketch_signer = SimHashSignature(bit_depth=sketch_bits)
+            elif sketch_algorithm == SketchModel.minhash:
+                self.sketch_signer = MinHashSketchSignature(sketch_bits)
+
+    def test_mac(self):
         """Expect to match number of clusters using simhash"""
-        minhash_signer = MinHashSignature(6, lsh_hasher=LSHC(2, width=6))
-        simhash_signer = SimHashSignature(63)
+        self.prepare_for_mac()
 
-        container = []
-        with open(abs_path('data/unicode.json'), 'r') as fh:
-            for line in fh:
-                container.append(json.loads(line))
+        cluster_builder = SimpleCluster()
+        min_support = self.min_support
+        for i, obj in enumerate(imap(itemgetter('object'),
+                                     read_json_file(self.resource_file))):
+            if not i % 1000:
+                print "Processing line " + str(i)
+            obj_content = obj['content']
+            obj_post_id = obj['post_id']
+            obj_user_id = obj['user_id']
 
-        self.assertEqual(len(container), 7)
+            # Step 1: Extract features
+            if not self.content_filter.accept(obj):
+                features = self.shingler.get_shingles(obj_content,
+                                                    prefix=obj_user_id)
+                keys = self.signer.get_signature(features)
+                if self.sketch_enabled:
+                    sketch_features = self.sketch_shingler.get_shingles(
+                        obj_content)
+                    sketch = self.sketch_signer.get_signature(sketch_features)
+                else:
+                    sketch = None
 
-        feature_extractor = Shingler(span=3,
-                                     tokenizer=RegexTokenizer(),
-                                     normalizer=Normalizer())
+                # Step 2: Cluster given keys, sketch
+                cluster_builder.add_set(keys, label=obj_post_id)
 
-        for post in container:
-            post_obj = post['object']
-            content = post_obj['content']
-            features = feature_extractor.get_shingles(content)
-            minhash_keys = minhash_signer.get_signature(features)
-            simhash = simhash_signer.get_signature(features)
-            print "ok"
+        clusters = cluster_builder.get_clusters()
+        for cluster in clusters:
+            if len(cluster) > 1:
+                print cluster
+        print len(clusters)
+        print len([x for x in clusters if len(x) > 1])
         # TODO: finish writing this test
 
     def test_names(self):
         """Should return 281 clusters of names.
         """
-        with open(abs_path('data/perrys.csv'), 'r') as f:
+        with open(get_resource_name('data/perrys.csv'), 'r') as f:
             data = set(line.rstrip() for line in f)
         cluster = Cluster(width=20, bandwidth=5)
         shingler = Shingler(3)
@@ -60,7 +142,7 @@ class TestFiles(unittest.TestCase):
     def test_names_kmin(self):
         """Should return 252 clusters of names.
         """
-        with open(abs_path('data/perrys.csv'), 'r') as f:
+        with open(get_resource_name('data/perrys.csv'), 'r') as f:
             data = set(line.rstrip() for line in f)
         cluster = Cluster(width=20, bandwidth=5, kmin=2)
         shingler = Shingler(3)
@@ -70,8 +152,8 @@ class TestFiles(unittest.TestCase):
             s.add_features(name, shingles)
             cluster.add_set(shingles, name)
         clusters = cluster.get_clusters()
-        #for cluster in clusters:
-        #    print cluster
+        # for cluster in clusters:
+        #     print cluster
         ti = s.summarize_clusters(clusters)
         self.assertEqual(len(clusters), 252)
         self.assertAlmostEqual(ti, 0.9732840816954408)
@@ -79,7 +161,7 @@ class TestFiles(unittest.TestCase):
     def test_names_kmin_scheme(self):
         """Should return 145 clusters of names.
         """
-        with open(abs_path('data/perrys.csv'), 'r') as f:
+        with open(get_resource_name('data/perrys.csv'), 'r') as f:
             data = set(line.rstrip() for line in f)
         cluster = Cluster(width=20, bandwidth=5, kmin=2, lsh_scheme="a1")
         shingler = Shingler(3)
@@ -89,8 +171,8 @@ class TestFiles(unittest.TestCase):
             s.add_features(name, shingles)
             cluster.add_set(shingles, name)
         clusters = cluster.get_clusters()
-        #for cluster in clusters:
-        #    print cluster
+        # for cluster in clusters:
+        #     print cluster
         ti = s.summarize_clusters(clusters)
         self.assertEqual(len(clusters), 145)
         self.assertAlmostEqual(ti, 0.9693895180932199)
@@ -98,7 +180,7 @@ class TestFiles(unittest.TestCase):
     def test_bills(self):
         """Should return 97 clusters of bills.
         """
-        with open(abs_path('data/bills100.txt'), 'r') as f:
+        with open(get_resource_name('data/bills100.txt'), 'r') as f:
             data = [line.rstrip().split('|') for line in f]
         cluster = Cluster(width=20, bandwidth=5)
         shingler = Shingler(span=3, tokenizer=RegexTokenizer())
@@ -113,11 +195,13 @@ class TestFiles(unittest.TestCase):
         self.assertAlmostEqual(ti, 1.0)
 
     @staticmethod
-    def run_simulated_manually(filepath, universe_size=None, lines_to_read=sys.maxint):
-        with open(abs_path(filepath), 'r') as f:
+    def run_simulated_manually(filepath, universe_size=None,
+                               lines_to_read=sys.maxint):
+        with open(get_resource_name(filepath), 'r') as f:
             data = [line.rstrip().split(' ')
                     for line in islice(f, lines_to_read)]
-        cluster = Cluster(width=20, bandwidth=5, lsh_scheme="a2", universe_size=universe_size)
+        cluster = Cluster(width=20, bandwidth=5, lsh_scheme="a2",
+                          universe_size=universe_size)
         shingler = Shingler(span=3)
         s = FeatureClusterSummarizer()
         content_dict = dict()
@@ -138,11 +222,13 @@ class TestFiles(unittest.TestCase):
                     uindex=s.summarize_clusters(clusters))
 
     @staticmethod
-    def run_simulated_manually_b(filepath, universe_size=None, lines_to_read=sys.maxint):
-        with open(abs_path(filepath), 'r') as f:
+    def run_simulated_manually_b(filepath, universe_size=None,
+                                 lines_to_read=sys.maxint):
+        with open(get_resource_name(filepath), 'r') as f:
             data = [line.rstrip().split(' ')
                     for line in islice(f, lines_to_read)]
-        cluster = Cluster(width=15, bandwidth=3, lsh_scheme="b3", kmin=3, universe_size=universe_size)
+        cluster = Cluster(width=15, bandwidth=3, lsh_scheme="b3", kmin=3,
+                          universe_size=universe_size)
         shingler = Shingler(span=3)
         s = FeatureClusterSummarizer()
         content_dict = dict()
@@ -182,15 +268,15 @@ class TestFiles(unittest.TestCase):
         ))
 
     def test_simulated_b(self, universe_size=None):
-        results = TestFiles.run_simulated_manually_b('data/simulated.txt',
-                                                     lines_to_read=1000,
-                                                     universe_size=universe_size)
+        results = TestFiles.run_simulated_manually_b(
+            'data/simulated.txt', lines_to_read=1000,
+            universe_size=universe_size)
         c = results['stats']
         ti = results['uindex']
         recall = c.get_recall()
         precision = c.get_precision()
         self.assertGreaterEqual(recall, 0.10)
-        #self.assertGreaterEqual(precision, 0.09836065573770492)
+        # previous result for precision: 0.09836065573770492
         self.assertGreaterEqual(precision, 0.09090909090909091)
         print json.dumps(dict(
             stats=c.dict(),

@@ -16,7 +16,6 @@ from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from collections import defaultdict
 from abc import abstractmethod
-from HTMLParser import HTMLParser
 
 from cityhash import CityHash64, CityHash128
 from pymaptools import UnionFind
@@ -350,20 +349,6 @@ class Shingler:
             return list(shingles)
 
 
-class Normalizer:
-    def __init__(self):
-        self.html_parser = HTMLParser()
-
-    def normalize(self, text):
-        """
-        :param text: Input text
-        :return: str, unicode
-        :return: normalized text
-        :rtype: str, unicode
-        """
-        return self.html_parser.unescape(text).lower()
-
-
 def jaccard_sim(x, y):
     """Return Jaccard similarity between two sets
 
@@ -682,7 +667,7 @@ class LSHC:
             yield '{}:{}'.format(prefix, CityHash64("salt" + repr(band) + "tlas"))
 
 
-class Cluster:
+class Cluster(object):
     """Clusters sets with Jaccard similarity above threshold with high
     probability.
 
@@ -691,23 +676,9 @@ class Cluster:
     2. Use LSH to map similar signatures to same buckets
     3. Use UnionFind to merge buckets containing same values
     """
-    def __init__(self, width=12, bandwidth=3, lsh_scheme="a0", universe_size=None, kmin=1):
-        """
-
-        :param width: Number of bands
-        :type width: int
-        :param lsh_scheme: Adjusts number of combinatorial bands
-        :type lsh_scheme: str
-        :param bandwidth: Number of rows per band
-        :type bandwidth: int
-        :param universe_size: A prime number of size close to token universe cardinality
-        :type universe_size: long
-        """
+    def __init__(self, signer=None):
         self.union_find = UnionFind()
-        self.signer = MinHashSignature(width,
-                                       lsh_hasher=LSHC(bandwidth, width=width, scheme=lsh_scheme),
-                                       universe_size=universe_size,
-                                       kmin=kmin)
+        self.signer = signer
         self.hash_map = defaultdict(list)
 
     def add_set(self, s, label=None):
@@ -720,7 +691,9 @@ class Cluster:
         uf_.__getitem__(label)
 
         # Get signature vector and hash it
-        hashed_signature = self.signer.get_signature(s)
+        hashed_signature = s \
+            if self.signer is None \
+            else self.signer.get_signature(s)
         label_gen = imap(self.hash_map.__getitem__, hashed_signature)
 
         # Unite labels with same LSH keys
@@ -740,3 +713,23 @@ class Cluster:
         :rtype: list
         """
         return self.union_find.sets()
+
+
+class MinHashCluster(Cluster):
+    def __init__(self, width=12, bandwidth=3, lsh_scheme="a0", universe_size=None, kmin=1):
+        """
+
+        :param width: Number of bands
+        :type width: int
+        :param lsh_scheme: Adjusts number of combinatorial bands
+        :type lsh_scheme: str
+        :param bandwidth: Number of rows per band
+        :type bandwidth: int
+        :param universe_size: A prime number of size close to token universe cardinality
+        :type universe_size: long
+        """
+        signer = MinHashSignature(width,
+                                  lsh_hasher=LSHC(bandwidth, width=width, scheme=lsh_scheme),
+                                  universe_size=universe_size,
+                                  kmin=kmin)
+        super(MinHashCluster, self).__init__(signer=signer)
