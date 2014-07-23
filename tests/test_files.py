@@ -10,7 +10,7 @@ from itertools import islice
 from pkg_resources import resource_filename
 
 from content_rules import ContentFilter
-from lsh import Shingler, MinHashSignature, LSHC, SimHashSignature, \
+from lsh import Shingler, MinHashSignature, LSHC, SimHashSignature, hamming, \
     MinHashSketchSignature, MinHashCluster as Cluster, Cluster as SimpleCluster
 from lsh.utils import RegexTokenizer, HTMLNormalizer, read_json_file
 from lsh.stats import FeatureClusterSummarizer, get_stats
@@ -89,7 +89,9 @@ class TestFiles(unittest.TestCase):
         """Expect to match number of clusters using simhash"""
         self.prepare_for_mac()
 
-        cluster_builder = SimpleCluster()
+        sketch_resemblance = self.cfg['sketch']['resemblance']
+        sketch_sim_fn = lambda a, b: hamming(a, b) >= sketch_resemblance
+        cluster_builder = SimpleCluster(sketch_sim_fn=sketch_sim_fn)
         min_support = self.min_support
         for i, obj in enumerate(imap(itemgetter('object'),
                                      read_json_file(self.resource_file))):
@@ -112,7 +114,7 @@ class TestFiles(unittest.TestCase):
                     sketch = None
 
                 # Step 2: Cluster given keys, sketch
-                cluster_builder.add_set(keys, label=obj_post_id)
+                cluster_builder.add_set(keys, label=obj_post_id, sketch=sketch)
 
         clusters = cluster_builder.get_clusters()
         for cluster in clusters:
