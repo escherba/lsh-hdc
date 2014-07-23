@@ -4,8 +4,8 @@ import random
 from cityhash import CityHash128
 from lsh.utils import randset, sigsim, randstr
 from lsh import MinHashSignature, SimHashSignature, \
-    jaccard_sim, hamming_ndist, Shingler, RegexTokenizer, \
-    from_bitstring, bitstring_padded
+    jaccard_sim, hamming, Shingler, from_bitstring, bitstring_padded
+from lsh.utils import RegexTokenizer
 
 
 class TestSig(unittest.TestCase):
@@ -99,17 +99,17 @@ class TestSig(unittest.TestCase):
 
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("")
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 25)
 
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracadabra")
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 0)
 
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracdabra")
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 6)
 
     def test_simhash_feature_weights(self):
@@ -120,37 +120,37 @@ class TestSig(unittest.TestCase):
 
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracdabra")
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 6)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 0))
         sig2 = sh.get_signature("abracdabra", ("dogs", 0))
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 6)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 0))
         sig2 = sh.get_signature("abracadabra", ("dogs", 0))
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 0)
 
         sig1 = sh.get_signature("abracadabra", ("ca", 4))
         sig2 = sh.get_signature("abracadabra", ("do", 4))
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 0)
 
         sig1 = sh.get_signature("abracadabra", ("ca", 5))
         sig2 = sh.get_signature("abracadabra", ("do", 5))
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 7)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 200))
         sig2 = sh.get_signature("abracadabra", ("dogs", 200))
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 17)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 10))
         sig2 = sh.get_signature("abracadabra", ("cats", 10))
-        dist = hamming_ndist(sig1, sig2)
+        dist = hamming(sig1, sig2)
         self.assertEqual(dist, 0)
 
     def test_signature_similarity(self):

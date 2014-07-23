@@ -7,11 +7,11 @@ package: env
 	$(PYTHON) setup.py bdist_egg
 	$(PYTHON) setup.py sdist
 
+test: env dev
+	$(PYENV) nosetests $(NOSEARGS)
+
 dev: env/bin/activate dev_requirements.txt
 	$(PYENV) pip install -e . -r dev_requirements.txt
-
-test: env
-	$(PYENV) nosetests $(NOSEARGS)
 
 clean:
 	$(PYTHON) setup.py clean

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 __version__ = "0.0.19"
 
 
@@ -13,11 +12,11 @@ import sys
 import operator
 import math
 import heapq
+from functools import partial
 from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from collections import defaultdict
 from abc import abstractmethod
-from HTMLParser import HTMLParser
 
 from cityhash import CityHash64, CityHash128
 from pymaptools import UnionFind
@@ -114,6 +113,7 @@ def hamming_idist(s, t):
     :rtype: int
     """
 
+    # TODO: move this into utils
     d = len(s) - len(t)
     if d > 0:
         t += [0] * d
@@ -122,7 +122,7 @@ def hamming_idist(s, t):
     return sum(ch1 != ch2 for ch1, ch2 in izip(s, t))
 
 
-def hamming_ndist(a, b):
+def hamming(a, b):
     """Return the Hamming distance between bits of two numbers
 
     :param a: some number
@@ -132,6 +132,8 @@ def hamming_ndist(a, b):
     :returns: hamming distance between two numbers
     :rtype: int
     """
+
+    # TODO: move this into utils
     return bitlist(a ^ b).count(1)
 
 
@@ -349,51 +351,6 @@ class Shingler:
             return set(shingles)
         else:
             return list(shingles)
-
-
-class Tokenizer(object):
-    """Abstract tokenizer interface"""
-
-    @abstractmethod
-    def tokenize(self, text):
-        """Tokenize text"""
-
-
-class RegexTokenizer(Tokenizer):
-    def __init__(self, pattern=None):
-        if pattern is None:
-            """
-            pattern = ur'(?u)\w+'
-            pattern = ur'(?:\B[#@$£€¥₩฿])?(?u)\w+(?:[%\+]\B)?'
-            pattern = ur'''
-                        (?:                # Either URL
-                        http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+
-                        |                  # or
-                        (?:\B[#@$£€¥₩฿])?  # (preceded by optional pound-, at-, or currency signs)
-                        (?u)\w+            # a Unicode word
-                        (?:[%\+]\B)?       # optionally followed by percentage or plus signs
-                        )
-                        '''
-            """
-            pattern = ur'(?u)\w+'
-        self.r = re.compile(pattern, (re.VERBOSE | re.UNICODE))
-
-    def tokenize(self, text):
-        return self.r.findall(text)
-
-
-class Normalizer:
-    def __init__(self):
-        self.html_parser = HTMLParser()
-
-    def normalize(self, text):
-        """
-        :param text: Input text
-        :return: str, unicode
-        :return: normalized text
-        :rtype: str, unicode
-        """
-        return self.html_parser.unescape(text).lower()
 
 
 def jaccard_sim(x, y):
@@ -714,7 +671,7 @@ class LSHC:
             yield '{}:{}'.format(prefix, CityHash64("salt" + repr(band) + "tlas"))
 
 
-class Cluster:
+class Cluster(object):
     """Clusters sets with Jaccard similarity above threshold with high
     probability.
 
@@ -723,47 +680,40 @@ class Cluster:
     2. Use LSH to map similar signatures to same buckets
     3. Use UnionFind to merge buckets containing same values
     """
-    def __init__(self, width=12, bandwidth=3, lsh_scheme="a0", universe_size=None, kmin=1):
-        """
-
-        :param width: Number of bands
-        :type width: int
-        :param lsh_scheme: Adjusts number of combinatorial bands
-        :type lsh_scheme: str
-        :param bandwidth: Number of rows per band
-        :type bandwidth: int
-        :param universe_size: A prime number of size close to token universe cardinality
-        :type universe_size: long
-        """
+    def __init__(self, signer=None, sketch_sim_fn=lambda x, y: True):
         self.union_find = UnionFind()
-        self.signer = MinHashSignature(width,
-                                       lsh_hasher=LSHC(bandwidth, width=width, scheme=lsh_scheme),
-                                       universe_size=universe_size,
-                                       kmin=kmin)
+        self.signer = signer
         self.hash_map = defaultdict(list)
+        self.sketch_sim_fn = sketch_sim_fn
 
-    def add_set(self, s, label=None):
+    def add_set(self, s, label=None, sketch=None):
         # Set default label for this set
         if not label:
             label = s
 
         # Add to union-find structure
-        uf_ = self.union_find
-        uf_.__getitem__(label)
+        uf = self.union_find
+        uf.__getitem__(label)
 
         # Get signature vector and hash it
-        hashed_signature = self.signer.get_signature(s)
+        hashed_signature = s \
+            if self.signer is None \
+            else self.signer.get_signature(s)
         label_gen = imap(self.hash_map.__getitem__, hashed_signature)
 
+        similar_to = partial(self.sketch_sim_fn, sketch)
         # Unite labels with same LSH keys
         for label_list in label_gen:
             if label_list:
-                first_label = label_list[0]
-                if label != first_label:
-                    label_list.append(label)
-                    uf_.union(first_label, label)
+                fst_label = label_list[0][0]
+                good_lbl_count = \
+                    len([x for x in label_list if similar_to(x[1])])
+                if good_lbl_count > 0:
+                    if label != fst_label:
+                        label_list.append((label, sketch))
+                        uf.union(fst_label, label)
             else:
-                label_list.append(label)
+                label_list.append((label, sketch))
 
     def get_clusters(self):
         """
@@ -772,3 +722,26 @@ class Cluster:
         :rtype: list
         """
         return self.union_find.sets()
+
+
+class MinHashCluster(Cluster):
+    def __init__(self, width=12, bandwidth=3, lsh_scheme="a0",
+                 universe_size=None, kmin=1):
+        """
+
+        :param width: Number of bands
+        :type width: int
+        :param lsh_scheme: Adjusts number of combinatorial bands
+        :type lsh_scheme: str
+        :param bandwidth: Number of rows per band
+        :type bandwidth: int
+        :param universe_size: A prime number of size close to token universe
+                              cardinality
+        :type universe_size: long
+        """
+        signer = MinHashSignature(width,
+                                  lsh_hasher=LSHC(bandwidth, width=width,
+                                                  scheme=lsh_scheme),
+                                  universe_size=universe_size,
+                                  kmin=kmin)
+        super(MinHashCluster, self).__init__(signer=signer)

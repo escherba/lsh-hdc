@@ -3,7 +3,7 @@ __author__ = 'escherba'
 import sys
 import unittest
 from lsh.utils import sort_by_length
-from lsh import hamming_idist, hamming_ndist, bitlist, create_sig_selectors
+from lsh import hamming_idist, hamming, bitlist, create_sig_selectors
 from random import randint
 
 
@@ -19,7 +19,7 @@ class TestUtils(unittest.TestCase):
         for i in range(100):
             x = randint(0, sys.maxint)
             y = randint(0, sys.maxint)
-            self.assertEqual(hamming_ndist(x, y),
+            self.assertEqual(hamming(x, y),
                              hamming_idist(bitlist(x), bitlist(y)))
 
     def test_create_sig_selectors1(self):

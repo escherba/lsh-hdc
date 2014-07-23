@@ -5,7 +5,7 @@ import string
 import json
 import argparse
 from itertools import chain, izip, repeat, islice
-from lsh import Cluster, Shingler
+from lsh import Shingler, MinHashCluster as Cluster
 from lsh.stats import FeatureClusterSummarizer, get_stats
 
 

@@ -13,5 +13,8 @@ bin
 *.egg-info/
 *.egg/
 *.egg
+
 nosetests.xml
 .coverage
+coverage.xml
+cover/
