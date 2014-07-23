@@ -4,7 +4,8 @@ import sys
 import json
 from itertools import islice
 from lsh import Cluster, Shingler, MinHashSignature, LSHC, \
-    SimHashSignature, RegexTokenizer, Normalizer
+    SimHashSignature, Normalizer
+from lsh.utils import RegexTokenizer
 from lsh.stats import FeatureClusterSummarizer, get_stats
 
 

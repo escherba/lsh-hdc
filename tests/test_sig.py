@@ -4,8 +4,8 @@ import random
 from cityhash import CityHash128
 from lsh.utils import randset, sigsim, randstr
 from lsh import MinHashSignature, SimHashSignature, \
-    jaccard_sim, hamming_ndist, Shingler, RegexTokenizer, \
-    from_bitstring, bitstring_padded
+    jaccard_sim, hamming_ndist, Shingler, from_bitstring, bitstring_padded
+from lsh.utils import RegexTokenizer
 
 
 class TestSig(unittest.TestCase):

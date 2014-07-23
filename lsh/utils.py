@@ -1,14 +1,42 @@
-"""
-utils.py
-
-Various utilities
-"""
-
+# -*- coding: utf-8 -*-
+import re
 import random
 import operator
 import json
 import string
 from itertools import imap
+from abc import abstractmethod
+
+
+class Tokenizer(object):
+    """Abstract tokenizer interface"""
+
+    @abstractmethod
+    def tokenize(self, text):
+        """Tokenize text"""
+
+
+class RegexTokenizer(Tokenizer):
+    def __init__(self, pattern=None):
+        if pattern is None:
+            """
+            pattern = ur'(?u)\w+'
+            pattern = ur'(?:\B[#@$£€¥₩฿])?(?u)\w+(?:[%\+]\B)?'
+            pattern = ur'''
+                        (?:                # Either URL
+                        http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+
+                        |                  # or
+                        (?:\B[#@$£€¥₩฿])?  # (preceded by optional pound-, at-, or currency signs)
+                        (?u)\w+            # a Unicode word
+                        (?:[%\+]\B)?       # optionally followed by percentage or plus signs
+                        )
+                        '''
+            """
+            pattern = ur'(?u)\w+'
+        self.r = re.compile(pattern, (re.VERBOSE | re.UNICODE))
+
+    def tokenize(self, text):
+        return self.r.findall(text)
 
 
 def totuple(a):
