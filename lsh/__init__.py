@@ -696,14 +696,14 @@ class Cluster(object):
         uf.__getitem__(label)
 
         # Get signature vector and hash it
-        hashed_signature = s \
+        keys = s \
             if self.signer is None \
             else self.signer.get_signature(s)
-        label_gen = imap(self.hash_map.__getitem__, hashed_signature)
+        label_lists = map(self.hash_map.__getitem__, keys)
 
         similar_to = partial(self.sketch_sim_fn, sketch)
         # Unite labels with same LSH keys
-        for label_list in label_gen:
+        for label_list in label_lists:
             if label_list:
                 fst_label = label_list[0][0]
                 good_lbl_count = \
