@@ -1,13 +1,23 @@
+import yaml
 from itertools import imap
 from operator import itemgetter
 from functools import partial
 from abc import abstractmethod
 from pymaptools import UnionFind
+from pymaptools.utils import override
 from collections import defaultdict
-
+from pkg_resources import resource_filename
+from logging import getLogger, config as logging_config
 from lsh import Shingler, MinHashSignature, LSHC, SimHashSignature, hamming, \
     MinHashSketchSignature
 from lsh.utils import RegexTokenizer, HTMLNormalizer, read_json_file
+
+get_resource_name = partial(resource_filename, __name__)
+
+with open(get_resource_name('conf/hdc.yaml'), 'r') as fh:
+    hdc_config = yaml.load(fh)
+logging_config.dictConfig(hdc_config['logging'])
+LOG = getLogger(__name__)
 
 
 class Cluster(object):
@@ -103,11 +113,15 @@ class SketchModel(object):
 
 class HDClustering(object):
 
-    def __init__(self, cfg, logger=None, content_filter=None):
+    def __init__(self, cfg_override=None, logger=LOG, content_filter=None):
 
         """Read configuration"""
 
-        self.cfg = cfg  # for record-keeping
+        if cfg_override is None:
+            cfg = hdc_config['model']
+        else:
+            cfg = override(hdc_config['model'], cfg_override)
+        self.cfg = cfg
 
         common_kwargs = dict(
             normalizer=HTMLNormalizer(),
@@ -116,7 +130,6 @@ class HDClustering(object):
 
         # Set options
         self.logger = logger
-        self.max_returned = cfg['max_returned']
         self.content_filter = content_filter
         self.min_support = cfg['min_support']
 

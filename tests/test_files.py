@@ -1,8 +1,6 @@
 import unittest
 import sys
 import json
-import yaml
-from logging import getLogger, config as logging_config
 from functools import partial
 from itertools import islice
 from pkg_resources import resource_filename
@@ -15,19 +13,13 @@ from content_rules import ContentFilter
 
 get_resource_name = partial(resource_filename, __name__)
 
-mac_config_filename = get_resource_name('config/mac.yaml')
-mac_config = yaml.load(open(mac_config_filename, 'r'))
-logging_config.dictConfig(mac_config['logging'])
-LOG = getLogger(__name__)
-
 
 class TestFiles(unittest.TestCase):
 
     def test_mac(self):
         """Expect to match number of clusters using simhash"""
 
-        cfg = mac_config['model']
-        hdc = HDClustering(cfg, logger=LOG, content_filter=ContentFilter())
+        hdc = HDClustering(content_filter=ContentFilter())
         clusters = \
             hdc.clusters_from_mac_log(get_resource_name('data/mac.json'))
 
