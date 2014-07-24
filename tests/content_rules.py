@@ -2,16 +2,14 @@ __author__ = 'escherba'
 
 import re
 from logging import getLogger
-#from valenti.conf import Statsd
+from lsh.cluster import BaseContentFilter
 
 LOG = getLogger(__name__)
 
 
-class ContentFilter(object):
+class ContentFilter(BaseContentFilter):
 
-    def __init__(self, cfg):
-        #Pass `bulk' configuration
-        self.cfg = cfg
+    def __init__(self):
         self.word_regex = re.compile(ur'(?u)\w+', re.UNICODE)
 
     def match_instagram(self, obj):
@@ -21,7 +19,7 @@ class ContentFilter(object):
         content = obj[u'content']
         post_id = obj[u'post_id']
         return len(list(self.word_regex.findall(content))) == 0 and \
-               post_id.endswith(u'@instagram.com')
+            post_id.endswith(u'@instagram.com')
 
     def accept(self, obj):
         """Process an input object according to our rules"""

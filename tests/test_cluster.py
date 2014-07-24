@@ -1,6 +1,7 @@
 import unittest
 from lsh.utils import randset
-from lsh import jaccard_sim, get_bandwidth, MinHashCluster as Cluster
+from lsh import jaccard_sim, get_bandwidth
+from lsh.cluster import MinHashCluster as Cluster
 
 
 class TestCluster(unittest.TestCase):
