@@ -5,7 +5,8 @@ import string
 import json
 import argparse
 from itertools import chain, izip, repeat, islice
-from lsh import Shingler, MinHashCluster as Cluster
+from lsh import Shingler
+from lsh.cluster import MinHashCluster as Cluster
 from lsh.stats import FeatureClusterSummarizer, get_stats
 
 
@@ -171,7 +172,7 @@ def get_simulation(opts):
         for seq_id in range(cluster_size):
             data.append(("{}:{}".format(c_id, seq_id), mcm.mutate(master)))
             pos_count += 1
-    num_negatives = int(pos_count * (1 - pos_ratio) / pos_ratio)
+    num_negatives = int(pos_count * ((1.0 - pos_ratio) / pos_ratio))
     for neg_idx in range(num_negatives):
         seq_length = gauss_unsigned(mu=seq_len_mu, sigma=seq_len_sigma)
         data.append(("{}".format(neg_idx), mcg.generate(seq_length)))
@@ -222,7 +223,7 @@ if __name__ == '__main__':
         #p.add_argument('--filter', type=str, required=False, default='None',
         #               help='[TN, FN, FP, TP, None]')
         p.add_argument('--num_clusters', type=int, dest='num_clusters',
-                       default=100, help='number of clusters', required=False)
+                       default=1000, help='number of clusters', required=False)
         p.add_argument('--pos_ratio', type=float, dest='pos_ratio', default=0.1,
                        help='ratio of positives', required=False)
         p.add_argument('--p_err', type=float, dest='p_err', default=0.95,

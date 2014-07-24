@@ -2,19 +2,16 @@ import unittest
 import sys
 import json
 import yaml
-from itertools import imap
-from operator import itemgetter
 from logging import getLogger, config as logging_config
 from functools import partial
 from itertools import islice
 from pkg_resources import resource_filename
 
-from content_rules import ContentFilter
-from lsh import Shingler, MinHashSignature, LSHC, SimHashSignature, hamming, \
-    MinHashSketchSignature, MinHashCluster as Cluster, Cluster as SimpleCluster
-from lsh.utils import RegexTokenizer, HTMLNormalizer, read_json_file
+from lsh import Shingler
+from lsh.cluster import HDClustering, MinHashCluster as Cluster
+from lsh.utils import RegexTokenizer
 from lsh.stats import FeatureClusterSummarizer, get_stats
-from pymaptools.utils import deepupdate
+from content_rules import ContentFilter
 
 get_resource_name = partial(resource_filename, __name__)
 
@@ -24,99 +21,16 @@ logging_config.dictConfig(mac_config['logging'])
 LOG = getLogger(__name__)
 
 
-class SketchModel(object):
-    """A pseudo-enum of supported models"""
-    simhash = 0
-    minhash = 1
-
-
 class TestFiles(unittest.TestCase):
-
-    def prepare_for_mac(self, cfg_override=None, logger=LOG):
-
-        self.resource_file = get_resource_name('data/unicode.json')
-
-        # cfg_override overrides everything specified in the local config file
-        cfg = mac_config['model']
-        if cfg_override is not None:
-            deepupdate(cfg, cfg_override)
-        self.cfg = cfg  # for record-keeping
-
-        common_kwargs = dict(
-            normalizer=HTMLNormalizer(),
-            tokenizer=RegexTokenizer()
-        )
-
-        # Set options
-        self.logger = logger
-        self.max_returned = cfg['max_returned']
-        self.content_filter = ContentFilter(cfg)
-        self.min_support = cfg['min_support']
-
-        # Configure minhash signer
-        sig_width = cfg['sig_width']
-        lsh_hasher = LSHC(width=sig_width, **cfg['lsh_options'])
-        self.signer = MinHashSignature(sig_width,
-                                       lsh_hasher=lsh_hasher,
-                                       kmin=cfg['kmin'])
-
-        # Configure shingler
-        cfg_key_shingle = cfg['shingler']
-        cfg_key_shingle.update(common_kwargs)
-        self.shingler = Shingler(**cfg_key_shingle)
-
-        # Configure sketch comparison algorithm
-        cfg_sketch = cfg['sketch']
-        self.sketch_enabled = cfg_sketch['enabled']
-        if self.sketch_enabled:
-            algorithm_name = cfg_sketch['algorithm']
-            try:
-                sketch_algorithm = getattr(SketchModel, algorithm_name)
-            except AttributeError:
-                raise RuntimeError("Unknown sketch model specified: '%s'"
-                                   % algorithm_name)
-            sketch_bits = cfg_sketch['size'] * 8
-            cfg_sketch_shingle = cfg_sketch['shingler']
-            cfg_sketch_shingle.update(common_kwargs)
-            self.sketch_shingler = Shingler(**cfg_sketch_shingle)
-            self.sketch_resemblance = cfg_sketch['resemblance']
-            if sketch_algorithm == SketchModel.simhash:
-                self.sketch_signer = SimHashSignature(bit_depth=sketch_bits)
-            elif sketch_algorithm == SketchModel.minhash:
-                self.sketch_signer = MinHashSketchSignature(sketch_bits)
 
     def test_mac(self):
         """Expect to match number of clusters using simhash"""
-        self.prepare_for_mac()
 
-        sketch_resemblance = self.cfg['sketch']['resemblance']
-        sketch_sim_fn = lambda a, b: hamming(a, b) >= sketch_resemblance
-        cluster_builder = SimpleCluster(sketch_sim_fn=sketch_sim_fn)
-        min_support = self.min_support
-        for i, obj in enumerate(imap(itemgetter('object'),
-                                     read_json_file(self.resource_file))):
-            if not i % 1000:
-                print "Processing line " + str(i)
-            obj_content = obj['content']
-            obj_post_id = obj['post_id']
-            obj_user_id = obj['user_id']
+        cfg = mac_config['model']
+        hdc = HDClustering(cfg, logger=LOG, content_filter=ContentFilter())
+        clusters = \
+            hdc.clusters_from_mac_log(get_resource_name('data/mac.json'))
 
-            # Step 1: Extract features
-            if not self.content_filter.accept(obj):
-                features = self.shingler.get_shingles(obj_content,
-                                                    prefix=obj_user_id)
-                keys = self.signer.get_signature(features)
-                if self.sketch_enabled:
-                    sketch_features = self.sketch_shingler.get_shingles(
-                        obj_content)
-                    sketch = self.sketch_signer.get_signature(sketch_features)
-                else:
-                    sketch = None
-
-                # Step 2: Cluster given keys, sketch
-                cluster_builder.add_set(keys, label=obj_post_id, sketch=sketch)
-
-        clusters = cluster_builder.get_clusters()
         for cluster in clusters:
             if len(cluster) > 1:
                 print cluster
