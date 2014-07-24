@@ -197,13 +197,14 @@ class TestFiles(unittest.TestCase):
         self.assertAlmostEqual(ti, 1.0)
 
     @staticmethod
-    def run_simulated_manually(filepath, universe_size=None,
-                               lines_to_read=sys.maxint):
+    def run_simulated_manually(filepath, lines_to_read=sys.maxint,
+                               cluster_args=None):
         with open(get_resource_name(filepath), 'r') as f:
             data = [line.rstrip().split(' ')
                     for line in islice(f, lines_to_read)]
-        cluster = Cluster(width=20, bandwidth=5, lsh_scheme="a2",
-                          universe_size=universe_size)
+        if cluster_args is None:
+            cluster_args = dict()
+        cluster = Cluster(**cluster_args)
         shingler = Shingler(span=3)
         s = FeatureClusterSummarizer()
         content_dict = dict()
@@ -211,35 +212,7 @@ class TestFiles(unittest.TestCase):
             if len(pair) > 1:
                 label, text = pair
             else:
-                label = pair[0]
-                text = ''
-            content_dict[label] = text
-            shingles = shingler.get_shingles(text)
-            s.add_features(label, shingles)
-            cluster.add_set(shingles, label)
-        clusters = cluster.get_clusters()
-
-        is_label_positive = lambda lbl: len(lbl.split(':')) > 1
-        return dict(stats=get_stats(clusters, is_label_positive),
-                    uindex=s.summarize_clusters(clusters))
-
-    @staticmethod
-    def run_simulated_manually_b(filepath, universe_size=None,
-                                 lines_to_read=sys.maxint):
-        with open(get_resource_name(filepath), 'r') as f:
-            data = [line.rstrip().split(' ')
-                    for line in islice(f, lines_to_read)]
-        cluster = Cluster(width=15, bandwidth=3, lsh_scheme="b3", kmin=3,
-                          universe_size=universe_size)
-        shingler = Shingler(span=3)
-        s = FeatureClusterSummarizer()
-        content_dict = dict()
-        for pair in data:
-            if len(pair) > 1:
-                label, text = pair
-            else:
-                label = pair[0]
-                text = ''
+                label, text = pair[0], ''
             content_dict[label] = text
             shingles = shingler.get_shingles(text)
             s.add_features(label, shingles)
@@ -251,9 +224,10 @@ class TestFiles(unittest.TestCase):
                     uindex=s.summarize_clusters(clusters))
 
     def test_simulated(self, universe_size=None):
-        results = TestFiles.run_simulated_manually('data/simulated.txt',
-                                                   lines_to_read=1000,
-                                                   universe_size=universe_size)
+        results = TestFiles.run_simulated_manually(
+            'data/simulated.txt', lines_to_read=1000,
+            cluster_args=dict(width=20, bandwidth=5, lsh_scheme="a2",
+                              universe_size=universe_size))
         c = results['stats']
         ti = results['uindex']
         recall = c.get_recall()
@@ -270,9 +244,10 @@ class TestFiles(unittest.TestCase):
         ))
 
     def test_simulated_b(self, universe_size=None):
-        results = TestFiles.run_simulated_manually_b(
+        results = TestFiles.run_simulated_manually(
             'data/simulated.txt', lines_to_read=1000,
-            universe_size=universe_size)
+            cluster_args=dict(width=15, bandwidth=3, lsh_scheme="b3", kmin=3,
+                              universe_size=universe_size))
         c = results['stats']
         ti = results['uindex']
         recall = c.get_recall()
