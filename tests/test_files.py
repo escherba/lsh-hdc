@@ -61,8 +61,8 @@ class TestFiles(unittest.TestCase):
                 recall=recall
             )
         ))
-        self.assertGreaterEqual(recall, 0.252)
-        self.assertGreaterEqual(precision, 0.543)
+        self.assertGreaterEqual(recall, 0.272)
+        self.assertGreaterEqual(precision, 0.453)
 
     def test_names(self):
         """Should return 281 clusters of names.
@@ -206,7 +206,7 @@ class TestFiles(unittest.TestCase):
         with open(get_resource_name('data/simulated.yaml'), 'r') as fh:
             sim_cfg = yaml.load(fh)
 
-        with open(get_resource_name('data/simulated3.txt'), 'r') as f:
+        with open(get_resource_name('data/simulated.txt'), 'r') as f:
             data = [line.rstrip().split(' ') for line in f]
 
         hdc = HDClustering(sim_cfg['model'],
@@ -238,8 +238,8 @@ class TestFiles(unittest.TestCase):
                 recall=recall
             )
         ))
-        self.assertGreaterEqual(recall, 0.536)
-        self.assertGreaterEqual(precision, 0.993)
+        self.assertGreaterEqual(recall, 0.661)
+        self.assertGreaterEqual(precision, 0.305)
 
 
 if __name__ == '__main__':
