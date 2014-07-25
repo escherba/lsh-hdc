@@ -2,141 +2,18 @@ import unittest
 import sys
 import json
 import yaml
+from operator import itemgetter
 from functools import partial
 from itertools import islice
 from pkg_resources import resource_filename
 
-from pymaptools.utils import deepupdate
-from lsh import Shingler, SimHashSignature, hamming, LSHC, MinHashSignature, \
-    MinHashSketchSignature
-from lsh.cluster import MinHashCluster as Cluster, Cluster as SimpleCluster
-from lsh.utils import RegexTokenizer, HTMLNormalizer, read_json_file
+from lsh import Shingler
+from lsh.cluster import MinHashCluster as Cluster, HDClustering
+from lsh.utils import RegexTokenizer, read_json_file
 from lsh.stats import FeatureClusterSummarizer, get_stats
 from content_rules import ContentFilter
 
 get_resource_name = partial(resource_filename, __name__)
-
-
-class SketchModel(object):
-    """A pseudo-enum of supported models"""
-    simhash = 0
-    minhash = 1
-
-
-class HDClustering(object):
-
-    def __init__(self, cfg, content_filter=None, opts=None):
-
-        """Read configuration"""
-        self.cfg = cfg
-
-        common_kwargs = dict(
-            normalizer=HTMLNormalizer(),
-            tokenizer=RegexTokenizer()
-        )
-        deepupdate(common_kwargs, opts or {})
-
-        # Set options
-        self.content_filter = content_filter
-        self.min_support = cfg['min_support']
-
-        # Configure minhash signer
-        sig_width = cfg['sig_width']
-        lsh_hasher = LSHC(width=sig_width, **cfg['lsh_options'])
-        self.signer = MinHashSignature(sig_width,
-                                       lsh_hasher=lsh_hasher,
-                                       kmin=cfg['kmin'])
-
-        # Configure shingler
-        cfg_key_shingle = cfg['shingler']
-        cfg_key_shingle.update(common_kwargs)
-        self.shingler = Shingler(**cfg_key_shingle)
-
-        # Configure sketch comparison algorithm
-        cfg_sketch = cfg['sketch']
-        self.sketch_enabled = cfg_sketch['enabled']
-        sketch_sim_fn = None
-        if self.sketch_enabled:
-            algorithm_name = cfg_sketch['algorithm']
-            try:
-                sketch_algorithm = getattr(SketchModel, algorithm_name)
-            except AttributeError:
-                raise RuntimeError("Unknown sketch model specified: '%s'"
-                                   % algorithm_name)
-            sketch_bits = cfg_sketch['size'] * 8
-            cfg_sketch_shingle = cfg_sketch['shingler']
-            cfg_sketch_shingle.update(common_kwargs)
-            self.sketch_shingler = Shingler(**cfg_sketch_shingle)
-            self.sketch_resemblance = cfg_sketch['resemblance']
-            if sketch_algorithm == SketchModel.simhash:
-                self.sketch_signer = SimHashSignature(bit_depth=sketch_bits)
-            elif sketch_algorithm == SketchModel.minhash:
-                self.sketch_signer = MinHashSketchSignature(sketch_bits)
-
-            sketch_resemblance = cfg_sketch['resemblance']
-            sketch_sim_fn = lambda a, b: hamming(a, b) >= sketch_resemblance
-
-        self.cluster_builder = SimpleCluster(sketch_sim_fn=sketch_sim_fn)
-
-    def clusters_from_mac_log(self, data):
-        """Find clusters in a MAC-formatted file"""
-
-        # TODO: add min_support parameter
-        # min_support = self.min_support
-
-        cluster_builder = self.cluster_builder
-        for i, obj in enumerate(data):
-            if not i % 1000:
-                print "Processing line " + str(i)
-            obj_content = obj['content']
-            obj_post_id = obj['post_id']
-            obj_user_id = obj['user_id']
-
-            # Step 1: Extract features
-            if self.content_filter is not None and \
-                    not self.content_filter.accept(obj):
-                features = self.shingler.get_shingles(obj_content,
-                                                      prefix=obj_user_id)
-                keys = self.signer.get_signature(features)
-                if self.sketch_enabled:
-                    sketch_features = self.sketch_shingler.get_shingles(
-                        obj_content)
-                    sketch = self.sketch_signer.get_signature(sketch_features)
-                else:
-                    sketch = None
-
-            # Step 2: Cluster given keys, sketch
-            cluster_builder.add_set(keys, label=obj_post_id, sketch=sketch)
-
-        return cluster_builder.get_clusters()
-
-    def clusters_from_sim(self, data):
-        """Find clusters in a list of key-value tuples"""
-
-        # TODO: add min_support parameter
-        # min_support = self.min_support
-
-        cluster_builder = self.cluster_builder
-        for i, obj in enumerate(data):
-            if not i % 1000:
-                print "Processing line " + str(i)
-            obj_content = obj[1]
-            obj_post_id = obj[0]
-
-            # Step 1: Extract features
-            features = self.shingler.get_shingles(obj_content)
-            keys = self.signer.get_signature(features)
-            if self.sketch_enabled:
-                sketch_features = self.sketch_shingler.get_shingles(
-                    obj_content)
-                sketch = self.sketch_signer.get_signature(sketch_features)
-            else:
-                sketch = None
-
-            # Step 2: Cluster given keys, sketch
-            cluster_builder.add_set(keys, label=obj_post_id, sketch=sketch)
-
-        return cluster_builder.get_clusters()
 
 
 class TestFiles(unittest.TestCase):
@@ -160,7 +37,12 @@ class TestFiles(unittest.TestCase):
 
         hdc = HDClustering(cfg=mac_cfg['model'],
                            content_filter=ContentFilter())
-        clusters = hdc.clusters_from_mac_log(data)
+        clusters = hdc.clusters_from_iter(
+            data,
+            get_body=itemgetter('content'),
+            get_label=itemgetter('post_id'),
+            get_prefix=itemgetter('user_id'),
+        )
 
         num_clusters = len([x for x in clusters if len(x) > 1])
         print "Found %d clusters" % num_clusters
@@ -327,9 +209,13 @@ class TestFiles(unittest.TestCase):
         with open(get_resource_name('data/simulated.txt'), 'r') as f:
             data = [line.rstrip().split(' ') for line in f]
 
-        hdc = HDClustering(sim_cfg['model'], content_filter=ContentFilter(),
+        hdc = HDClustering(sim_cfg['model'],
                            opts=dict(tokenizer=None, normalizer=None))
-        clusters = hdc.clusters_from_sim(data)
+        clusters = hdc.clusters_from_iter(
+            data,
+            get_body=itemgetter(1),
+            get_label=itemgetter(0)
+        )
 
         #for cluster in clusters:
         #    if len(cluster) > 1:
