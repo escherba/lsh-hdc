@@ -226,7 +226,7 @@ if __name__ == '__main__':
                        default=1000, help='number of clusters', required=False)
         p.add_argument('--pos_ratio', type=float, dest='pos_ratio', default=0.1,
                        help='ratio of positives', required=False)
-        p.add_argument('--p_err', type=float, dest='p_err', default=0.95,
+        p.add_argument('--p_err', type=float, dest='p_err', default=0.10,
                        help='Probability of error at any location in sequence',
                        required=False)
         p.add_argument('--seq_len_mu', type=float, dest='seq_len_mu',

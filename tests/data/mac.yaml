@@ -1,14 +1,8 @@
 model:
-  reset_on_init: true  # Clear all buckets on init.
-  use_adaptive_clock: true  # whether to use real clock or adaptive
-
   kmin: 4  # number of minima (k) in minhash
   sig_width: 16  # Length of minhash signature. Must be a multiple of kmin. Should usually also be a multiple of lsh_bandwidth.
   min_support: 1  # Minimum number of matching keys (>=1)
 
-  windowing:
-    num_buckets: 6  # Number of time buckets
-    window_size: 3600  # Duration of a window in seconds
   lsh_options:
     bandwidth: 3  # Rows per LSH band. Setting this to 1 effectively turns off LSH (do not try this in production...)
     scheme: "b2"  # LSH banding scheme. Use a0 for non-overlapping bands, a1 for circularly overlapping, ax (where x is bandwidth)
@@ -25,21 +19,3 @@ model:
       span: 3       # Length of shingles (in words)
       skip: 1       # How many words to skip
       unique: true  # Discard duplicates
-
-
-logging:
-    version: 1
-    formatters:
-      simple:
-        format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    handlers:
-      console:
-        class: logging.StreamHandler
-        level: DEBUG
-        formatter: simple
-        stream: ext://sys.stderr
-    loggers:
-      bulk_svc:
-        level: DEBUG
-        handlers: [console]
-        propagate: no

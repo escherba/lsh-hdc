@@ -6,10 +6,9 @@ from itertools import imap
 from operator import itemgetter
 from functools import partial
 from itertools import islice
-from logging import getLogger, config as logging_config
 from pkg_resources import resource_filename
 
-from pymaptools.utils import override
+from pymaptools.utils import deepupdate
 from lsh import Shingler, SimHashSignature, hamming, LSHC, MinHashSignature, \
     MinHashSketchSignature
 from lsh.cluster import MinHashCluster as Cluster, Cluster as SimpleCluster
@@ -18,11 +17,6 @@ from lsh.stats import FeatureClusterSummarizer, get_stats
 from content_rules import ContentFilter
 
 get_resource_name = partial(resource_filename, __name__)
-
-with open(get_resource_name('conf/hdc.yaml'), 'r') as fh:
-    hdc_config = yaml.load(fh)
-logging_config.dictConfig(hdc_config['logging'])
-LOG = getLogger(__name__)
 
 
 class SketchModel(object):
@@ -33,23 +27,18 @@ class SketchModel(object):
 
 class HDClustering(object):
 
-    def __init__(self, cfg_override=None, logger=LOG, content_filter=None):
+    def __init__(self, cfg, content_filter=None, opts=None):
 
         """Read configuration"""
-
-        if cfg_override is None:
-            cfg = hdc_config['model']
-        else:
-            cfg = override(hdc_config['model'], cfg_override)
         self.cfg = cfg
 
         common_kwargs = dict(
             normalizer=HTMLNormalizer(),
             tokenizer=RegexTokenizer()
         )
+        deepupdate(common_kwargs, opts or {})
 
         # Set options
-        self.logger = logger
         self.content_filter = content_filter
         self.min_support = cfg['min_support']
 
@@ -68,6 +57,7 @@ class HDClustering(object):
         # Configure sketch comparison algorithm
         cfg_sketch = cfg['sketch']
         self.sketch_enabled = cfg_sketch['enabled']
+        sketch_sim_fn = None
         if self.sketch_enabled:
             algorithm_name = cfg_sketch['algorithm']
             try:
@@ -85,17 +75,18 @@ class HDClustering(object):
             elif sketch_algorithm == SketchModel.minhash:
                 self.sketch_signer = MinHashSketchSignature(sketch_bits)
 
+            sketch_resemblance = cfg_sketch['resemblance']
+            sketch_sim_fn = lambda a, b: hamming(a, b) >= sketch_resemblance
+
+        self.cluster_builder = SimpleCluster(sketch_sim_fn=sketch_sim_fn)
+
     def clusters_from_mac_log(self, filename):
         """Find clusters in a MAC-formatted file"""
-
-        # TODO: make this work with generic inputs
-        sketch_resemblance = self.cfg['sketch']['resemblance']
-        sketch_sim_fn = lambda a, b: hamming(a, b) >= sketch_resemblance
-        cluster_builder = SimpleCluster(sketch_sim_fn=sketch_sim_fn)
 
         # TODO: add min_support parameter
         # min_support = self.min_support
 
+        cluster_builder = self.cluster_builder
         for i, obj in enumerate(imap(itemgetter('object'),
                                      read_json_file(filename))):
             if not i % 1000:
@@ -122,13 +113,44 @@ class HDClustering(object):
 
         return cluster_builder.get_clusters()
 
+    def clusters_from_sim(self, data):
+        """Find clusters in a MAC-formatted file"""
+
+        # TODO: add min_support parameter
+        # min_support = self.min_support
+
+        cluster_builder = self.cluster_builder
+        for i, obj in enumerate(data):
+            if not i % 1000:
+                print "Processing line " + str(i)
+            obj_content = obj[1]
+            obj_post_id = obj[0]
+
+            # Step 1: Extract features
+            features = self.shingler.get_shingles(obj_content)
+            keys = self.signer.get_signature(features)
+            if self.sketch_enabled:
+                sketch_features = self.sketch_shingler.get_shingles(
+                    obj_content)
+                sketch = self.sketch_signer.get_signature(sketch_features)
+            else:
+                sketch = None
+
+            # Step 2: Cluster given keys, sketch
+            cluster_builder.add_set(keys, label=obj_post_id, sketch=sketch)
+
+        return cluster_builder.get_clusters()
+
 
 class TestFiles(unittest.TestCase):
 
     def test_mac(self):
         """Expect to match number of clusters using simhash"""
 
-        hdc = HDClustering(content_filter=ContentFilter())
+        with open(get_resource_name('data/mac.yaml'), 'r') as fh:
+            mac_cfg = yaml.load(fh)
+
+        hdc = HDClustering(cfg=mac_cfg['model'], content_filter=ContentFilter())
         clusters = \
             hdc.clusters_from_mac_log(get_resource_name('data/mac.json'))
 
@@ -234,21 +256,20 @@ class TestFiles(unittest.TestCase):
             cluster.add_set(shingles, label)
         clusters = cluster.get_clusters()
 
-        is_label_positive = lambda lbl: len(lbl.split(':')) > 1
+        is_label_positive = lambda lbl: ':' in lbl
         return dict(stats=get_stats(clusters, is_label_positive),
                     uindex=s.summarize_clusters(clusters))
 
-    def test_simulated(self, universe_size=None):
+    def test_simulated(self):
         results = TestFiles.run_simulated_manually(
-            'data/simulated.txt', lines_to_read=1000,
-            cluster_args=dict(width=20, bandwidth=5, lsh_scheme="a2",
-                              universe_size=universe_size))
+            'data/simulated.txt',
+            cluster_args=dict(width=30, bandwidth=3, lsh_scheme="a0"))
         c = results['stats']
         ti = results['uindex']
         recall = c.get_recall()
         precision = c.get_precision()
-        self.assertGreaterEqual(recall, 0.10)
-        self.assertGreaterEqual(precision, 0.10)
+        self.assertGreaterEqual(recall, 0.499)
+        self.assertGreaterEqual(precision, 0.250)
         print json.dumps(dict(
             stats=c.dict(),
             ratios=dict(
@@ -258,18 +279,16 @@ class TestFiles(unittest.TestCase):
             ti=ti
         ))
 
-    def test_simulated_b(self, universe_size=None):
+    def test_simulated_b(self):
         results = TestFiles.run_simulated_manually(
-            'data/simulated.txt', lines_to_read=1000,
-            cluster_args=dict(width=15, bandwidth=3, lsh_scheme="b3", kmin=3,
-                              universe_size=universe_size))
+            'data/simulated.txt',
+            cluster_args=dict(width=15, bandwidth=3, lsh_scheme="b3", kmin=3))
         c = results['stats']
         ti = results['uindex']
         recall = c.get_recall()
         precision = c.get_precision()
-        self.assertGreaterEqual(recall, 0.10)
-        # previous result for precision: 0.09836065573770492
-        self.assertGreaterEqual(precision, 0.09090909090909091)
+        self.assertGreaterEqual(recall, 0.483)
+        self.assertGreaterEqual(precision, 0.241)
         print json.dumps(dict(
             stats=c.dict(),
             ratios=dict(
@@ -278,6 +297,43 @@ class TestFiles(unittest.TestCase):
             ),
             ti=ti
         ))
+
+    def test_simulated_hd(self):
+
+        with open(get_resource_name('data/simulated.yaml'), 'r') as fh:
+            sim_cfg = yaml.load(fh)
+
+        with open(get_resource_name('data/simulated.txt'), 'r') as f:
+            data = [line.rstrip().split(' ') for line in f]
+
+        hdc = HDClustering(sim_cfg['model'], content_filter=ContentFilter(),
+                           opts=dict(tokenizer=None, normalizer=None))
+        clusters = hdc.clusters_from_sim(data)
+
+        #for cluster in clusters:
+        #    if len(cluster) > 1:
+        #        print cluster
+
+        num_clusters = len([x for x in clusters if len(x) > 1])
+        print "Found %d clusters" % num_clusters
+        print "Points not clustered: %d" % (len(data) - num_clusters)
+
+        is_label_positive = lambda lbl: ':' in lbl
+        results = dict(stats=get_stats(clusters, is_label_positive))
+
+        c = results['stats']
+        recall = c.get_recall()
+        precision = c.get_precision()
+        print json.dumps(dict(
+            stats=c.dict(),
+            ratios=dict(
+                precision=precision,
+                recall=recall
+            )
+        ))
+        self.assertGreaterEqual(recall, 0.536)
+        self.assertGreaterEqual(precision, 0.993)
+
 
 if __name__ == '__main__':
     unittest.main()
