@@ -2,8 +2,6 @@ import unittest
 import sys
 import json
 import yaml
-from itertools import imap
-from operator import itemgetter
 from functools import partial
 from itertools import islice
 from pkg_resources import resource_filename
@@ -80,15 +78,14 @@ class HDClustering(object):
 
         self.cluster_builder = SimpleCluster(sketch_sim_fn=sketch_sim_fn)
 
-    def clusters_from_mac_log(self, filename):
+    def clusters_from_mac_log(self, data):
         """Find clusters in a MAC-formatted file"""
 
         # TODO: add min_support parameter
         # min_support = self.min_support
 
         cluster_builder = self.cluster_builder
-        for i, obj in enumerate(imap(itemgetter('object'),
-                                     read_json_file(filename))):
+        for i, obj in enumerate(data):
             if not i % 1000:
                 print "Processing line " + str(i)
             obj_content = obj['content']
@@ -114,7 +111,7 @@ class HDClustering(object):
         return cluster_builder.get_clusters()
 
     def clusters_from_sim(self, data):
-        """Find clusters in a MAC-formatted file"""
+        """Find clusters in a list of key-value tuples"""
 
         # TODO: add min_support parameter
         # min_support = self.min_support
@@ -150,16 +147,40 @@ class TestFiles(unittest.TestCase):
         with open(get_resource_name('data/mac.yaml'), 'r') as fh:
             mac_cfg = yaml.load(fh)
 
-        hdc = HDClustering(cfg=mac_cfg['model'], content_filter=ContentFilter())
-        clusters = \
-            hdc.clusters_from_mac_log(get_resource_name('data/mac.json'))
+        data = []
+        positives = set()
+        for json_obj in read_json_file(get_resource_name('data/mac.json')):
+            obj = json_obj['object']
+            data.append(obj)
+            imp_section = json_obj.get('impermium', {}) or {}
+            imp_result = imp_section.get('result', {}) or {}
+            imp_tags = imp_result.get('tag_details', {}) or {}
+            if 'bulk' in imp_tags:
+                positives.add(obj['post_id'])
 
-        for cluster in clusters:
-            if len(cluster) > 1:
-                print cluster
-        print len(clusters)
-        print len([x for x in clusters if len(x) > 1])
-        # TODO: finish writing this test
+        hdc = HDClustering(cfg=mac_cfg['model'],
+                           content_filter=ContentFilter())
+        clusters = hdc.clusters_from_mac_log(data)
+
+        num_clusters = len([x for x in clusters if len(x) > 1])
+        print "Found %d clusters" % num_clusters
+        print "Points not clustered: %d" % (len(data) - num_clusters)
+
+        is_label_positive = lambda lbl: lbl in positives
+        results = dict(stats=get_stats(clusters, is_label_positive))
+
+        c = results['stats']
+        recall = c.get_recall()
+        precision = c.get_precision()
+        print json.dumps(dict(
+            stats=c.dict(),
+            ratios=dict(
+                precision=precision,
+                recall=recall
+            )
+        ))
+        self.assertGreaterEqual(recall, 0.227)
+        self.assertGreaterEqual(precision, 0.420)
 
     def test_names(self):
         """Should return 281 clusters of names.
