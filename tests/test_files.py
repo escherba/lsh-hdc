@@ -206,7 +206,7 @@ class TestFiles(unittest.TestCase):
         with open(get_resource_name('data/simulated.yaml'), 'r') as fh:
             sim_cfg = yaml.load(fh)
 
-        with open(get_resource_name('data/simulated.txt'), 'r') as f:
+        with open(get_resource_name('data/simulated3.txt'), 'r') as f:
             data = [line.rstrip().split(' ') for line in f]
 
         hdc = HDClustering(sim_cfg['model'],

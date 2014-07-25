@@ -4,7 +4,6 @@ from collections import defaultdict, Counter
 from abc import abstractmethod
 from math import floor
 
-from ordered_set import OrderedSet
 from pymaptools.utils import deepupdate
 from lsh import Shingler, SimHashSignature, hamming, MinHashSketchSignature, \
     MinHashSignature, LSHC
@@ -20,12 +19,14 @@ class Cluster(object):
     2. Use LSH to map similar signatures to same buckets
     3. Use UnionFind to merge buckets containing same values
     """
-    def __init__(self, signer=None, sketch_dist_fn=None, max_dist=0):
+    def __init__(self, signer=None, sketch_dist_fn=None, max_dist=0,
+                 min_support=1):
         self.union_find = UnionFind()
         self.signer = signer
-        self.hash_map = defaultdict(OrderedSet)
+        self.hash_map = defaultdict(dict)
         self.sketch_dist_fn = sketch_dist_fn
         self.max_dist = max_dist
+        self.min_support = min_support
 
     def add_set(self, s, label=None, sketch=None):
         # Set default label for this set
@@ -48,24 +49,21 @@ class Cluster(object):
             distance_from = partial(self.sketch_dist_fn, sketch)
 
         # Unite labels with same LSH keys
-        print
+        counter = Counter()
+        sketches = dict()
         for label_list in label_lists:
-            found = False
-            if label_list:
-                fst = label_list[0]
-                if distance_from is None:
-                    good_lbl_count = len(label_list)
-                else:
-                    list_of_tuples = sorted([(distance_from(x[1]), x) for x in label_list])
-                    print list_of_tuples
-                    good_lbl_count = sum(1 for lbl in list_of_tuples if lbl[0] <= self.max_dist)
-                if good_lbl_count:
-                    if label != fst[0]:
-                        label_list.add((label, sketch))
-                        uf.union(fst[0], label)
-                        found = True
-            if not found:
-                label_list.add((label, sketch))
+            label_list[label] = sketch
+            counter.update(label_list.keys())
+            sketches.update(label_list)
+
+        min_supp, max_dist = self.min_support, self.max_dist
+        for lbl, cnt in counter.iteritems():
+            if lbl != label and cnt >= min_supp:
+                skt = sketches[lbl]
+                # Note: large improvement in precision when also
+                # ensuring distance > 0 below:
+                if distance_from is None or distance_from(skt) <= max_dist:
+                    uf.union(lbl, label)
 
     def get_clusters(self):
         """
@@ -127,7 +125,7 @@ class HDClustering(object):
 
         # Set options
         self.content_filter = content_filter
-        self.min_support = cfg['min_support']
+        min_support = cfg['min_support']
 
         # Configure minhash signer
         sig_width = cfg['sig_width']
@@ -167,14 +165,12 @@ class HDClustering(object):
             sketch_dist_fn = hamming
 
         self.cluster_builder = Cluster(sketch_dist_fn=sketch_dist_fn,
-                                       max_dist=xor_threshold)
+                                       max_dist=xor_threshold,
+                                       min_support=min_support)
 
     def clusters_from_iter(self, data, get_body=None, get_label=None,
                            get_prefix=None):
         """Find clusters in an iterable"""
-
-        # TODO: add min_support parameter
-        # min_support = self.min_support
 
         cluster_builder = self.cluster_builder
         for i, obj in enumerate(data):
