@@ -1,9 +1,10 @@
 from functools import partial
 from pymaptools import UnionFind
-from collections import defaultdict
+from collections import defaultdict, Counter
 from abc import abstractmethod
 from math import floor
 
+from ordered_set import OrderedSet
 from pymaptools.utils import deepupdate
 from lsh import Shingler, SimHashSignature, hamming, MinHashSketchSignature, \
     MinHashSignature, LSHC
@@ -22,7 +23,7 @@ class Cluster(object):
     def __init__(self, signer=None, sketch_dist_fn=None, max_dist=0):
         self.union_find = UnionFind()
         self.signer = signer
-        self.hash_map = defaultdict(list)
+        self.hash_map = defaultdict(OrderedSet)
         self.sketch_dist_fn = sketch_dist_fn
         self.max_dist = max_dist
 
@@ -47,22 +48,24 @@ class Cluster(object):
             distance_from = partial(self.sketch_dist_fn, sketch)
 
         # Unite labels with same LSH keys
+        print
         for label_list in label_lists:
+            found = False
             if label_list:
                 fst = label_list[0]
                 if distance_from is None:
                     good_lbl_count = len(label_list)
-                    fst_is_good = True
                 else:
-                    list_of_tuples = [(distance_from(x[1]), x) for x in label_list]
+                    list_of_tuples = sorted([(distance_from(x[1]), x) for x in label_list])
+                    print list_of_tuples
                     good_lbl_count = sum(1 for lbl in list_of_tuples if lbl[0] <= self.max_dist)
-                    fst_is_good = distance_from(fst[1]) <= self.max_dist
-                if good_lbl_count > 0 and fst_is_good:
+                if good_lbl_count:
                     if label != fst[0]:
-                        label_list.append((label, sketch))
+                        label_list.add((label, sketch))
                         uf.union(fst[0], label)
-            else:
-                label_list.append((label, sketch))
+                        found = True
+            if not found:
+                label_list.add((label, sketch))
 
     def get_clusters(self):
         """

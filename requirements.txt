@@ -1,2 +1,3 @@
 git+https://github.com/escherba/cityhash.git#egg=cityhash
 git+https://github.com/escherba/pymaptools.git#egg=pymaptools
+ordered_set
