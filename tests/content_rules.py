@@ -2,12 +2,11 @@ __author__ = 'escherba'
 
 import re
 from logging import getLogger
-from lsh.cluster import BaseContentFilter
 
 LOG = getLogger(__name__)
 
 
-class ContentFilter(BaseContentFilter):
+class ContentFilter(object):
 
     def __init__(self):
         self.word_regex = re.compile(ur'(?u)\w+', re.UNICODE)
