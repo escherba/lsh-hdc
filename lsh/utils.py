@@ -9,6 +9,33 @@ from abc import abstractmethod
 from HTMLParser import HTMLParser
 
 
+class MLStripper(HTMLParser):
+    def __init__(self):
+        self.reset()
+        self.fed = []
+
+    def handle_data(self, d):
+        self.fed.append(d)
+
+    def handle_entityref(self, name):
+        # Ignore HTML entities (already unescaped)
+        self.fed.append(u'&' + name)
+
+    def get_data(self):
+        return ''.join(self.fed)
+
+
+def clean_html(html):
+    """Remove HTML markup from the given string."""
+    html = re.sub(r"(?s)<!--(.*?)-->[\n]?", "\\1", html)
+    html = re.sub(r"<!--", "", html)
+    if html == '':
+        return ''
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data().strip()
+
+
 class Normalizer(object):
     """Abstract tokenizer interface"""
 
@@ -18,17 +45,41 @@ class Normalizer(object):
 
 
 class HTMLNormalizer(Normalizer):
-    def __init__(self):
+
+    normalize_map = {k: None for k in (
+        range(ord(u'\x00'), ord(u'\x08') + 1) +
+        range(ord(u'\x0b'), ord(u'\x0c') + 1) +
+        range(ord(u'\x0e'), ord(u'\x1f') + 1) +
+        range(ord(u'\x7f'), ord(u'\x9f') + 1) +
+        [ord(u'\uffff')] +
+        [ord(u'\xad')] +
+        range(ord(u'\u17b4'), ord(u'\u17b5') + 1) +
+        range(ord(u'\u200b'), ord(u'\u200f') + 1) +
+        range(ord(u'\u202a'), ord(u'\u202d') + 1) +
+        range(ord(u'\u2060'), ord(u'\u2064') + 1) +
+        range(ord(u'\u206a'), ord(u'\u206f') + 1) +
+        [ord(u'\ufeff')]
+    )}
+
+    def __init__(self, lowercase=True):
+        self.lowercase = lowercase
         self.html_parser = HTMLParser()
 
-    def normalize(self, text):
+    def normalize(self, soup):
         """
         :param text: Input text
         :return: str, unicode
         :return: normalized text
         :rtype: str, unicode
         """
-        return self.html_parser.unescape(text).lower()
+        html_parser = self.html_parser
+        unescaped_soup = html_parser.unescape(html_parser.unescape(soup))
+
+        text = clean_html(unescaped_soup)
+
+        cleaned = text if text == '' else text.translate(self.normalize_map)
+
+        return cleaned.lower() if self.lowercase else cleaned
 
 
 class Tokenizer(object):
