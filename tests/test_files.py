@@ -256,15 +256,14 @@ class TestFiles(unittest.TestCase):
             cluster.add_set(shingles, label)
         clusters = cluster.get_clusters()
 
-        is_label_positive = lambda lbl: len(lbl.split(':')) > 1
+        is_label_positive = lambda lbl: ':' in lbl
         return dict(stats=get_stats(clusters, is_label_positive),
                     uindex=s.summarize_clusters(clusters))
 
-    def test_simulated(self, universe_size=None):
+    def test_simulated(self):
         results = TestFiles.run_simulated_manually(
             'data/simulated.txt',
-            cluster_args=dict(width=20, bandwidth=5, lsh_scheme="a2",
-                              universe_size=universe_size))
+            cluster_args=dict(width=30, bandwidth=3, lsh_scheme="a0"))
         c = results['stats']
         ti = results['uindex']
         recall = c.get_recall()
@@ -280,11 +279,10 @@ class TestFiles(unittest.TestCase):
             ti=ti
         ))
 
-    def test_simulated_b(self, universe_size=None):
+    def test_simulated_b(self):
         results = TestFiles.run_simulated_manually(
             'data/simulated.txt',
-            cluster_args=dict(width=15, bandwidth=3, lsh_scheme="b3", kmin=3,
-                              universe_size=universe_size))
+            cluster_args=dict(width=15, bandwidth=3, lsh_scheme="b3", kmin=3))
         c = results['stats']
         ti = results['uindex']
         recall = c.get_recall()
@@ -300,7 +298,7 @@ class TestFiles(unittest.TestCase):
             ti=ti
         ))
 
-    def test_simulated_hd(self, universe_size=None):
+    def test_simulated_hd(self):
 
         with open(get_resource_name('data/simulated.yaml'), 'r') as fh:
             sim_cfg = yaml.load(fh)
@@ -320,7 +318,7 @@ class TestFiles(unittest.TestCase):
         print "Found %d clusters" % num_clusters
         print "Points not clustered: %d" % (len(data) - num_clusters)
 
-        is_label_positive = lambda lbl: len(lbl.split(':')) > 1
+        is_label_positive = lambda lbl: ':' in lbl
         results = dict(stats=get_stats(clusters, is_label_positive))
 
         c = results['stats']
@@ -333,8 +331,8 @@ class TestFiles(unittest.TestCase):
                 recall=recall
             )
         ))
-        self.assertGreaterEqual(recall, 0.365)
-        self.assertGreaterEqual(precision, 0.996)
+        self.assertGreaterEqual(recall, 0.536)
+        self.assertGreaterEqual(precision, 0.993)
 
 
 if __name__ == '__main__':
