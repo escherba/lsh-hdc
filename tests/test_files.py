@@ -19,7 +19,7 @@ get_resource_name = partial(resource_filename, __name__)
 class TestFiles(unittest.TestCase):
 
     def test_mac(self):
-        """Expect to match number of clusters using simhash"""
+        """test a file in MAC log format"""
 
         with open(get_resource_name('data/mac.yaml'), 'r') as fh:
             mac_cfg = yaml.load(fh)
