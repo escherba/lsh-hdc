@@ -217,10 +217,6 @@ class TestFiles(unittest.TestCase):
             get_label=itemgetter(0)
         )
 
-        #for cluster in clusters:
-        #    if len(cluster) > 1:
-        #        print cluster
-
         num_clusters = len([x for x in clusters if len(x) > 1])
         print "Found %d clusters" % num_clusters
         print "Points not clustered: %d" % (len(data) - num_clusters)
