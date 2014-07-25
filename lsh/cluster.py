@@ -1,7 +1,8 @@
 from functools import partial
 from pymaptools import UnionFind
-from collections import defaultdict
+from collections import defaultdict, Counter
 from abc import abstractmethod
+from math import floor
 
 from pymaptools.utils import deepupdate
 from lsh import Shingler, SimHashSignature, hamming, MinHashSketchSignature, \
@@ -18,11 +19,14 @@ class Cluster(object):
     2. Use LSH to map similar signatures to same buckets
     3. Use UnionFind to merge buckets containing same values
     """
-    def __init__(self, signer=None, sketch_sim_fn=lambda x, y: True):
+    def __init__(self, signer=None, sketch_dist_fn=None, max_dist=0,
+                 min_support=1):
         self.union_find = UnionFind()
         self.signer = signer
-        self.hash_map = defaultdict(list)
-        self.sketch_sim_fn = sketch_sim_fn
+        self.hash_map = defaultdict(dict)
+        self.sketch_dist_fn = sketch_dist_fn
+        self.max_dist = max_dist
+        self.min_support = min_support
 
     def add_set(self, s, label=None, sketch=None):
         # Set default label for this set
@@ -39,26 +43,27 @@ class Cluster(object):
             else self.signer.get_signature(s)
         label_lists = map(self.hash_map.__getitem__, keys)
 
-        if self.sketch_sim_fn is None:
-            similar_to = None
+        if self.sketch_dist_fn is None:
+            distance_from = None
         else:
-            similar_to = partial(self.sketch_sim_fn, sketch)
+            distance_from = partial(self.sketch_dist_fn, sketch)
 
         # Unite labels with same LSH keys
+        counter = Counter()
+        sketches = dict()
         for label_list in label_lists:
-            if label_list:
-                fst_label = label_list[0][0]
-                if similar_to is None:
-                    good_lbl_count = len(label_list)
-                else:
-                    good_lbl_count = \
-                        len([x for x in label_list if similar_to(x[1])])
-                if good_lbl_count > 0:
-                    if label != fst_label:
-                        label_list.append((label, sketch))
-                        uf.union(fst_label, label)
-            else:
-                label_list.append((label, sketch))
+            label_list[label] = sketch
+            counter.update(label_list.keys())
+            sketches.update(label_list)
+
+        min_supp, max_dist = self.min_support, self.max_dist
+        for lbl, cnt in counter.iteritems():
+            if lbl != label and cnt >= min_supp:
+                skt = sketches[lbl]
+                # Note: large improvement in precision when also
+                # ensuring distance > 0 below:
+                if distance_from is None or distance_from(skt) <= max_dist:
+                    uf.union(lbl, label)
 
     def get_clusters(self):
         """
@@ -120,7 +125,7 @@ class HDClustering(object):
 
         # Set options
         self.content_filter = content_filter
-        self.min_support = cfg['min_support']
+        min_support = cfg['min_support']
 
         # Configure minhash signer
         sig_width = cfg['sig_width']
@@ -137,7 +142,8 @@ class HDClustering(object):
         # Configure sketch comparison algorithm
         cfg_sketch = cfg['sketch']
         self.sketch_enabled = cfg_sketch['enabled']
-        sketch_sim_fn = None
+        sketch_dist_fn = None
+        xor_threshold = None
         if self.sketch_enabled:
             algorithm_name = cfg_sketch['algorithm']
             try:
@@ -149,23 +155,22 @@ class HDClustering(object):
             cfg_sketch_shingle = cfg_sketch['shingler']
             cfg_sketch_shingle.update(common_kwargs)
             self.sketch_shingler = Shingler(**cfg_sketch_shingle)
-            self.sketch_resemblance = cfg_sketch['resemblance']
             if sketch_algorithm == SketchModel.simhash:
                 self.sketch_signer = SimHashSignature(bit_depth=sketch_bits)
             elif sketch_algorithm == SketchModel.minhash:
                 self.sketch_signer = MinHashSketchSignature(sketch_bits)
+            xor_threshold = \
+                int(floor(sketch_bits *
+                          (1.0 - float(cfg_sketch['resemblance']))))
+            sketch_dist_fn = hamming
 
-            sketch_resemblance = cfg_sketch['resemblance']
-            sketch_sim_fn = lambda a, b: hamming(a, b) >= sketch_resemblance
-
-        self.cluster_builder = Cluster(sketch_sim_fn=sketch_sim_fn)
+        self.cluster_builder = Cluster(sketch_dist_fn=sketch_dist_fn,
+                                       max_dist=xor_threshold,
+                                       min_support=min_support)
 
     def clusters_from_iter(self, data, get_body=None, get_label=None,
                            get_prefix=None):
         """Find clusters in an iterable"""
-
-        # TODO: add min_support parameter
-        # min_support = self.min_support
 
         cluster_builder = self.cluster_builder
         for i, obj in enumerate(data):

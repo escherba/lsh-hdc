@@ -61,8 +61,8 @@ class TestFiles(unittest.TestCase):
                 recall=recall
             )
         ))
-        self.assertGreaterEqual(recall, 0.252)
-        self.assertGreaterEqual(precision, 0.543)
+        self.assertGreaterEqual(recall, 0.272)
+        self.assertGreaterEqual(precision, 0.453)
 
     def test_names(self):
         """Should return 281 clusters of names.
@@ -238,8 +238,8 @@ class TestFiles(unittest.TestCase):
                 recall=recall
             )
         ))
-        self.assertGreaterEqual(recall, 0.536)
-        self.assertGreaterEqual(precision, 0.993)
+        self.assertGreaterEqual(recall, 0.661)
+        self.assertGreaterEqual(precision, 0.305)
 
 
 if __name__ == '__main__':
