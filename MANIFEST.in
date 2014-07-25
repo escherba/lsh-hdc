@@ -1,5 +1,4 @@
-include lsh/conf/*
 include tests/data/*
-include tests/config/*
+include tests/conf/*
 include requirements.txt
 include dev_requirements.txt
