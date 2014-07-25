@@ -34,13 +34,20 @@ class Cluster(object):
             else self.signer.get_signature(s)
         label_lists = map(self.hash_map.__getitem__, keys)
 
-        similar_to = partial(self.sketch_sim_fn, sketch)
+        if self.sketch_sim_fn is None:
+            similar_to = None
+        else:
+            similar_to = partial(self.sketch_sim_fn, sketch)
+
         # Unite labels with same LSH keys
         for label_list in label_lists:
             if label_list:
                 fst_label = label_list[0][0]
-                good_lbl_count = \
-                    len([x for x in label_list if similar_to(x[1])])
+                if similar_to is None:
+                    good_lbl_count = len(label_list)
+                else:
+                    good_lbl_count = \
+                        len([x for x in label_list if similar_to(x[1])])
                 if good_lbl_count > 0:
                     if label != fst_label:
                         label_list.append((label, sketch))

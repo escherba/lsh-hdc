@@ -1,0 +1,21 @@
+model:
+  kmin: 3  # number of minima (k) in minhash
+  sig_width: 30  # Length of minhash signature. Must be a multiple of kmin. Should usually also be a multiple of lsh_bandwidth.
+  min_support: 1  # Minimum number of matching keys (>=1)
+
+  lsh_options:
+    bandwidth: 3  # Rows per LSH band. Setting this to 1 effectively turns off LSH (do not try this in production...)
+    scheme: "a0"  # LSH banding scheme. Use a0 for non-overlapping bands, a1 for circularly overlapping, ax (where x is bandwidth)
+  shingler:
+    span: 2       # Length of shingles (in words)
+    skip: 0       # How many words to skip
+    unique: true  # Discard duplicates
+  sketch:
+    enabled: true
+    algorithm: "simhash"  # [simhash, minhash]
+    size: 2  # Length of sketch vector, in bytes
+    resemblance: 0.75  # Minimum Hamming similarity of bit vectors (set to zero to remove this constraint)
+    shingler:
+      span: 2       # Length of shingles (in words)
+      skip: 0       # How many words to skip
+      unique: true  # Discard duplicates

@@ -1,4 +1,3 @@
 include tests/data/*
-include tests/conf/*
 include requirements.txt
 include dev_requirements.txt
