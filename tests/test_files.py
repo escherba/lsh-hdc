@@ -179,8 +179,8 @@ class TestFiles(unittest.TestCase):
                 recall=recall
             )
         ))
-        self.assertGreaterEqual(recall, 0.227)
-        self.assertGreaterEqual(precision, 0.420)
+        self.assertGreaterEqual(recall, 0.252)
+        self.assertGreaterEqual(precision, 0.543)
 
     def test_names(self):
         """Should return 281 clusters of names.
