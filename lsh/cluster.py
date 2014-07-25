@@ -2,6 +2,7 @@ from functools import partial
 from pymaptools import UnionFind
 from collections import defaultdict
 from abc import abstractmethod
+from math import floor
 
 from pymaptools.utils import deepupdate
 from lsh import Shingler, SimHashSignature, hamming, MinHashSketchSignature, \
@@ -18,11 +19,12 @@ class Cluster(object):
     2. Use LSH to map similar signatures to same buckets
     3. Use UnionFind to merge buckets containing same values
     """
-    def __init__(self, signer=None, sketch_sim_fn=lambda x, y: True):
+    def __init__(self, signer=None, sketch_dist_fn=None, max_dist=0):
         self.union_find = UnionFind()
         self.signer = signer
         self.hash_map = defaultdict(list)
-        self.sketch_sim_fn = sketch_sim_fn
+        self.sketch_dist_fn = sketch_dist_fn
+        self.max_dist = max_dist
 
     def add_set(self, s, label=None, sketch=None):
         # Set default label for this set
@@ -39,24 +41,26 @@ class Cluster(object):
             else self.signer.get_signature(s)
         label_lists = map(self.hash_map.__getitem__, keys)
 
-        if self.sketch_sim_fn is None:
-            similar_to = None
+        if self.sketch_dist_fn is None:
+            distance_from = None
         else:
-            similar_to = partial(self.sketch_sim_fn, sketch)
+            distance_from = partial(self.sketch_dist_fn, sketch)
 
         # Unite labels with same LSH keys
         for label_list in label_lists:
             if label_list:
-                fst_label = label_list[0][0]
-                if similar_to is None:
+                fst = label_list[0]
+                if distance_from is None:
                     good_lbl_count = len(label_list)
+                    fst_is_good = True
                 else:
-                    good_lbl_count = \
-                        len([x for x in label_list if similar_to(x[1])])
-                if good_lbl_count > 0:
-                    if label != fst_label:
+                    list_of_tuples = [(distance_from(x[1]), x) for x in label_list]
+                    good_lbl_count = sum(1 for lbl in list_of_tuples if lbl[0] <= self.max_dist)
+                    fst_is_good = distance_from(fst[1]) <= self.max_dist
+                if good_lbl_count > 0 and fst_is_good:
+                    if label != fst[0]:
                         label_list.append((label, sketch))
-                        uf.union(fst_label, label)
+                        uf.union(fst[0], label)
             else:
                 label_list.append((label, sketch))
 
@@ -137,7 +141,8 @@ class HDClustering(object):
         # Configure sketch comparison algorithm
         cfg_sketch = cfg['sketch']
         self.sketch_enabled = cfg_sketch['enabled']
-        sketch_sim_fn = None
+        sketch_dist_fn = None
+        xor_threshold = None
         if self.sketch_enabled:
             algorithm_name = cfg_sketch['algorithm']
             try:
@@ -149,16 +154,17 @@ class HDClustering(object):
             cfg_sketch_shingle = cfg_sketch['shingler']
             cfg_sketch_shingle.update(common_kwargs)
             self.sketch_shingler = Shingler(**cfg_sketch_shingle)
-            self.sketch_resemblance = cfg_sketch['resemblance']
             if sketch_algorithm == SketchModel.simhash:
                 self.sketch_signer = SimHashSignature(bit_depth=sketch_bits)
             elif sketch_algorithm == SketchModel.minhash:
                 self.sketch_signer = MinHashSketchSignature(sketch_bits)
+            xor_threshold = \
+                int(floor(sketch_bits *
+                          (1.0 - float(cfg_sketch['resemblance']))))
+            sketch_dist_fn = hamming
 
-            sketch_resemblance = cfg_sketch['resemblance']
-            sketch_sim_fn = lambda a, b: hamming(a, b) >= sketch_resemblance
-
-        self.cluster_builder = Cluster(sketch_sim_fn=sketch_sim_fn)
+        self.cluster_builder = Cluster(sketch_dist_fn=sketch_dist_fn,
+                                       max_dist=xor_threshold)
 
     def clusters_from_iter(self, data, get_body=None, get_label=None,
                            get_prefix=None):
