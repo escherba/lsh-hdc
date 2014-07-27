@@ -20,6 +20,9 @@ install_requires = \
     map(lambda x: find_eggs(x).groups()[0], requirements)
 tests_require = filter(lambda r: not contains_url(r), dev_requirements)
 
+print "install_requires: " + str(install_requires)
+print "dependency_links: " + str(dependency_links)
+
 setup(
     name="lsh-hdc",
     version="0.0.19",
