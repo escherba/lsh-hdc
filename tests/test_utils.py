@@ -2,8 +2,8 @@ __author__ = 'escherba'
 
 import sys
 import unittest
-from lsh.utils import sort_by_length
-from lsh import hamming_idist, hamming, bitlist, create_sig_selectors
+from lsh_hdc.utils import sort_by_length
+from lsh_hdc import hamming_idist, hamming, bitlist, create_sig_selectors
 from random import randint
 
 

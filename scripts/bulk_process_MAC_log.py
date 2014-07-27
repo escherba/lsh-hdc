@@ -9,11 +9,11 @@ from datetime import timedelta, datetime
 from collections import Counter
 from itertools import islice
 
-from lsh import WordShingler
-from lsh.cluster import Cluster
-from lsh.stats import UncertaintySummarizer, \
+from lsh_hdc import WordShingler
+from lsh_hdc.cluster import Cluster
+from lsh_hdc.stats import UncertaintySummarizer, \
     MADSummarizer, MADRatioSummarizer, median, mad
-from lsh.utils import sort_by_length, JsonRepr, read_json_file
+from lsh_hdc.utils import sort_by_length, JsonRepr, read_json_file
 
 
 class Options(JsonRepr):

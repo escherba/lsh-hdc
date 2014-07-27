@@ -2,8 +2,6 @@ __version__ = "0.0.19"
 
 
 """
-lsh.py
-
 Algorithms based on 'Mining of Massive Datasets'
 """
 
@@ -18,7 +16,7 @@ from collections import defaultdict
 from abc import abstractmethod
 
 from cityhash import CityHash64, CityHash128
-from lsh.utils import totuple, tsorted
+from lsh_hdc.utils import totuple, tsorted
 
 
 LOG = getLogger(__name__)

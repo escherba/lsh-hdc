@@ -23,7 +23,7 @@ setup(
     author="Eugene Scherba",
     author_email="escherba@livefyre.com",
     description=("Algorithms for locality-sensitive hashing on text data"),
-    url='https://github.com/Livefyre/lfpylib/tree/lsh/lsh',
+    url='https://github.com/escherba/lsh-hdc',
     packages=find_packages(exclude=['tests', 'scripts']),
     long_description="LSH algo that uses MinHash signatures",
     install_requires=install_requires,

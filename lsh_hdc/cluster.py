@@ -5,9 +5,9 @@ from abc import abstractmethod
 from math import floor
 
 from pymaptools.utils import deepupdate
-from lsh import Shingler, SimHashSignature, hamming, MinHashSketchSignature, \
-    MinHashSignature, LSHC
-from lsh.utils import RegexTokenizer, HTMLNormalizer
+from lsh_hdc import Shingler, SimHashSignature, hamming, \
+    MinHashSketchSignature, MinHashSignature, LSHC
+from lsh_hdc.utils import RegexTokenizer, HTMLNormalizer
 
 
 class Cluster(object):
