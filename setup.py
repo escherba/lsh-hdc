@@ -17,7 +17,6 @@ find_eggs = partial(re.search, EGG_PATTERN)
 dependency_links = filter(contains_url, requirements)
 install_requires = \
     filter(lambda r: not contains_url(r), requirements) + \
-    dependency_links
     #map(lambda x: find_eggs(x).groups()[0], requirements)
 tests_require = filter(lambda r: not contains_url(r), dev_requirements)
 
