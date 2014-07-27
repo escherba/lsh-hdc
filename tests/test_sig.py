@@ -2,10 +2,10 @@
 import unittest
 import random
 from cityhash import CityHash128
-from lsh.utils import randset, sigsim, randstr
-from lsh import MinHashSignature, SimHashSignature, \
+from lsh_hdc.utils import randset, sigsim, randstr
+from lsh_hdc import MinHashSignature, SimHashSignature, \
     jaccard_sim, hamming, Shingler, from_bitstring, bitstring_padded
-from lsh.utils import RegexTokenizer
+from lsh_hdc.utils import RegexTokenizer
 
 
 class TestSig(unittest.TestCase):

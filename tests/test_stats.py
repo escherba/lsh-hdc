@@ -2,7 +2,7 @@ __author__ = 'escherba'
 
 import unittest
 
-from lsh.stats import UncertaintySummarizer, ExplainedVarianceSummarizer
+from lsh_hdc.stats import UncertaintySummarizer, ExplainedVarianceSummarizer
 from collections import Counter
 
 

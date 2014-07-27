@@ -3,10 +3,10 @@
 import yaml
 import sys
 import argparse
-from itertools import imap
 import json
+from itertools import imap
 from operator import itemgetter
-from lsh.cluster import HDClustering
+from lsh_hdc.cluster import HDClustering
 from content_rules import ContentFilter
 
 parser = argparse.ArgumentParser()

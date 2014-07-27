@@ -5,9 +5,9 @@ import string
 import json
 import argparse
 from itertools import chain, izip, repeat, islice
-from lsh import Shingler
-from lsh.cluster import MinHashCluster as Cluster
-from lsh.stats import FeatureClusterSummarizer, get_stats
+from lsh_hdc import Shingler
+from lsh_hdc.cluster import MinHashCluster as Cluster
+from lsh_hdc.stats import FeatureClusterSummarizer, get_stats
 
 
 def random_string(length=4, alphabet=string.letters):

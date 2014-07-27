@@ -7,10 +7,10 @@ from functools import partial
 from itertools import islice
 from pkg_resources import resource_filename
 
-from lsh import Shingler
-from lsh.cluster import MinHashCluster as Cluster, HDClustering
-from lsh.utils import RegexTokenizer, read_json_file
-from lsh.stats import FeatureClusterSummarizer, get_stats
+from lsh_hdc import Shingler
+from lsh_hdc.cluster import MinHashCluster as Cluster, HDClustering
+from lsh_hdc.utils import RegexTokenizer, read_json_file
+from lsh_hdc.stats import FeatureClusterSummarizer, get_stats
 from content_rules import ContentFilter
 
 get_resource_name = partial(resource_filename, __name__)

@@ -2,7 +2,7 @@ __author__ = 'escherba'
 
 import re
 from logging import getLogger
-from lsh.cluster import BaseContentFilter
+from lsh_hdc.cluster import BaseContentFilter
 
 LOG = getLogger(__name__)
 
