@@ -9,7 +9,7 @@ dev_requirements = resource_string(
     __name__, 'dev_requirements.txt').splitlines()
 
 #EGG_FRAGMENT = re.compile(r'(.+)#egg=(\w+)((-|>=|==)?[\d\w.]+)?$')
-EGG_FRAGMENT = re.compile(r'#egg=([a-z0-9_.]+)-([a-z0-9_.-]+)')
+EGG_FRAGMENT = re.compile(r'(.+)#egg=([a-z0-9_.]+)-([a-z0-9_.-]+)$')
 find_egg = partial(re.search, EGG_FRAGMENT)
 
 pkg_names = []
