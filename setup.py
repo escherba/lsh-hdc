@@ -3,30 +3,37 @@ from functools import partial
 from setuptools import setup, find_packages
 from pkg_resources import resource_string
 
-requirements = resource_string(
-    __name__, 'requirements.txt').splitlines()
-dev_requirements = resource_string(
-    __name__, 'dev_requirements.txt').splitlines()
+get_resource = partial(resource_string, __name__)
 
-#EGG_FRAGMENT = re.compile(r'(.+)#egg=(\w+)((-|>=|==)?[\d\w.]+)?$')
-EGG_FRAGMENT = re.compile(r'(.+)#egg=([a-z0-9_.]+)-([a-z0-9_.-]+)$')
-find_egg = partial(re.search, EGG_FRAGMENT)
+# Regex groups: 0: URL part, 1: package name, 2: package version
+find_egg = partial(
+    re.search,
+    re.compile(r'^(.+)#egg=([a-z0-9_.]+)-([a-z0-9_.-]+)$')
+)
 
-pkg_names = []
-dep_links = []
-for req in requirements:
-    egg_info = find_egg(req)
-    if egg_info is None:
-        pkg_names.append(req)
-    else:
-        url, egg = egg_info.group(1, 2)
-        pkg_names.append(egg)
-        dep_links.append(req)
 
-tests_require = filter(lambda r: find_egg(r) is None, dev_requirements)
+def process_reqs(reqs):
+    pkg_reqs = []
+    dep_links = []
+    for req in reqs:
+        egg_info = find_egg(req)
+        if egg_info is None:
+            pkg_reqs.append(req)
+        else:
+            url, egg = egg_info.group(1, 2)
+            pkg_reqs.append(egg)
+            dep_links.append(req)
+    return pkg_reqs, dep_links
 
-print "install_requires: " + str(pkg_names)
-print "dependency_links: " + str(dep_links)
+requirements = get_resource('requirements.txt').splitlines()
+dev_requirements = get_resource('dev_requirements.txt').splitlines()
+
+install_requires, dep_links1 = process_reqs(requirements)
+tests_require, dep_links2 = process_reqs(dev_requirements)
+dependency_links = dep_links1 + dep_links2
+
+print "install_requires: " + str(install_requires)
+print "dependency_links: " + str(dependency_links)
 
 setup(
     name="lsh-hdc",
@@ -37,8 +44,8 @@ setup(
     url='https://github.com/escherba/lsh-hdc',
     packages=find_packages(exclude=['tests', 'scripts']),
     long_description="LSH algo that uses MinHash signatures",
-    install_requires=pkg_names,
-    dependency_links=dep_links,
+    install_requires=install_requires,
+    dependency_links=dependency_links,
     tests_require=tests_require,
     test_suite='nose.collector',
     classifiers=[
