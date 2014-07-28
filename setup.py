@@ -13,6 +13,13 @@ find_egg = partial(
 
 
 def process_reqs(reqs):
+    """
+    Add all egg-containing links to list #1 and egg information plus
+    package names to list #2. Note: we rely on dependency links, support
+    for which will be removed in future versions of pip.
+
+    TODO: migrate to custom pip repo.
+    """
     pkg_reqs = []
     dep_links = []
     for req in reqs:
