@@ -1,2 +1,2 @@
-git+https://github.com/escherba/cityhash/tarball/master#egg=cityhash-0.0.2
+git+https://github.com/escherba/cityhash/tarball/master#egg=cityhash
 git+https://github.com/escherba/pymaptools/tarball/master#egg=pymaptools
