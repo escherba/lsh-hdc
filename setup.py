@@ -32,8 +32,6 @@ install_requires, dep_links1 = process_reqs(requirements)
 tests_require, dep_links2 = process_reqs(dev_requirements)
 dependency_links = dep_links1 + dep_links2
 
-print "install_requires: " + str(install_requires)
-print "dependency_links: " + str(dependency_links)
 
 setup(
     name="lsh-hdc",
