@@ -8,23 +8,22 @@ requirements = resource_string(
 dev_requirements = resource_string(
     __name__, 'dev_requirements.txt').splitlines()
 
-# regex for finding URLs in strings
-GRUBER_URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
-contains_url = partial(re.findall, GRUBER_URLINTEXT_PAT)
-EGG_PATTERN = re.compile(ur'(.+)#egg=(\w+)((-|>=|==)?[\d\w.]+)?$')
-find_eggs = partial(re.search, EGG_PATTERN)
+#EGG_FRAGMENT = re.compile(r'(.+)#egg=(\w+)((-|>=|==)?[\d\w.]+)?$')
+EGG_FRAGMENT = re.compile(r'#egg=([a-z0-9_.]+)-([a-z0-9_.-]+)')
+find_egg = partial(re.search, EGG_FRAGMENT)
 
 pkg_names = []
 dep_links = []
 for req in requirements:
-    if contains_url(req):
-        url, egg = find_eggs(req).groups()[0:2]
+    egg_info = find_egg(req)
+    if egg_info is None:
+        pkg_names.append(req)
+    else:
+        url, egg = egg_info.groups(1, 2)
         pkg_names.append(egg)
         dep_links.append(req)
-    else:
-        pkg_names.append(req)
 
-tests_require = filter(lambda r: not contains_url(r), dev_requirements)
+tests_require = filter(lambda r: find_egg(r) is None, dev_requirements)
 
 print "install_requires: " + str(pkg_names)
 print "dependency_links: " + str(dep_links)
