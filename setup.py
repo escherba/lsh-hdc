@@ -18,7 +18,7 @@ pkg_names = []
 dep_links = []
 for req in requirements:
     if contains_url(req):
-        url, egg = find_eggs(req).groups()[0:1]
+        url, egg = find_eggs(req).groups()[0:2]
         pkg_names.append(egg)
         dep_links.append(url)
     else:
