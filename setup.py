@@ -20,7 +20,7 @@ for req in requirements:
     if contains_url(req):
         url, egg = find_eggs(req).groups()[0:2]
         pkg_names.append(egg)
-        dep_links.append(url)
+        dep_links.append(req)
     else:
         pkg_names.append(req)
 
