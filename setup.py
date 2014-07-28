@@ -19,7 +19,7 @@ for req in requirements:
     if egg_info is None:
         pkg_names.append(req)
     else:
-        url, egg = egg_info.groups(1, 2)
+        url, egg = egg_info.group(1, 2)
         pkg_names.append(egg)
         dep_links.append(req)
 
