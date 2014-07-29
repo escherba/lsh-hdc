@@ -8,6 +8,9 @@ from pymaptools.utils import deepupdate
 from lsh_hdc import Shingler, SimHashSignature, hamming, \
     MinHashSketchSignature, MinHashSignature, LSHC
 from lsh_hdc.utils import RegexTokenizer, HTMLNormalizer
+from logging import getLogger
+
+LOG = getLogger(__name__)
 
 
 class Cluster(object):
@@ -112,11 +115,12 @@ class BaseContentFilter(object):
 
 class HDClustering(object):
 
-    def __init__(self, cfg, content_filter=None, opts=None):
+    def __init__(self, cfg, content_filter=None, opts=None, trace_every=0):
 
         """Read configuration"""
         self.cfg = cfg
 
+        self.trace_every = trace_every
         common_kwargs = dict(
             normalizer=HTMLNormalizer(),
             tokenizer=RegexTokenizer()
@@ -174,8 +178,8 @@ class HDClustering(object):
 
         cluster_builder = self.cluster_builder
         for i, obj in enumerate(data):
-            if not i % 1000:
-                print "Processing line " + str(i)
+            if self.trace_every > 0 and (not i % self.trace_every):
+                LOG.info("Processing line " + str(i))
             body = obj if get_body is None else get_body(obj)
             label = i if get_label is None else get_label(obj)
             prefix = None if get_prefix is None else get_prefix(obj)
