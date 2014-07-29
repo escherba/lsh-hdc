@@ -36,13 +36,12 @@ for json_obj in imap(json.loads, args.infile):
         positives.add(id_)
 
 hdc = HDClustering(cfg=mac_cfg['model'],
-                   content_filter=ContentFilter())
-clusters = hdc.clusters_from_iter(
-    data,
-    get_body=itemgetter('content'),
-    get_label=itemgetter('post_id'),
-    get_prefix=itemgetter('user_id'),
-)
+                   content_filter=ContentFilter(),
+                   get_body=itemgetter('content'),
+                   get_label=itemgetter('post_id'),
+                   get_prefix=itemgetter('user_id')
+                   )
+clusters = hdc.clusters_from_iter(data)
 
 count_clusters = sorted([(len(c), c) for c in clusters], reverse=True)
 for i, (l, cluster) in enumerate(count_clusters):

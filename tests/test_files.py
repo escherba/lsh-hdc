@@ -36,13 +36,12 @@ class TestFiles(unittest.TestCase):
                 positives.add(obj['post_id'])
 
         hdc = HDClustering(cfg=mac_cfg['model'],
-                           content_filter=ContentFilter())
-        clusters = hdc.clusters_from_iter(
-            data,
-            get_body=itemgetter('content'),
-            get_label=itemgetter('post_id'),
-            get_prefix=itemgetter('user_id'),
-        )
+                           content_filter=ContentFilter(),
+                           get_body=itemgetter('content'),
+                           get_label=itemgetter('post_id'),
+                           get_prefix=itemgetter('user_id'),
+                           )
+        clusters = hdc.clusters_from_iter(data)
 
         num_clusters = len([x for x in clusters if len(x) > 1])
         print "Found %d clusters" % num_clusters
@@ -210,12 +209,11 @@ class TestFiles(unittest.TestCase):
             data = [line.rstrip().split(' ') for line in f]
 
         hdc = HDClustering(sim_cfg['model'],
-                           opts=dict(tokenizer=None, normalizer=None))
-        clusters = hdc.clusters_from_iter(
-            data,
-            get_body=itemgetter(1),
-            get_label=itemgetter(0)
-        )
+                           opts=dict(tokenizer=None, normalizer=None),
+                           get_body=itemgetter(1),
+                           get_label=itemgetter(0)
+                           )
+        clusters = hdc.clusters_from_iter(data)
 
         num_clusters = len([x for x in clusters if len(x) > 1])
         print "Found %d clusters" % num_clusters

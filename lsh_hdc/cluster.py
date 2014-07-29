@@ -115,10 +115,14 @@ class BaseContentFilter(object):
 
 class HDClustering(object):
 
-    def __init__(self, cfg, content_filter=None, opts=None, trace_every=0):
+    def __init__(self, cfg, content_filter=None, opts=None, trace_every=0,
+                 get_body=None, get_label=None, get_prefix=None):
 
         """Read configuration"""
         self.cfg = cfg
+        self._get_body = get_body
+        self._get_label = get_label
+        self._get_prefix = get_prefix
 
         self.trace_every = trace_every
         common_kwargs = dict(
@@ -172,11 +176,14 @@ class HDClustering(object):
                                        max_dist=xor_threshold,
                                        min_support=min_support)
 
-    def clusters_from_iter(self, data, get_body=None, get_label=None,
-                           get_prefix=None):
+    def clusters_from_iter(self, data):
         """Find clusters in an iterable"""
 
         cluster_builder = self.cluster_builder
+        get_body = self._get_body
+        get_label = self._get_label
+        get_prefix = self._get_prefix
+
         for i, obj in enumerate(data):
             if self.trace_every > 0 and (not i % self.trace_every):
                 LOG.info("Processing line " + str(i))
