@@ -26,14 +26,14 @@ class Cluster(object):
                  min_support=1):
         self.union_find = UnionFind()
         self.signer = signer
-        self.hash_map = defaultdict(dict)
+        self.buckets = defaultdict(dict)
         self.sketch_dist_fn = sketch_dist_fn
         self.max_dist = max_dist
         self.min_support = min_support
 
-    def add_set(self, s, label=None, sketch=None):
+    def add_item(self, s, label=None, sketch=None):
         # Set default label for this set
-        if not label:
+        if label is None:
             label = s
 
         # Add to union-find structure
@@ -44,7 +44,6 @@ class Cluster(object):
         keys = s \
             if self.signer is None \
             else self.signer.get_signature(s)
-        label_lists = map(self.hash_map.__getitem__, keys)
 
         if self.sketch_dist_fn is None:
             distance_from = None
@@ -54,19 +53,20 @@ class Cluster(object):
         # Unite labels with same LSH keys
         counter = Counter()
         sketches = dict()
-        for label_list in label_lists:
-            label_list[label] = sketch
-            counter.update(label_list.keys())
-            sketches.update(label_list)
+        for bucket in map(self.buckets.__getitem__, keys):
+            bucket[label] = sketch
+            counter.update(bucket.keys())
+            sketches.update(bucket)
 
-        min_supp, max_dist = self.min_support, self.max_dist
-        for lbl, cnt in counter.iteritems():
-            if lbl != label and cnt >= min_supp:
-                skt = sketches[lbl]
+        min_support, max_distance = self.min_support, self.max_dist
+        for matched_label, support in counter.iteritems():
+            if matched_label != label and support >= min_support:
+                matched_sketch = sketches[matched_label]
                 # Note: large improvement in precision when also
                 # ensuring distance > 0 below:
-                if distance_from is None or distance_from(skt) <= max_dist:
-                    uf.union(lbl, label)
+                if distance_from is None \
+                        or distance_from(matched_sketch) <= max_distance:
+                    uf.union(matched_label, label)
 
     def get_clusters(self):
         """
@@ -176,22 +176,19 @@ class HDClustering(object):
                                        max_dist=xor_threshold,
                                        min_support=min_support)
 
-    def clusters_from_iter(self, data):
+    def _clusters_from_iter(self, data):
         """Find clusters in an iterable"""
 
-        cluster_builder = self.cluster_builder
         get_body = self._get_body
         get_label = self._get_label
         get_prefix = self._get_prefix
 
         for i, obj in enumerate(data):
-            if self.trace_every > 0 and (not i % self.trace_every):
-                LOG.info("Processing line " + str(i))
             body = obj if get_body is None else get_body(obj)
             label = i if get_label is None else get_label(obj)
             prefix = None if get_prefix is None else get_prefix(obj)
 
-            # Step 1: Extract features
+            # Extract features
             if self.content_filter is None or \
                     not self.content_filter.accept(obj):
                 features = self.shingler.get_shingles(body, prefix=prefix)
@@ -201,8 +198,19 @@ class HDClustering(object):
                     sketch = self.sketch_signer.get_signature(sketch_features)
                 else:
                     sketch = None
+                yield (keys, (label, sketch))
 
-            # Step 2: Cluster given keys, sketch
-            cluster_builder.add_set(keys, label=label, sketch=sketch)
+    def clusters_from_iter(self, data):
+        """Find clusters in an iterable"""
+
+        cluster_builder = self.cluster_builder
+        trace_every = self.trace_every
+        for i, obj in enumerate(self._clusters_from_iter(data)):
+            if trace_every > 0 and (not i % trace_every):
+                LOG.info("Processing line " + str(i))
+
+            # Cluster given keys, sketch
+            keys, (label, sketch) = obj
+            cluster_builder.add_item(keys, label=label, sketch=sketch)
 
         return cluster_builder.get_clusters()

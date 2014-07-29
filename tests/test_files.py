@@ -74,7 +74,7 @@ class TestFiles(unittest.TestCase):
         for name in data:
             shingles = shingler.get_shingles(name)
             s.add_features(name, shingles)
-            cluster.add_set(shingles, name)
+            cluster.add_item(shingles, name)
         clusters = cluster.get_clusters()
         ti = s.summarize_clusters(clusters)
         self.assertEqual(len(clusters), 281)
@@ -91,7 +91,7 @@ class TestFiles(unittest.TestCase):
         for name in data:
             shingles = shingler.get_shingles(name)
             s.add_features(name, shingles)
-            cluster.add_set(shingles, name)
+            cluster.add_item(shingles, name)
         clusters = cluster.get_clusters()
         # for cluster in clusters:
         #     print cluster
@@ -110,7 +110,7 @@ class TestFiles(unittest.TestCase):
         for name in data:
             shingles = shingler.get_shingles(name)
             s.add_features(name, shingles)
-            cluster.add_set(shingles, name)
+            cluster.add_item(shingles, name)
         clusters = cluster.get_clusters()
         # for cluster in clusters:
         #     print cluster
@@ -129,7 +129,7 @@ class TestFiles(unittest.TestCase):
         for label, text in data:
             shingles = shingler.get_shingles(text)
             s.add_features(label, shingles)
-            cluster.add_set(shingles, label)
+            cluster.add_item(shingles, label)
         clusters = cluster.get_clusters()
         ti = s.summarize_clusters(clusters)
         self.assertEqual(len(clusters), 97)
@@ -155,7 +155,7 @@ class TestFiles(unittest.TestCase):
             content_dict[label] = text
             shingles = shingler.get_shingles(text)
             s.add_features(label, shingles)
-            cluster.add_set(shingles, label)
+            cluster.add_item(shingles, label)
         clusters = cluster.get_clusters()
 
         is_label_positive = lambda lbl: ':' in lbl

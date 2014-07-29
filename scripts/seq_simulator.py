@@ -191,7 +191,7 @@ def test_simulated(opts, data):
         content_dict[label] = text
         shingles = shingler.get_shingles(text)
         s.add_features(label, shingles)
-        cluster.add_set(shingles, label)
+        cluster.add_item(shingles, label)
     clusters = cluster.get_clusters()
 
     c = get_stats(clusters, lambda x: len(x.split(':')) > 1)

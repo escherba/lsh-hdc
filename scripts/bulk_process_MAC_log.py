@@ -199,7 +199,7 @@ def cluster_from_mac_log(options):
                 sys.stderr.write("Processing line " + str(line_num) + "\n")
             json_obj = json.loads(line)
             post_id = mac_get_post_id(json_obj, line_num)
-            cluster_builder.add_set(shingler.shingles_from_mac(json_obj), post_id)
+            cluster_builder.add_item(shingler.shingles_from_mac(json_obj), post_id)
             data[post_id] = json_obj
 
     clusters = cluster_builder.get_clusters()
