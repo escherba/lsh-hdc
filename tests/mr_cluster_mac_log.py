@@ -2,10 +2,11 @@
 
 import yaml
 import json
+from mrjob import protocol as mrjob_protocol
+from mrjob.job import MRJob
 from operator import itemgetter
 from lsh_hdc.cluster import HDClustering
 from content_rules import ContentFilter
-from mrjob.job import MRJob
 from pkg_resources import resource_string
 
 
@@ -20,16 +21,19 @@ hdc = HDClustering(cfg=mac_cfg['model'],
 
 class MRCluster(MRJob):
 
+    INPUT_PROTOCOL = mrjob_protocol.RawValueProtocol
+    OUTPUT_PROTOCOL = mrjob_protocol.JSONValueProtocol
+
     def mapper(self, _, data):
         obj = json.loads(data)['object']
-        for x in hdc.mapper(obj):
-            yield x
+        for pair in hdc.mapper(obj):
+            yield pair
 
     def reducer(self, key, val):
-        yield hdc.reducer((key, val))
+        result = hdc.reducer((key, val))
+        if len(result[1]) > 1:
+            yield result
 
 
-mrcountpn = MRCluster()
-clusters = mrcountpn.run()
-
-print clusters
+mrcluster = MRCluster()
+mrcluster.run()
