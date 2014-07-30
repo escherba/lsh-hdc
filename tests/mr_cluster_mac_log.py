@@ -26,8 +26,8 @@ class MRCluster(MRJob):
 
     def mapper(self, _, data):
         obj = json.loads(data)['object']
-        for x in hdc.mapper(obj):
-            yield x
+        for pair in hdc.mapper(obj):
+            yield pair
 
     def reducer(self, key, val):
         result = hdc.reducer((key, val))
