@@ -26,10 +26,10 @@ class MRCluster(MRJob):
             yield x
 
     def reducer(self, key, val):
-        yield hdc.reducer((key, val))
+        result = hdc.reducer((key, val))
+        if len(result[1]) > 1:
+            yield result
 
 
-mrcountpn = MRCluster()
-clusters = mrcountpn.run()
-
-print clusters
+mrcluster = MRCluster()
+mrcluster.run()

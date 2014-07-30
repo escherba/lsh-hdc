@@ -3,3 +3,4 @@ coverage
 nosexcover
 mock
 PyYAML
+mrjob

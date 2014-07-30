@@ -299,9 +299,9 @@ class HDClustering(object):
         sketch_counts = map(lambda x: len(x[1]), sketch_items)
         _, i = max((v, i) for i, v in enumerate(sketch_counts))
         rep_sketch = sketch_items[i][0]  # most representative sketch
-        result = []
+        result = set()
         is_close = self._closeness_measure(rep_sketch)
         for sketch, items in sketch_items:
             if is_close(sketch):
-                result.extend(items)
-        return data[0], result
+                result.update(items)
+        return data[0], sorted(result)
