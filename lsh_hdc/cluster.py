@@ -206,7 +206,7 @@ class HDClustering(object):
                                        max_dist=self.max_dist,
                                        min_support=min_support)
 
-    def _clusters_from_iter(self, data):
+    def _map_iter(self, data):
         """Find clusters in an iterable"""
 
         get_body = self._get_body
@@ -218,24 +218,29 @@ class HDClustering(object):
             label = i if get_label is None else get_label(obj)
             prefix = None if get_prefix is None else get_prefix(obj)
 
-            # Extract features
-            if self.content_filter is None or \
-                    not self.content_filter.accept(obj):
-                features = self.shingler.get_shingles(body, prefix=prefix)
-                keys = self.signer.get_signature(features)
-                if self.sketch_enabled:
-                    sketch_features = self.sketch_shingler.get_shingles(body)
-                    sketch = self.sketch_signer.get_signature(sketch_features)
-                else:
-                    sketch = None
-                yield (keys, (label, sketch))
+            for feat in self._map_item(obj, body, label, prefix):
+                yield feat
+
+    def _map_item(self, obj, body, label, prefix=None):
+
+        # Extract features
+        if self.content_filter is None or \
+                not self.content_filter.accept(obj):
+            features = self.shingler.get_shingles(body, prefix=prefix)
+            keys = self.signer.get_signature(features)
+            if self.sketch_enabled:
+                sketch_features = self.sketch_shingler.get_shingles(body)
+                sketch = self.sketch_signer.get_signature(sketch_features)
+            else:
+                sketch = None
+            yield (keys, (label, sketch))
 
     def clusters_from_iter(self, data):
         """Find clusters in an iterable"""
 
         cluster_builder = self.cluster_builder
         trace_every = self.trace_every
-        for i, obj in enumerate(self._clusters_from_iter(data)):
+        for i, obj in enumerate(self._map_iter(data)):
             if trace_every > 0 and (not i % trace_every):
                 LOG.info("Processing line " + str(i))
 
@@ -247,11 +252,18 @@ class HDClustering(object):
 
         return cluster_builder.get_clusters()
 
-    def mapper(self, data):
+    def mapper(self, obj):
         """Perform a mapper task in MR"""
+        get_body = self._get_body
+        get_label = self._get_label
+        get_prefix = self._get_prefix
 
-        for i, obj in enumerate(self._clusters_from_iter(data)):
-            keys, val = obj
+        body = obj if get_body is None else get_body(obj)
+        label = obj if get_label is None else get_label(obj)
+        prefix = None if get_prefix is None else get_prefix(obj)
+
+        for out in self._map_item(obj, body, label, prefix):
+            keys, val = out
             for key in keys:
                 yield key, val
 
@@ -289,7 +301,7 @@ class HDClustering(object):
         rep_sketch = sketch_items[i][0]  # most representative sketch
         result = []
         is_close = self._closeness_measure(rep_sketch)
-        for sketch, items in sketch_counts:
+        for sketch, items in sketch_items:
             if is_close(sketch):
                 result.extend(items)
         return data[0], result
