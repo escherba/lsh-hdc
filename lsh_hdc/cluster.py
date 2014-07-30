@@ -8,6 +8,9 @@ from pymaptools.utils import deepupdate
 from lsh_hdc import Shingler, SimHashSignature, hamming, \
     MinHashSketchSignature, MinHashSignature, LSHC
 from lsh_hdc.utils import RegexTokenizer, HTMLNormalizer
+from logging import getLogger
+
+LOG = getLogger(__name__)
 
 
 class Cluster(object):
@@ -23,14 +26,24 @@ class Cluster(object):
                  min_support=1):
         self.union_find = UnionFind()
         self.signer = signer
-        self.hash_map = defaultdict(dict)
+        self.buckets = defaultdict(dict)
         self.sketch_dist_fn = sketch_dist_fn
         self.max_dist = max_dist
         self.min_support = min_support
 
-    def add_set(self, s, label=None, sketch=None):
+    def _closeness_measure(self, sketch):
+        if sketch is None:
+            is_close = lambda sketch: True
+        else:
+            max_dist = self.max_dist
+            distance_from = partial(self.sketch_dist_fn, sketch)
+            is_close = lambda matched_sketch: distance_from(matched_sketch) \
+                <= max_dist
+        return is_close
+
+    def add_item(self, s, label=None, sketch=None):
         # Set default label for this set
-        if not label:
+        if label is None:
             label = s
 
         # Add to union-find structure
@@ -41,29 +54,49 @@ class Cluster(object):
         keys = s \
             if self.signer is None \
             else self.signer.get_signature(s)
-        label_lists = map(self.hash_map.__getitem__, keys)
-
-        if self.sketch_dist_fn is None:
-            distance_from = None
-        else:
-            distance_from = partial(self.sketch_dist_fn, sketch)
 
         # Unite labels with same LSH keys
         counter = Counter()
         sketches = dict()
-        for label_list in label_lists:
-            label_list[label] = sketch
-            counter.update(label_list.keys())
-            sketches.update(label_list)
+        for bucket in map(self.buckets.__getitem__, keys):
+            bucket[label] = sketch
+            counter.update(bucket.keys())
+            sketches.update(bucket)
 
-        min_supp, max_dist = self.min_support, self.max_dist
-        for lbl, cnt in counter.iteritems():
-            if lbl != label and cnt >= min_supp:
-                skt = sketches[lbl]
+        min_support = self.min_support
+        is_close = self._closeness_measure(sketch)
+        for matched_label, support in counter.iteritems():
+            if matched_label != label and support >= min_support:
+                matched_sketch = sketches[matched_label]
                 # Note: large improvement in precision when also
                 # ensuring distance > 0 below:
-                if distance_from is None or distance_from(skt) <= max_dist:
-                    uf.union(lbl, label)
+                if is_close(matched_sketch):
+                    uf.union(matched_label, label)
+
+    def add_key(self, s, label=None, sketch=None):
+        """Add one LSH key only (with associated info)
+        Cannot use min_support in this case (it is always equal to one)
+        """
+        # Set default label for this set
+        if label is None:
+            label = s
+
+        # Add to union-find structure
+        uf = self.union_find
+        uf.__getitem__(label)
+
+        # Unite labels with same LSH keys
+        bucket = self.buckets[s]
+        bucket[label] = sketch
+
+        is_close = self._closeness_measure(sketch)
+        for matched_label in bucket.keys():
+            if matched_label != label:
+                matched_sketch = bucket[matched_label]
+                # Note: large improvement in precision when also ensuring that
+                # distance > 0 below:
+                if is_close(matched_sketch):
+                    uf.union(matched_label, label)
 
     def get_clusters(self):
         """
@@ -112,11 +145,16 @@ class BaseContentFilter(object):
 
 class HDClustering(object):
 
-    def __init__(self, cfg, content_filter=None, opts=None):
+    def __init__(self, cfg, content_filter=None, opts=None, trace_every=0,
+                 get_body=None, get_label=None, get_prefix=None):
 
         """Read configuration"""
         self.cfg = cfg
+        self._get_body = get_body
+        self._get_label = get_label
+        self._get_prefix = get_prefix
 
+        self.trace_every = trace_every
         common_kwargs = dict(
             normalizer=HTMLNormalizer(),
             tokenizer=RegexTokenizer()
@@ -142,8 +180,8 @@ class HDClustering(object):
         # Configure sketch comparison algorithm
         cfg_sketch = cfg['sketch']
         self.sketch_enabled = cfg_sketch['enabled']
-        sketch_dist_fn = None
-        xor_threshold = None
+        self.sketch_dist_fn = None
+        self.max_dist = None
         if self.sketch_enabled:
             algorithm_name = cfg_sketch['algorithm']
             try:
@@ -159,39 +197,111 @@ class HDClustering(object):
                 self.sketch_signer = SimHashSignature(bit_depth=sketch_bits)
             elif sketch_algorithm == SketchModel.minhash:
                 self.sketch_signer = MinHashSketchSignature(sketch_bits)
-            xor_threshold = \
+            self.max_dist = \
                 int(floor(sketch_bits *
                           (1.0 - float(cfg_sketch['resemblance']))))
-            sketch_dist_fn = hamming
+            self.sketch_dist_fn = hamming
 
-        self.cluster_builder = Cluster(sketch_dist_fn=sketch_dist_fn,
-                                       max_dist=xor_threshold,
+        self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
+                                       max_dist=self.max_dist,
                                        min_support=min_support)
 
-    def clusters_from_iter(self, data, get_body=None, get_label=None,
-                           get_prefix=None):
+    def _map_iter(self, data):
         """Find clusters in an iterable"""
 
-        cluster_builder = self.cluster_builder
+        get_body = self._get_body
+        get_label = self._get_label
+        get_prefix = self._get_prefix
+
         for i, obj in enumerate(data):
-            if not i % 1000:
-                print "Processing line " + str(i)
             body = obj if get_body is None else get_body(obj)
             label = i if get_label is None else get_label(obj)
             prefix = None if get_prefix is None else get_prefix(obj)
 
-            # Step 1: Extract features
-            if self.content_filter is None or \
-                    not self.content_filter.accept(obj):
-                features = self.shingler.get_shingles(body, prefix=prefix)
-                keys = self.signer.get_signature(features)
-                if self.sketch_enabled:
-                    sketch_features = self.sketch_shingler.get_shingles(body)
-                    sketch = self.sketch_signer.get_signature(sketch_features)
-                else:
-                    sketch = None
+            for feat in self._map_item(obj, body, label, prefix):
+                yield feat
 
-            # Step 2: Cluster given keys, sketch
-            cluster_builder.add_set(keys, label=label, sketch=sketch)
+    def _map_item(self, obj, body, label, prefix=None):
+
+        # Extract features
+        if self.content_filter is None or \
+                not self.content_filter.accept(obj):
+            features = self.shingler.get_shingles(body, prefix=prefix)
+            keys = self.signer.get_signature(features)
+            if self.sketch_enabled:
+                sketch_features = self.sketch_shingler.get_shingles(body)
+                sketch = self.sketch_signer.get_signature(sketch_features)
+            else:
+                sketch = None
+            yield (keys, (label, sketch))
+
+    def clusters_from_iter(self, data):
+        """Find clusters in an iterable"""
+
+        cluster_builder = self.cluster_builder
+        trace_every = self.trace_every
+        for i, obj in enumerate(self._map_iter(data)):
+            if trace_every > 0 and (not i % trace_every):
+                LOG.info("Processing line " + str(i))
+
+            keys, val = obj
+            label, sketch = val \
+                if isinstance(val, tuple) \
+                else (val, None)
+            cluster_builder.add_item(keys, label=label, sketch=sketch)
 
         return cluster_builder.get_clusters()
+
+    def mapper(self, obj):
+        """Perform a mapper task in MR"""
+        get_body = self._get_body
+        get_label = self._get_label
+        get_prefix = self._get_prefix
+
+        body = obj if get_body is None else get_body(obj)
+        label = obj if get_label is None else get_label(obj)
+        prefix = None if get_prefix is None else get_prefix(obj)
+
+        for out in self._map_item(obj, body, label, prefix):
+            keys, val = out
+            for key in keys:
+                yield key, val
+
+    def _closeness_measure(self, sketch):
+        if sketch is None:
+            is_close = lambda sketch: True
+        else:
+            max_dist = self.max_dist
+            distance_from = partial(self.sketch_dist_fn, sketch)
+            is_close = lambda matched_sketch: distance_from(matched_sketch) \
+                <= max_dist
+        return is_close
+
+    def reducer(self, data):
+        """Perform a reducer task in MR
+
+        If sketches enabled, data consists of:
+            (key, [(lbl, sk), (lbl, sk), (lbl, sk)])
+        Otherwise:
+            (key, [lbl, lbl, lbl])
+        """
+
+        # If not using sketches, we are done
+        if self.sketch_dist_fn is None:
+            return data
+
+        # If are using sketches, find those that are closest to the most
+        # representative
+        sketch_dict = defaultdict(list)
+        for d in data[1]:
+            sketch_dict[d[1]].append(d[0])
+        sketch_items = sketch_dict.items()
+        sketch_counts = map(lambda x: len(x[1]), sketch_items)
+        _, i = max((v, i) for i, v in enumerate(sketch_counts))
+        rep_sketch = sketch_items[i][0]  # most representative sketch
+        result = []
+        is_close = self._closeness_measure(rep_sketch)
+        for sketch, items in sketch_items:
+            if is_close(sketch):
+                result.extend(items)
+        return data[0], result
