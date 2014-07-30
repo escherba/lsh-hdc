@@ -31,6 +31,16 @@ class Cluster(object):
         self.max_dist = max_dist
         self.min_support = min_support
 
+    def _closeness_measure(self, sketch):
+        if sketch is None:
+            is_close = lambda sketch: True
+        else:
+            max_dist = self.max_dist
+            distance_from = partial(self.sketch_dist_fn, sketch)
+            is_close = lambda matched_sketch: distance_from(matched_sketch) \
+                <= max_dist
+        return is_close
+
     def add_item(self, s, label=None, sketch=None):
         # Set default label for this set
         if label is None:
@@ -45,11 +55,6 @@ class Cluster(object):
             if self.signer is None \
             else self.signer.get_signature(s)
 
-        if self.sketch_dist_fn is None:
-            distance_from = None
-        else:
-            distance_from = partial(self.sketch_dist_fn, sketch)
-
         # Unite labels with same LSH keys
         counter = Counter()
         sketches = dict()
@@ -58,14 +63,39 @@ class Cluster(object):
             counter.update(bucket.keys())
             sketches.update(bucket)
 
-        min_support, max_distance = self.min_support, self.max_dist
+        min_support = self.min_support
+        is_close = self._closeness_measure(sketch)
         for matched_label, support in counter.iteritems():
             if matched_label != label and support >= min_support:
                 matched_sketch = sketches[matched_label]
                 # Note: large improvement in precision when also
                 # ensuring distance > 0 below:
-                if distance_from is None \
-                        or distance_from(matched_sketch) <= max_distance:
+                if is_close(matched_sketch):
+                    uf.union(matched_label, label)
+
+    def add_key(self, s, label=None, sketch=None):
+        """Add one LSH key only (with associated info)
+        Cannot use min_support in this case (it is always equal to one)
+        """
+        # Set default label for this set
+        if label is None:
+            label = s
+
+        # Add to union-find structure
+        uf = self.union_find
+        uf.__getitem__(label)
+
+        # Unite labels with same LSH keys
+        bucket = self.buckets[s]
+        bucket[label] = sketch
+
+        is_close = self._closeness_measure(sketch)
+        for matched_label in bucket.keys():
+            if matched_label != label:
+                matched_sketch = bucket[matched_label]
+                # Note: large improvement in precision when also ensuring that
+                # distance > 0 below:
+                if is_close(matched_sketch):
                     uf.union(matched_label, label)
 
     def get_clusters(self):
@@ -150,8 +180,8 @@ class HDClustering(object):
         # Configure sketch comparison algorithm
         cfg_sketch = cfg['sketch']
         self.sketch_enabled = cfg_sketch['enabled']
-        sketch_dist_fn = None
-        xor_threshold = None
+        self.sketch_dist_fn = None
+        self.max_dist = None
         if self.sketch_enabled:
             algorithm_name = cfg_sketch['algorithm']
             try:
@@ -167,13 +197,13 @@ class HDClustering(object):
                 self.sketch_signer = SimHashSignature(bit_depth=sketch_bits)
             elif sketch_algorithm == SketchModel.minhash:
                 self.sketch_signer = MinHashSketchSignature(sketch_bits)
-            xor_threshold = \
+            self.max_dist = \
                 int(floor(sketch_bits *
                           (1.0 - float(cfg_sketch['resemblance']))))
-            sketch_dist_fn = hamming
+            self.sketch_dist_fn = hamming
 
-        self.cluster_builder = Cluster(sketch_dist_fn=sketch_dist_fn,
-                                       max_dist=xor_threshold,
+        self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
+                                       max_dist=self.max_dist,
                                        min_support=min_support)
 
     def _clusters_from_iter(self, data):
@@ -209,8 +239,57 @@ class HDClustering(object):
             if trace_every > 0 and (not i % trace_every):
                 LOG.info("Processing line " + str(i))
 
-            # Cluster given keys, sketch
-            keys, (label, sketch) = obj
+            keys, val = obj
+            label, sketch = val \
+                if isinstance(val, tuple) \
+                else (val, None)
             cluster_builder.add_item(keys, label=label, sketch=sketch)
 
         return cluster_builder.get_clusters()
+
+    def mapper(self, data):
+        """Perform a mapper task in MR"""
+
+        for i, obj in enumerate(self._clusters_from_iter(data)):
+            keys, val = obj
+            for key in keys:
+                yield key, val
+
+    def _closeness_measure(self, sketch):
+        if sketch is None:
+            is_close = lambda sketch: True
+        else:
+            max_dist = self.max_dist
+            distance_from = partial(self.sketch_dist_fn, sketch)
+            is_close = lambda matched_sketch: distance_from(matched_sketch) \
+                <= max_dist
+        return is_close
+
+    def reducer(self, data):
+        """Perform a reducer task in MR
+
+        If sketches enabled, data consists of:
+            (key, [(lbl, sk), (lbl, sk), (lbl, sk)])
+        Otherwise:
+            (key, [lbl, lbl, lbl])
+        """
+
+        # If not using sketches, we are done
+        if self.sketch_dist_fn is None:
+            return data
+
+        # If are using sketches, find those that are closest to the most
+        # representative
+        sketch_dict = defaultdict(list)
+        for d in data[1]:
+            sketch_dict[d[1]].append(d[0])
+        sketch_items = sketch_dict.items()
+        sketch_counts = map(lambda x: len(x[1]), sketch_items)
+        _, i = max((v, i) for i, v in enumerate(sketch_counts))
+        rep_sketch = sketch_items[i][0]  # most representative sketch
+        result = []
+        is_close = self._closeness_measure(rep_sketch)
+        for sketch, items in sketch_counts:
+            if is_close(sketch):
+                result.extend(items)
+        return data[0], result
