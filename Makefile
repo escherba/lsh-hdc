@@ -11,9 +11,11 @@ test: env dev
 	$(PYENV) nosetests $(NOSEARGS)
 
 test_mr: tests/mr_cluster_mac_log.py mrjob.conf tests/data/mac.json env dev 
+	mkdir -p tests/out
 	$(PYTHON) tests/mr_cluster_mac_log.py \
 		-c mrjob.conf \
-		tests/data/mac.json
+		tests/data/mac.json > tests/out/mr.out
+	echo "Output written to tests/out/mr.out"
 
 dev: env/bin/activate dev_requirements.txt
 	$(PYENV) pip install --process-dependency-links -e . -r dev_requirements.txt

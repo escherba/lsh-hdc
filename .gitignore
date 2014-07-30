@@ -9,6 +9,7 @@ examples/
 
 env/
 bin
+tests/out/
 
 *.egg-info/
 *.egg/
