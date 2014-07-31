@@ -277,7 +277,7 @@ class HDClustering(object):
                 <= max_dist
         return is_close
 
-    def reducer(self, data):
+    def reducer(self, key, tuple_gen):
         """Perform a reducer task in MR
 
         If sketches enabled, data consists of:
@@ -285,8 +285,6 @@ class HDClustering(object):
         Otherwise:
             (key, [lbl, lbl, lbl])
         """
-
-        key, tuple_gen = data
 
         # If not using sketches, we are done
         if self.sketch_dist_fn is None:

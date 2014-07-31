@@ -23,10 +23,15 @@ class MRCluster(MRJob):
         for pair in hdc.mapper(obj):
             yield pair
 
-    def reducer(self, key, val):
-        result = hdc.reducer((key, val))
-        if len(result[1]) > 1:
-            yield result
+    def combiner(self, key, vals):
+        ckey, cvals = hdc.reducer(key, vals)
+        for cval in cvals:
+            yield ckey, cval
+
+    def reducer(self, key, vals):
+        rkey, rvals = hdc.reducer(key, vals)
+        if len(rvals) > 1:
+            yield rkey, rvals
 
 
 if __name__ == '__main__':
