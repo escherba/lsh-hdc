@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 
 import yaml
-import json
 from mrjob import protocol as mrjob_protocol
 from mrjob.job import MRJob
 from operator import itemgetter
@@ -10,22 +9,17 @@ from content_rules import ContentFilter
 from pkg_resources import resource_string
 
 
-mac_cfg = yaml.load(resource_string(__name__, 'data/mac.yaml'))
-hdc = HDClustering(cfg=mac_cfg['model'],
-                   content_filter=ContentFilter(),
-                   get_body=itemgetter('content'),
-                   get_label=itemgetter('post_id'),
-                   get_prefix=itemgetter('user_id')
-                   )
-
-
 class MRCluster(MRJob):
 
-    INPUT_PROTOCOL = mrjob_protocol.RawValueProtocol
+    INPUT_PROTOCOL = mrjob_protocol.JSONValueProtocol
     OUTPUT_PROTOCOL = mrjob_protocol.JSONValueProtocol
 
+    def __init__(self, hdc=None, *args, **kwargs):
+        super(self.__class__, self).__init__(*args, **kwargs)
+        self.hdc = hdc
+
     def mapper(self, _, data):
-        obj = json.loads(data)['object']
+        obj = data['object']
         for pair in hdc.mapper(obj):
             yield pair
 
@@ -35,5 +29,14 @@ class MRCluster(MRJob):
             yield result
 
 
-mrcluster = MRCluster()
-mrcluster.run()
+if __name__ == '__main__':
+    mac_cfg = yaml.load(resource_string(__name__, 'data/mac.yaml'))
+    hdc = HDClustering(cfg=mac_cfg['model'],
+                       content_filter=ContentFilter(),
+                       get_body=itemgetter('content'),
+                       get_label=itemgetter('post_id'),
+                       get_prefix=itemgetter('user_id')
+                       )
+
+    mrcluster = MRCluster(hdc=hdc)
+    mrcluster.run()
