@@ -57,6 +57,17 @@ class MRCluster(MRJob):
         for val in uniq:
             yield key, val
 
+    def cluster_combiner(self, key, vals):
+
+        clustered_sketches = dict()
+        for val in vals:
+            lsh, tuples = val
+            if lsh is None:
+                clustered_sketches.update(tuples)
+            else:
+                yield key, val
+        yield key, (None, clustered_sketches.items())
+
     def cluster_reducer(self, key, vals):
 
         sketch_dist = hdc.sketch_dist_fn
@@ -125,8 +136,10 @@ class MRCluster(MRJob):
                    combiner=self.lsh_combiner,
                    reducer=self.lsh_reducer),
             MRStep(mapper=self.ab_mapper,
+                   combiner=self.cluster_combiner,
                    reducer=self.cluster_reducer),
-            MRStep(reducer=self.cluster_reducer),
+            MRStep(combiner=self.cluster_combiner,
+                   reducer=self.cluster_reducer),
             MRStep(mapper=self.union_mapper,
                    reducer=self.union_reducer)
         ]
