@@ -29,7 +29,7 @@ class MRCluster(MRJob):
 
     INPUT_PROTOCOL = mr_protocol.JSONValueProtocol
     INTERNAL_PROTOCOL = mr_protocol.JSONProtocol
-    OUTPUT_PROTOCOL = mr_protocol.JSONProtocol
+    OUTPUT_PROTOCOL = mr_protocol.JSONValueProtocol
 
     def lsh_mapper(self, _, data):
         obj = data['object']

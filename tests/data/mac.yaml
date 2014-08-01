@@ -1,7 +1,7 @@
 model:
   kmin: 3  # number of minima (k) in minhash
   sig_width: 24  # Length of minhash signature. Must be a multiple of kmin. Should usually also be a multiple of lsh_bandwidth.
-  min_support: 1  # Minimum number of matching keys (>=1)
+  min_support: 2  # Minimum number of matching keys (>=1)
 
   lsh_options:
     bandwidth: 3  # Rows per LSH band. Setting this to 1 effectively turns off LSH (do not try this in production...)
