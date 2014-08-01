@@ -46,9 +46,12 @@ class MRCluster(MRJob):
 
     def ab_mapper(self, lsh, data):
         sorted_data = sorted(data)  # sort on labels
-        key = sorted_data[0]
+
         # key is label + sketch pair
-        yield key, (lsh, sorted_data[1:])
+        for t in sorted_data:
+            lbl = t[0]
+            val = filter(lambda x: x[0] != lbl, sorted_data)
+            yield t, (lsh, val)
 
     def uniq_reducer(self, key, vals):
         uniq = set()
