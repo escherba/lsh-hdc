@@ -1,7 +1,5 @@
 #!/usr/bin/env python2
 
-import os
-import sys
 import yaml
 from pymaptools import UnionFind
 from mrjob import protocol as mr_protocol
@@ -11,12 +9,10 @@ from operator import itemgetter
 from collections import Counter
 from lsh_hdc.cluster import HDClustering
 from content_rules import ContentFilter
+from pkg_resources import resource_filename
 
-fn = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/mac.yaml'))
-sys.stderr.write("--> " + fn + "\n")
-with open(fn, 'r') as fh:
+with open(resource_filename(__name__, 'mac.yaml'), 'r') as fh:
     mac_cfg = yaml.load(fh)
-
 
 hdc = HDClustering(cfg=mac_cfg['model'],
                    content_filter=ContentFilter(),
@@ -29,7 +25,7 @@ class MRCluster(MRJob):
 
     INPUT_PROTOCOL = mr_protocol.JSONValueProtocol
     INTERNAL_PROTOCOL = mr_protocol.JSONProtocol
-    OUTPUT_PROTOCOL = mr_protocol.JSONProtocol
+    OUTPUT_PROTOCOL = mr_protocol.JSONValueProtocol
 
     def lsh_mapper(self, _, data):
         obj = data['object']

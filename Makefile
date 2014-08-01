@@ -14,6 +14,7 @@ test_mr: tests/mr_cluster_mac_log.py mrjob.conf tests/data/mac.json env dev
 	mkdir -p tests/out
 	$(PYTHON) tests/mr_cluster_mac_log.py \
 		-c mrjob.conf \
+		-r local \
 		tests/data/mac.json > tests/out/mr.out
 	echo "Output written to tests/out/mr.out"
 
