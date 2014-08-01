@@ -163,7 +163,7 @@ class HDClustering(object):
 
         # Set options
         self.content_filter = content_filter
-        min_support = cfg['min_support']
+        self.min_support = cfg['min_support']
 
         # Configure minhash signer
         sig_width = cfg['sig_width']
@@ -204,7 +204,7 @@ class HDClustering(object):
 
         self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
                                        max_dist=self.max_dist,
-                                       min_support=min_support)
+                                       min_support=self.min_support)
 
     def _map_iter(self, data):
         """Find clusters in an iterable"""
