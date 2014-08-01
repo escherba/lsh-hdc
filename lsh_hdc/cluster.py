@@ -163,7 +163,7 @@ class HDClustering(object):
 
         # Set options
         self.content_filter = content_filter
-        min_support = cfg['min_support']
+        self.min_support = cfg['min_support']
 
         # Configure minhash signer
         sig_width = cfg['sig_width']
@@ -204,7 +204,7 @@ class HDClustering(object):
 
         self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
                                        max_dist=self.max_dist,
-                                       min_support=min_support)
+                                       min_support=self.min_support)
 
     def _map_iter(self, data):
         """Find clusters in an iterable"""
@@ -277,7 +277,7 @@ class HDClustering(object):
                 <= max_dist
         return is_close
 
-    def reducer(self, data):
+    def reducer(self, key, tuple_gen):
         """Perform a reducer task in MR
 
         If sketches enabled, data consists of:
@@ -288,20 +288,11 @@ class HDClustering(object):
 
         # If not using sketches, we are done
         if self.sketch_dist_fn is None:
-            return data
+            return key, list(set(t for t in tuple_gen))
 
-        # If are using sketches, find those that are closest to the most
-        # representative
-        sketch_dict = defaultdict(list)
-        for d in data[1]:
-            sketch_dict[d[1]].append(d[0])
-        sketch_items = sketch_dict.items()
-        sketch_counts = map(lambda x: len(x[1]), sketch_items)
-        _, i = max((v, i) for i, v in enumerate(sketch_counts))
-        rep_sketch = sketch_items[i][0]  # most representative sketch
-        result = set()
-        is_close = self._closeness_measure(rep_sketch)
-        for sketch, items in sketch_items:
-            if is_close(sketch):
-                result.update(items)
-        return data[0], sorted(result)
+        # create a dict mappipng a label to a sketch
+        label2sketch = dict()
+        for label, sketch in tuple_gen:
+            label2sketch[label] = sketch
+
+        return key, label2sketch.items()

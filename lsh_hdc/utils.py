@@ -65,21 +65,29 @@ class HTMLNormalizer(Normalizer):
         self.lowercase = lowercase
         self.html_parser = HTMLParser()
 
-    def normalize(self, soup):
+    def normalize(self, text, input_encoding='UTF-8'):
         """
         :param text: Input text
-        :return: str, unicode
+        :rtype text: str, unicode
         :return: normalized text
-        :rtype: str, unicode
+        :rtype: unicode
         """
+
+        # translate is only available for Unicode strings so we convert
+        # plain text to Unicode
+        if not isinstance(text, unicode):
+            text = text.decode(input_encoding)
+
         html_parser = self.html_parser
-        unescaped_soup = html_parser.unescape(html_parser.unescape(soup))
+        text = html_parser.unescape(html_parser.unescape(text))
+        text = clean_html(text)
 
-        text = clean_html(unescaped_soup)
+        if text != u'':
+            text = text.translate(self.normalize_map)
+            if self.lowercase:
+                text = text.lower()
 
-        cleaned = text if text == '' else text.translate(self.normalize_map)
-
-        return cleaned.lower() if self.lowercase else cleaned
+        return text
 
 
 class Tokenizer(object):

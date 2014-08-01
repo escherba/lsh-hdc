@@ -10,7 +10,7 @@ package: env
 test: env dev
 	$(PYENV) nosetests $(NOSEARGS)
 
-test_mr: tests/mr_cluster_mac_log.py mrjob.conf tests/data/mac.json env dev 
+test_mr: tests/mr_cluster_mac_log.py mrjob.conf tests/data/mac.json env dev
 	mkdir -p tests/out
 	$(PYTHON) tests/mr_cluster_mac_log.py \
 		-c mrjob.conf \
