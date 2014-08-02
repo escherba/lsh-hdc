@@ -35,13 +35,12 @@ results = dict(stats=get_stats(clusters,
                                lambda lbl: lbl in positives))
 
 c = results['stats']
-recall = c.get_recall()
-precision = c.get_precision()
 print json.dumps(dict(
     stats=c.dict(),
     num_clusters=c.meta['num_clusters'],
     ratios=dict(
-        precision=precision,
-        recall=recall
+        f1_score=c.get_f1_score(),
+        precision=c.get_precision(),
+        recall=c.get_recall()
     )
 ))

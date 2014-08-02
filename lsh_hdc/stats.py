@@ -288,6 +288,18 @@ class StatResult:
             result = float('nan')
         return '{:.1%}'.format(result) if pretty else result
 
+    def get_f1_score(self, pretty=False):
+        """
+        :rtype : float, str
+        """
+        recall = self.get_recall()
+        precis = self.get_precision()
+        try:
+            result = 2 * recall * precis / (recall + precis)
+        except ZeroDivisionError:
+            result = float('nan')
+        return '{:.1%}'.format(result) if pretty else result
+
     def __repr__(self):
         result = self.dict()
         return repr((result, {'meta': self.meta}))
