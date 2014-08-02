@@ -1,7 +1,9 @@
-.PHONY: clean virtualenv upgrade test package dev
+.PHONY: clean virtualenv upgrade test package dev eval_clusters
 
 PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
+MAC_LOG = tests/data/mac2.json
+MAC_OUT = tests/out/$(shell basename $(MAC_LOG)).out
 
 package: env
 	$(PYTHON) setup.py bdist_egg
@@ -10,13 +12,19 @@ package: env
 test: env dev
 	$(PYENV) nosetests $(NOSEARGS)
 
-test_mr: tests/mr_cluster_mac_log.py mrjob.conf tests/data/mac.json env dev
+test_mr: tests/mr_cluster_mac_log.py mrjob.conf $(MAC_LOG) env dev
 	mkdir -p tests/out
 	$(PYTHON) tests/mr_cluster_mac_log.py \
 		-c mrjob.conf \
 		-r local \
-		tests/data/mac.json > tests/out/mr.out
-	echo "Output written to tests/out/mr.out"
+		$(MAC_LOG) > $(MAC_OUT)
+	$(PYTHON) scripts/eval_clusters.py \
+		--imperm $(MAC_LOG) $(MAC_OUT)
+
+eval_clusters: tests/cluster_mac_log.py scripts/eval_clusters.py
+	$(PYTHON) tests/cluster_mac_log.py \
+		--config tests/mac.yaml $(MAC_LOG) \
+		| scripts/eval_clusters.py --imperm $(MAC_LOG)
 
 dev: env/bin/activate dev_requirements.txt
 	$(PYENV) pip install --process-dependency-links -e . -r dev_requirements.txt

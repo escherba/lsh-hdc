@@ -41,35 +41,7 @@ hdc = HDClustering(cfg=mac_cfg['model'],
                    get_label=itemgetter('post_id'),
                    get_prefix=itemgetter('user_id')
                    )
-clusters = hdc.clusters_from_iter(data)
 
-count_clusters = sorted([(len(c), c) for c in clusters], reverse=True)
-for i, (l, cluster) in enumerate(count_clusters):
+for cluster in hdc.clusters_from_iter(data):
     if len(cluster) > 1:
-        print "===== Cluster %d (%d comments) =======" % (i, l)
-        for id_ in cluster:
-            print all_objects[id_]['content'].rstrip()
-        print
-
-'''
-
-Various stats
-
-num_clusters = len([x for x in clusters if len(x) > 1])
-print "Found %d clusters" % num_clusters
-print "Points not clustered: %d" % (len(data) - num_clusters)
-
-is_label_positive = lambda lbl: lbl in positives
-results = dict(stats=get_stats(clusters, is_label_positive))
-
-c = results['stats']
-recall = c.get_recall()
-precision = c.get_precision()
-print json.dumps(dict(
-    stats=c.dict(),
-    ratios=dict(
-        precision=precision,
-        recall=recall
-    )
-))
-'''
+        print json.dumps(cluster)
