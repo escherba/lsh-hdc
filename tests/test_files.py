@@ -21,7 +21,7 @@ class TestFiles(unittest.TestCase):
     def test_mac(self):
         """test a file in MAC log format"""
 
-        with open(get_resource_name('data/mac.yaml'), 'r') as fh:
+        with open(get_resource_name('mac.yaml'), 'r') as fh:
             mac_cfg = yaml.load(fh)
 
         data = []

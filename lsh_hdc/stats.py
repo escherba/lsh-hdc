@@ -266,6 +266,7 @@ class StatResult:
         self.FP = 0
         self.FN = 0
         self.TN = 0
+        self.meta = {}
 
     def get_recall(self, pretty=False):
         """
@@ -288,13 +289,15 @@ class StatResult:
         return '{:.1%}'.format(result) if pretty else result
 
     def __repr__(self):
-        return str(dict(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN))
+        result = self.dict()
+        return repr((result, {'meta': self.meta}))
 
     def dict(self):
         """
         :rtype : dict
         """
-        return dict(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
+        result = dict(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
+        return result
 
 
 def get_stats(clusters, pred, threshold=3):
@@ -323,4 +326,5 @@ def get_stats(clusters, pred, threshold=3):
                     c.FN += 1  # FALSE NEGATIVES
                 else:
                     c.TN += 1  # TRUE NEGATIVES
+    c.meta['num_clusters'] = i + 1
     return c
