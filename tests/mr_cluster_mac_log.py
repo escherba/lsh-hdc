@@ -101,20 +101,20 @@ class MRCluster(MRJob):
         # merge new labels with already linked clusters
         clustered_sketches.update((lbl, unclustered_sketches[lbl])
                                   for lbl in filtered_labels)
-        clustered_labels = set(clustered_sketches.keys())
 
         # emit ("c", [remaining tuples]) for each tuple in clustered
-        if len(clustered_labels) > 1:
-            for lbl in clustered_labels:
-                new_key = (lbl, clustered_sketches[lbl])
-                val = [(x, clustered_sketches[x]) for x in clustered_labels
-                       if x != lbl]
-                yield new_key, (None, val)
+        if len(clustered_sketches) > 1:
+            for item in clustered_sketches.iteritems():
+                lbl = item[0]
+                val = filter(lambda x: x[0] != lbl,
+                             clustered_sketches.iteritems())
+                yield item, (None, val)
 
         # remove all the clustered labels from the unclustered groups and
         # emit unclustered groups on a rotated key
         for lsh, tuples in unclustered:
-            remaining = filter(lambda t: t[0] not in clustered_labels, tuples)
+            remaining = filter(lambda t: t[0] not in clustered_sketches,
+                               tuples)
             if len(remaining) > 1:
                 yield remaining[0], (lsh, remaining[1:])
 
