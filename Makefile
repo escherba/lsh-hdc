@@ -20,7 +20,8 @@ test_mr: tests/mr_cluster_mac_log.py mrjob.conf $(MAC_LOG) env dev
 		-r local \
 		$(MAC_LOG) > $(MAC_OUT)
 	$(PYTHON) scripts/eval_clusters.py \
-		--ground $(MAC_LOG) < $(MAC_OUT)
+		--ground $(MAC_LOG) \
+		--clusters $(MAC_OUT)
 
 eval_clusters: tests/cluster_mac_log.py scripts/eval_clusters.py
 	$(PYTHON) tests/cluster_mac_log.py \

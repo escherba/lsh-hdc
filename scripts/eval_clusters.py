@@ -38,7 +38,7 @@ def plot_roc_curves(rocs, names):
         plt.plot(*roc.get_axes(), label=cf)
     plt.ylabel('Recall')
     plt.ylim([0.0, 1.0])
-    plt.xlim([0.0, 0.2])
+    plt.xlim([0.0, 0.1])
     plt.title('ROC Curve')
     plt.xlabel('False Positive Rate')
     plt.legend(loc='lower right')
