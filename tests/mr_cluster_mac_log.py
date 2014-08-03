@@ -60,6 +60,18 @@ class MRCluster(MRJob):
         for val in uniq:
             yield key, val
 
+    def cluster_mapper(self, key, data):
+
+        if key is None:
+            clustered_sketches = list(data)
+            if len(clustered_sketches) > 1:
+                for item in clustered_sketches:
+                    lbl = item[0]
+                    val = filter(lambda x: x[0] != lbl, clustered_sketches)
+                    yield item, (None, val)
+        else:
+            yield key, data
+
     def cluster_combiner(self, key, vals):
 
         clustered_sketches = dict()
@@ -104,11 +116,7 @@ class MRCluster(MRJob):
 
         # emit ("c", [remaining tuples]) for each tuple in clustered
         if len(clustered_sketches) > 1:
-            for item in clustered_sketches.iteritems():
-                lbl = item[0]
-                val = filter(lambda x: x[0] != lbl,
-                             clustered_sketches.iteritems())
-                yield item, (None, val)
+            yield None, clustered_sketches.items()
 
         # remove all the clustered labels from the unclustered groups and
         # emit unclustered groups on a rotated key
@@ -120,10 +128,8 @@ class MRCluster(MRJob):
 
     def union_mapper(self, key, val):
         """ emit only 'good' clusters """
-        lsh, tuples = val
-        if lsh is None:
-            tuples.append(key)
-            yield None, tuples
+        if key is None:
+            yield key, val
 
     def union_reducer(self, key, vals):
         """ find connected components """
@@ -141,11 +147,14 @@ class MRCluster(MRJob):
             MRStep(mapper=self.ab_mapper,
                    combiner=self.cluster_combiner,
                    reducer=self.cluster_reducer),
-            MRStep(combiner=self.cluster_combiner,
+            MRStep(mapper=self.cluster_mapper,
+                   combiner=self.cluster_combiner,
                    reducer=self.cluster_reducer),
-            MRStep(combiner=self.cluster_combiner,
+            MRStep(mapper=self.cluster_mapper,
+                   combiner=self.cluster_combiner,
                    reducer=self.cluster_reducer),
-            MRStep(combiner=self.cluster_combiner,
+            MRStep(mapper=self.cluster_mapper,
+                   combiner=self.cluster_combiner,
                    reducer=self.cluster_reducer),
             MRStep(mapper=self.union_mapper,
                    reducer=self.union_reducer)
