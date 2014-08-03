@@ -62,6 +62,8 @@ class MRCluster(MRJob):
 
     def cluster_mapper(self, key, data):
 
+        # emit tuple -> (None, remaining_tuples) for each tuple in
+        # clustered groups
         if key is None:
             clustered_sketches = list(data)
             if len(clustered_sketches) > 1:
@@ -81,7 +83,8 @@ class MRCluster(MRJob):
                 clustered_sketches.update(tuples)
             else:
                 yield key, val
-        yield key, (None, clustered_sketches.items())
+        if len(clustered_sketches) > 0:
+            yield key, (None, clustered_sketches.items())
 
     def cluster_reducer(self, key, vals):
 
@@ -114,7 +117,6 @@ class MRCluster(MRJob):
         clustered_sketches.update((lbl, unclustered_sketches[lbl])
                                   for lbl in filtered_labels)
 
-        # emit ("c", [remaining tuples]) for each tuple in clustered
         if len(clustered_sketches) > 1:
             yield None, clustered_sketches.items()
 
