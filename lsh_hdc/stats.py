@@ -1,9 +1,18 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from functools import partial
-from itertools import imap
-from math import log, fabs
+from operator import itemgetter
+from itertools import imap, chain
+from math import log, fabs, copysign
 
 __author__ = 'escherba'
+
+
+def safe_div(num, denom):
+    """Divide numbers, returning inf when dividing by zero"""
+    try:
+        return num / denom
+    except ZeroDivisionError:
+        return copysign(float('inf'), num)
 
 
 def median(xs):
@@ -197,11 +206,7 @@ class ExplainedVarianceSummarizer(Summarizer):
         :return: Explained variance
         :rtype : float
         """
-        try:
-            result = 1.0 - self.residual / sumsq(self.all)
-        except ZeroDivisionError:
-            result = None
-        return result
+        return 1.0 - safe_div(self.residual, sumsq(self.all))
 
 
 class UncertaintySummarizer(Summarizer):
@@ -229,14 +234,10 @@ class UncertaintySummarizer(Summarizer):
         :returns: Theil index of uncertainty
         :rtype : float
         """
-        try:
-            denominator = float(self.cluster_count) * \
-                sum(imap(partial(entropy, self.post_count),
-                         self.multiverse.values()))
-            result = 1.0 - self.numerator / denominator
-        except ZeroDivisionError:
-            result = None
-        return result
+        denominator = float(self.cluster_count) * \
+            sum(imap(partial(entropy, self.post_count),
+                     self.multiverse.values()))
+        return 1.0 - safe_div(self.numerator, denominator)
 
 
 class FeatureClusterSummarizer:
@@ -272,20 +273,14 @@ class StatResult:
         """
         :rtype : float, str
         """
-        try:
-            result = float(self.TP) / (self.TP + self.FN)
-        except ZeroDivisionError:
-            result = float('nan')
+        result = safe_div(float(self.TP), (self.TP + self.FN))
         return '{:.1%}'.format(result) if pretty else result
 
     def get_precision(self, pretty=False):
         """
         :rtype : float, str
         """
-        try:
-            result = float(self.TP) / (self.TP + self.FP)
-        except ZeroDivisionError:
-            result = float('nan')
+        result = safe_div(float(self.TP), (self.TP + self.FP))
         return '{:.1%}'.format(result) if pretty else result
 
     def get_f1_score(self, pretty=False):
@@ -294,10 +289,7 @@ class StatResult:
         """
         recall = self.get_recall()
         precis = self.get_precision()
-        try:
-            result = 2 * recall * precis / (recall + precis)
-        except ZeroDivisionError:
-            result = float('nan')
+        result = safe_div(2.0 * recall * precis, (recall + precis))
         return '{:.1%}'.format(result) if pretty else result
 
     def __repr__(self):
@@ -311,9 +303,30 @@ class StatResult:
         result = dict(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
         return result
 
+    def add(self, ground_positive, predicted_positive):
+        """
+        :param ground_positive: Ground truth
+        :type ground_positive: bool
+        :param predicted_positive: Predicted result
+        :type predicted_positive: bool
+        """
+        if predicted_positive:
+            if ground_positive:
+                self.TP += 1
+            else:
+                self.FP += 1
+        else:
+            if ground_positive:
+                self.FN += 1
+            else:
+                self.TN += 1
 
-def get_stats(clusters, pred, threshold=3):
+
+def describe_clusters(clusters, pred, threshold=3):
     """
+    Describe a list of clusters of labels with a predicate function that
+    takes a label and returns ground truth result for that label
+
     :param clusters: A list of clusters (list of lists)
     :type clusters: list
     :param pred: A predicate that acts on a label and returns
@@ -325,18 +338,142 @@ def get_stats(clusters, pred, threshold=3):
     :rtype: StatResult
     """
     c = StatResult()
-    for i, cluster in enumerate(clusters):
-        if len(cluster) >= threshold:
-            for label in cluster:
-                if pred(label):
-                    c.TP += 1  # TRUE POSITIVES
-                else:
-                    c.FP += 1  # FALSE POSITIVES
-        else:
-            for label in cluster:
-                if pred(label):
-                    c.FN += 1  # FALSE NEGATIVES
-                else:
-                    c.TN += 1  # TRUE NEGATIVES
-    c.meta['num_clusters'] = i + 1
+    num_clusters = 0
+    for cluster in clusters:
+        num_clusters += 1
+        predicted_positive = len(cluster) >= threshold
+        for label in cluster:
+            c.add(pred(label), predicted_positive)
+    c.meta['num_clusters'] = num_clusters
     return c
+
+
+def auc(xs, ys, reorder=False):
+    """ Compute area under curve using trapesoidal rule"""
+    tuples = zip(xs, ys)
+    assert len(tuples) > 1
+    if reorder:
+        tuples.sort()
+    a = 0.0
+    x0, y0 = tuples[0]
+    for x1, y1 in tuples[1:]:
+        a += (x1 - x0) * (y1 + y0)
+        x0, y0 = x1, y1
+    return a * 0.5
+
+
+def roc_auc(fpr, tpr, reorder=False):
+    """ Compute area under ROC curve """
+    return auc(
+        chain([0.0], fpr, [1.0]),
+        chain([0.0], tpr, [1.0]),
+        reorder=reorder)
+
+
+class ROCSummarizer:
+    """ROC curve summarizer"""
+    def __init__(self):
+        self.tps = []
+        self.fps = []
+        self.tns = []
+        self.fns = []
+
+    def add(self, tp, fp, tn, fn):
+        """
+
+        :param tp: true positives
+        :type tp: int
+        :param fp: false positives
+        :type fp: int
+        :param tn: true negatives
+        :type tn: int
+        :param fn: false negatives
+        :type fn: int
+        """
+        self.tps.append(tp)
+        self.fps.append(fp)
+        self.tns.append(tn)
+        self.fns.append(fn)
+
+    @staticmethod
+    def _div(data):
+        """
+        :return: a "safe" result of division of x by x + y
+        :rtype : float
+        """
+        x, y = data
+        return safe_div(float(x), x + y)
+
+    def get_tprs(self):
+        """
+        :return: a list of true positive rate (recall) values
+        :rtype : list
+        """
+        return map(self._div, zip(self.tps, self.fns))
+
+    def get_fprs(self):
+        """
+        :return: a list of false positive rate values
+        :rtype : list
+        """
+        return map(self._div, zip(self.fps, self.tns))
+
+    def get_precisions(self):
+        """
+        :return: a list of precision values
+        :rtype : list
+        """
+        return map(self._div, zip(self.tps, self.fps))
+
+    def get_points(self):
+        """
+        :return: a list of tuples (x, y)
+        :rtype : list
+        """
+        return sorted(zip(self.get_fprs(), self.get_tprs()))
+
+    def get_axes(self):
+        """
+        :return: tuple of [x], [y] lists (for plotting)
+        :rtype : tuple
+        """
+        points = self.get_points()
+        return map(itemgetter(0), points), map(itemgetter(1), points)
+
+    def get_axes_pct(self):
+        """
+        :return: tuple of [x], [y] lists (for plotting)
+        :rtype : tuple
+        """
+        points = self.get_points()
+        return [100.0 * p[0] for p in points], [100.0 * p[1] for p in points]
+
+    def get_auc_score(self):
+        """
+        :return: Area-under-the-curve (AUC) statistic
+        :rtype : float
+        """
+        return roc_auc(*self.get_axes())
+
+
+def get_roc_summary(iter, get_level, ground_pos):
+    d = defaultdict(StatResult)
+    for item in iter:
+        sr = d[get_level(item)]
+        sr.add(ground_pos(item), True)
+
+    ref_pos, ref_neg = 0, 0
+    for sr in d.values():
+        ref_pos += sr.TP + sr.FN
+        ref_neg += sr.TN + sr.FP
+
+    sorted_keys = sorted(d.keys(), reverse=True)
+    meta = Counter()
+    roc = ROCSummarizer()
+    for nc in sorted_keys:
+        summ = d[nc]
+        meta.update(summ.dict())
+        tp, fp = meta['TP'], meta['FP']
+        tn, fn = ref_neg - fp, ref_pos - tp
+        roc.add(tp, fp, tn, fn)
+    return roc

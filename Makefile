@@ -1,7 +1,8 @@
-.PHONY: clean virtualenv upgrade test package dev eval_clusters
+.PHONY: clean virtualenv upgrade test package dev eval_clusters roc
 
 PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
+PYTHON_TIMED = $(PYENV) time python
 MAC_LOG = tests/data/mac2.json
 MAC_OUT = tests/out/$(shell basename $(MAC_LOG)).out
 
@@ -14,7 +15,7 @@ test: env dev
 
 test_mr: tests/mr_cluster_mac_log.py mrjob.conf $(MAC_LOG) env dev
 	mkdir -p tests/out
-	$(PYTHON) tests/mr_cluster_mac_log.py \
+	$(PYTHON_TIMED) tests/mr_cluster_mac_log.py \
 		-c mrjob.conf \
 		-r local \
 		$(MAC_LOG) > $(MAC_OUT)
@@ -25,6 +26,11 @@ eval_clusters: tests/cluster_mac_log.py scripts/eval_clusters.py
 	$(PYTHON) tests/cluster_mac_log.py \
 		--config tests/mac.yaml $(MAC_LOG) \
 		| scripts/eval_clusters.py --imperm $(MAC_LOG)
+
+roc: scripts/eval_clusters.py
+	$(PYTHON) scripts/eval_clusters.py \
+		--clusters $(MAC_OUT) \
+		$(MAC_LOG)
 
 dev: env/bin/activate dev_requirements.txt
 	$(PYENV) pip install --process-dependency-links -e . -r dev_requirements.txt

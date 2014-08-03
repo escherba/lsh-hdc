@@ -2,5 +2,7 @@ nose
 coverage
 nosexcover
 mock
-PyYAML
-mrjob
+PyYAML>=3.11
+mrjob>=0.4.2
+funcy>=1.1
+matplotlib>=1.3.1
