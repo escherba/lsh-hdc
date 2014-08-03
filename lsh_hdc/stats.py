@@ -1,7 +1,7 @@
 from collections import Counter, defaultdict
 from functools import partial
 from operator import itemgetter
-from itertools import imap, chain
+from itertools import imap, izip, chain
 from math import log, fabs, copysign
 
 __author__ = 'escherba'
@@ -456,12 +456,7 @@ class ROCSummarizer:
         return roc_auc(*self.get_axes())
 
 
-def get_roc_summary(iter, get_level, ground_pos):
-    d = defaultdict(StatResult)
-    for item in iter:
-        sr = d[get_level(item)]
-        sr.add(ground_pos(item), True)
-
+def get_roc(d):
     ref_pos, ref_neg = 0, 0
     for sr in d.values():
         ref_pos += sr.TP + sr.FN
@@ -477,3 +472,12 @@ def get_roc_summary(iter, get_level, ground_pos):
         tn, fn = ref_neg - fp, ref_pos - tp
         roc.add(tp, fp, tn, fn)
     return roc
+
+
+def get_roc_summaries(iterable, level_getters, ground_pos):
+    ds = [defaultdict(StatResult) for x in level_getters]
+    for item in iterable:
+        ground_truth = ground_pos(item)
+        for d, get_level in izip(ds, level_getters):
+            d[get_level(item)].add(ground_truth, True)
+    return map(get_roc, ds)
