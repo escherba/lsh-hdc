@@ -7,7 +7,7 @@ import argparse
 from itertools import chain, izip, repeat, islice
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
-from lsh_hdc.stats import FeatureClusterSummarizer, get_stats
+from lsh_hdc.stats import FeatureClusterSummarizer, describe_clusters
 
 
 def random_string(length=4, alphabet=string.letters):
@@ -194,7 +194,7 @@ def test_simulated(opts, data):
         cluster.add_item(shingles, label)
     clusters = cluster.get_clusters()
 
-    c = get_stats(clusters, lambda x: len(x.split(':')) > 1)
+    c = describe_clusters(clusters, lambda x: len(x.split(':')) > 1)
     ti = s.summarize_clusters(clusters)
     print json.dumps(dict(
         stats=c.dict(),

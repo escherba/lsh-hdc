@@ -10,7 +10,7 @@ from pkg_resources import resource_filename
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster, HDClustering
 from lsh_hdc.utils import RegexTokenizer, read_json_file
-from lsh_hdc.stats import FeatureClusterSummarizer, get_stats
+from lsh_hdc.stats import FeatureClusterSummarizer, describe_clusters
 from content_rules import ContentFilter
 
 get_resource_name = partial(resource_filename, __name__)
@@ -21,7 +21,7 @@ class TestFiles(unittest.TestCase):
     def test_mac(self):
         """test a file in MAC log format"""
 
-        with open(get_resource_name('mac.yaml'), 'r') as fh:
+        with open(get_resource_name('mac-std.yaml'), 'r') as fh:
             mac_cfg = yaml.load(fh)
 
         data = []
@@ -48,7 +48,7 @@ class TestFiles(unittest.TestCase):
         print "Points not clustered: %d" % (len(data) - num_clusters)
 
         is_label_positive = lambda lbl: lbl in positives
-        results = dict(stats=get_stats(clusters, is_label_positive))
+        results = dict(stats=describe_clusters(clusters, is_label_positive))
 
         c = results['stats']
         recall = c.get_recall()
@@ -159,7 +159,7 @@ class TestFiles(unittest.TestCase):
         clusters = cluster.get_clusters()
 
         is_label_positive = lambda lbl: ':' in lbl
-        return dict(stats=get_stats(clusters, is_label_positive),
+        return dict(stats=describe_clusters(clusters, is_label_positive),
                     uindex=s.summarize_clusters(clusters))
 
     def test_simulated(self):
@@ -220,7 +220,7 @@ class TestFiles(unittest.TestCase):
         print "Points not clustered: %d" % (len(data) - num_clusters)
 
         is_label_positive = lambda lbl: ':' in lbl
-        results = dict(stats=get_stats(clusters, is_label_positive))
+        results = dict(stats=describe_clusters(clusters, is_label_positive))
 
         c = results['stats']
         recall = c.get_recall()
