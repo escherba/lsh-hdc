@@ -143,6 +143,14 @@ class BaseContentFilter(object):
         returning Boolean"""
 
 
+def logical_and(x, y):
+    return x and y
+
+
+def logical_or(x, y):
+    return x or y
+
+
 class HDClustering(object):
 
     def __init__(self, cfg, content_filter=None, opts=None, trace_every=0,
@@ -201,7 +209,9 @@ class HDClustering(object):
                 int(floor(sketch_bits *
                           (1.0 - float(cfg_sketch['resemblance']))))
             self.sketch_dist_fn = hamming
-
+            self.sketch_operator = logical_and \
+                if cfg_sketch.get('operator', 'and') == 'and' \
+                else logical_or
         self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
                                        max_dist=self.max_dist,
                                        min_support=self.min_support)
@@ -266,16 +276,6 @@ class HDClustering(object):
             keys, val = out
             for key in keys:
                 yield key, val
-
-    def _closeness_measure(self, sketch):
-        if sketch is None:
-            is_close = lambda sketch: True
-        else:
-            max_dist = self.max_dist
-            distance_from = partial(self.sketch_dist_fn, sketch)
-            is_close = lambda matched_sketch: distance_from(matched_sketch) \
-                <= max_dist
-        return is_close
 
     def reducer(self, key, tuple_gen):
         """Perform a reducer task in MR

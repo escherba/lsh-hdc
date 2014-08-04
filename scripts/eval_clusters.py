@@ -2,24 +2,30 @@
 
 import sys
 import json
-import matplotlib.pyplot as plt
+import matplotlib.pyplot
 from os.path import basename
 from argparse import ArgumentParser, FileType
-from itertools import imap, izip
+from itertools import imap
 from collections import Counter
 from functools import partial
 from funcy import compose
-from lsh_hdc.stats import get_roc_summaries
+from lsh_hdc.stats import get_roc_summaries, mplot_roc_curves
 
 parser = ArgumentParser()
-parser.add_argument('--clusters', nargs="+", required=False,
-                    type=str, help="File(s) containig clusterings")
+parser.add_argument('--clusters', nargs='+', type=str, required=True,
+                    help="File(s) containig clusterings")
+parser.add_argument('--labels', nargs='*', type=str, required=False,
+                    default=[], help='Labels for clusterings')
 parser.add_argument('--ground', required=False, type=FileType('r'),
                     default=sys.stdin,
                     help="Impermium-tagged file for comparison")
 args = parser.parse_args()
 
-cluster_f = [sys.stdin] if args.clusters is None else args.clusters
+if args.labels:
+    assert len(args.labels) == len(args.clusters)
+    names = args.labels
+else:
+    names = map(basename, args.clusters)
 
 
 def has_tag(tag, json_obj):
@@ -33,25 +39,14 @@ def get_label(obj):
     return obj['object']['post_id']
 
 
-def plot_roc_curves(rocs, names):
-    for cf, roc in izip(names, rocs):
-        plt.plot(*roc.get_axes(), label=cf)
-    plt.ylabel('Recall')
-    plt.ylim([0.0, 1.0])
-    plt.xlim([0.0, 0.1])
-    plt.title('ROC Curve')
-    plt.xlabel('False Positive Rate')
-    plt.legend(loc='lower right')
-    plt.show()
-
 is_bulk = partial(has_tag, 'bulk')
 
 # consuming ground truth set from stdin -- can use multiple clusterings
 
 # memoize cluster set
 all_neighbors = []
-for cf in cluster_f:
-    with open(cf, 'r') as clusters:
+for filename in args.clusters:
+    with open(filename, 'r') as clusters:
         neighbors = Counter()
         all_neighbors.append(neighbors)
         for cluster in imap(compose(set, json.loads), clusters):
@@ -67,9 +62,13 @@ rocs = get_roc_summaries(
                    for n in all_neighbors],
     ground_pos=is_bulk)
 
-print json.dumps(dict(
+result = json.dumps(dict(
     metrics=dict(
-        auc_scores=[roc.get_auc_score() for roc in rocs],
+        auc_scores={name: roc.get_auc_score()
+                    for name, roc in zip(names, rocs)},
     )
 ))
-plot_roc_curves(rocs, imap(basename, args.clusters))
+
+print result
+
+mplot_roc_curves(matplotlib.pyplot, rocs, names, auc=True)

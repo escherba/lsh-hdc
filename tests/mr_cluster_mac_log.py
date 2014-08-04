@@ -11,7 +11,7 @@ from lsh_hdc.cluster import HDClustering
 from content_rules import ContentFilter
 from pkg_resources import resource_filename
 
-with open(resource_filename(__name__, 'mac.yaml'), 'r') as fh:
+with open(resource_filename(__name__, 'mac-a0.yaml'), 'r') as fh:
     mac_cfg = yaml.load(fh)
 
 hdc = HDClustering(cfg=mac_cfg['model'],
@@ -91,6 +91,7 @@ class MRCluster(MRJob):
         sketch_dist = hdc.sketch_dist_fn
         max_dist = hdc.max_dist
         min_support = hdc.min_support
+        logical_op = hdc.sketch_operator
 
         label, sketch = key
         unclustered_counter = Counter()
@@ -108,8 +109,8 @@ class MRCluster(MRJob):
 
         # from unclustered labels, obtain new labels to cluster
         is_close = lambda t: \
-            unclustered_counter[t[0]] >= min_support and \
-            sketch_dist(sketch, t[1]) <= max_dist
+            logical_op(unclustered_counter[t[0]] >= min_support,
+                       sketch_dist(sketch, t[1]) <= max_dist)
         filtered_labels = set(t[0] for t in unclustered_sketches.iteritems()
                               if is_close(t))
 

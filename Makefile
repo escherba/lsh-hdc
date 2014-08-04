@@ -23,15 +23,10 @@ test_mr: tests/mr_cluster_mac_log.py mrjob.conf $(MAC_LOG) env dev
 		--ground $(MAC_LOG) \
 		--clusters $(MAC_OUT)
 
-eval_clusters: tests/cluster_mac_log.py scripts/eval_clusters.py
-	$(PYTHON) tests/cluster_mac_log.py \
-		--config tests/mac.yaml $(MAC_LOG) \
-		| scripts/eval_clusters.py --ground $(MAC_LOG)
-
 roc: scripts/eval_clusters.py
 	$(PYTHON) scripts/eval_clusters.py \
 		--clusters $(MAC_OUT) \
-		< $(MAC_LOG)
+		--ground $(MAC_LOG)
 
 dev: env/bin/activate dev_requirements.txt
 	$(PYENV) pip install --process-dependency-links -e . -r dev_requirements.txt
