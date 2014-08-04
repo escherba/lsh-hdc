@@ -21,7 +21,7 @@ class TestFiles(unittest.TestCase):
     def test_mac(self):
         """test a file in MAC log format"""
 
-        with open(get_resource_name('mac-std.yaml'), 'r') as fh:
+        with open(get_resource_name('test_files.mac.yaml'), 'r') as fh:
             mac_cfg = yaml.load(fh)
 
         data = []
@@ -202,7 +202,7 @@ class TestFiles(unittest.TestCase):
 
     def test_simulated_hd(self):
 
-        with open(get_resource_name('data/simulated.yaml'), 'r') as fh:
+        with open(get_resource_name('test_files.simulated.yaml'), 'r') as fh:
             sim_cfg = yaml.load(fh)
 
         with open(get_resource_name('data/simulated.txt'), 'r') as f:

@@ -370,6 +370,47 @@ def roc_auc(fpr, tpr, reorder=False):
         reorder=reorder)
 
 
+def mplot_roc_curves(mplt, rocs, names, pct=False, auc=False):
+    """Plot ROC curve with MATPLOTLIB
+    :param mplt: matplotlib.pyplot module
+    :type plt: module
+    :param rocs: a list of ROCSummarizer instances
+    :type rocs: list
+    :param names: a list of labels for above instances
+    :type names: list
+    :param pct: whether to use percentage
+    :type pct: bool
+    :param auc: whether to show area under the curve
+    :type auc: bool
+    """
+
+    for i, (name, roc) in enumerate(izip(names, rocs)):
+        if auc:
+            auc_str = "AUC: {:.3f}".format(roc.get_auc_score())
+            name = "{} ({})".format(i, auc_str) \
+                if name is None \
+                else "{} ({})".format(name, auc_str)
+        else:
+            if name is None:
+                name = str(i)
+
+        mplt.plot(*roc.get_axes(), label=name)
+
+    if pct:
+        suffix = ' (%)'
+        mult = 100.0
+    else:
+        suffix = ''
+        mult = 1.0
+    mplt.ylabel('Recall' + suffix)
+    mplt.xlabel('False Positive Rate' + suffix)
+    mplt.ylim([0.0, 1.0 * mult])
+    mplt.xlim([0.0, 0.1 * mult])
+    mplt.title('ROC Curve')
+    mplt.legend(loc='lower right')
+    mplt.show()
+
+
 class ROCSummarizer:
     """ROC curve summarizer"""
     def __init__(self):
