@@ -3,7 +3,7 @@
 PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
 PYTHON_TIMED = $(PYENV) time python
-MAC_LOG = tests/data/2014-01-14.detail.sorted
+MAC_LOG = tests/data/mac2.json
 MAC_OUT = tests/out/$(shell basename $(MAC_LOG)).out
 
 package: env

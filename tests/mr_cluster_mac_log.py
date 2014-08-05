@@ -111,6 +111,7 @@ class MRCluster(MRJob):
                        for lbl in filtered_labels)
 
         if len(parents) > 1:
+            self.increment_counter('clustered', 'count', 1)
             yield None, parents.items()
 
         # remove all the clustered labels from the unclustered groups and
@@ -119,6 +120,7 @@ class MRCluster(MRJob):
             remaining = filter(lambda t: t[0] not in parents,
                                tuples)
             if len(remaining) > 1:
+                self.increment_counter('unclustered', 'count', 1)
                 yield remaining[0], (lsh, remaining[1:])
 
     def union_mapper(self, key, val):
