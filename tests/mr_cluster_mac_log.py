@@ -53,7 +53,7 @@ class MRCluster(MRJob):
             val = filter(lambda x: x[0] != lbl, sorted_data)
             yield t, (lsh, val)
 
-    def cluster_mapper(self, key, data):
+    def cc_mapper(self, key, data):
 
         if key is None:  # good cluster
             items = list(data)
@@ -64,9 +64,14 @@ class MRCluster(MRJob):
                     if child[0] != parent_label:
                         yield child, (None, parent)
         else:
-            yield key, data
+            remaining = list(data)
+            for item in remaining:
+                new_label = item[0]
+                yield item, (key, filter(lambda x: x[0] != new_label,
+                                         remaining))
+            #yield remaining[0], (key, remaining[1:])
 
-    def cluster_combiner(self, key, vals):
+    def cc_combiner(self, key, vals):
 
         children = dict()
         for val in vals:
@@ -74,12 +79,12 @@ class MRCluster(MRJob):
             if lsh is None:  # good cluster
                 children[child[0]] = child[1]
             else:
-                yield key, val
+                yield key, val  # pass through unchanged
         if len(children) > 0:
             for child in children.iteritems():
                 yield child, (None, key)  # key becomes parent
 
-    def cluster_reducer(self, key, vals):
+    def cc_reducer(self, key, vals):
 
         sketch_dist = hdc.sketch_dist_fn
         max_dist = hdc.max_dist
@@ -111,6 +116,8 @@ class MRCluster(MRJob):
                        for lbl in filtered_labels)
 
         if len(parents) > 1:
+            self.increment_counter('clustered', 'groups', 1)
+            self.increment_counter('clustered', 'items', len(parents))
             yield None, parents.items()
 
         # remove all the clustered labels from the unclustered groups and
@@ -119,7 +126,9 @@ class MRCluster(MRJob):
             remaining = filter(lambda t: t[0] not in parents,
                                tuples)
             if len(remaining) > 1:
-                yield remaining[0], (lsh, remaining[1:])
+                self.increment_counter('unclustered', 'groups', 1)
+                self.increment_counter('unclustered', 'items', len(remaining))
+                yield lsh, remaining
 
     def union_mapper(self, key, val):
         """ emit only 'good' clusters """
@@ -132,6 +141,8 @@ class MRCluster(MRJob):
         for elements in vals:
             uf.union(*[el[0] for el in elements])
         for i, s in enumerate(uf.sets()):
+            self.increment_counter('final', 'groups', 1)
+            self.increment_counter('final', 'items', len(s))
             yield i, s
 
     def steps(self):
@@ -140,17 +151,13 @@ class MRCluster(MRJob):
                    combiner=self.lsh_combiner,
                    reducer=self.lsh_reducer),
             MRStep(mapper=self.ab_mapper,
-                   combiner=self.cluster_combiner,
-                   reducer=self.cluster_reducer),
-            MRStep(mapper=self.cluster_mapper,
-                   combiner=self.cluster_combiner,
-                   reducer=self.cluster_reducer),
-            MRStep(mapper=self.cluster_mapper,
-                   combiner=self.cluster_combiner,
-                   reducer=self.cluster_reducer),
-            MRStep(mapper=self.cluster_mapper,
-                   combiner=self.cluster_combiner,
-                   reducer=self.cluster_reducer),
+                   reducer=self.cc_reducer),
+            MRStep(mapper=self.cc_mapper,
+                   combiner=self.cc_combiner,
+                   reducer=self.cc_reducer),
+            MRStep(mapper=self.cc_mapper,
+                   combiner=self.cc_combiner,
+                   reducer=self.cc_reducer),
             MRStep(mapper=self.union_mapper,
                    reducer=self.union_reducer)
         ]

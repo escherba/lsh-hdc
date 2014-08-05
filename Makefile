@@ -3,7 +3,7 @@
 PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
 PYTHON_TIMED = $(PYENV) time python
-MAC_LOG = tests/data/2014-01-14.detail.sorted
+MAC_LOG = tests/data/mac2.json
 MAC_OUT = tests/out/$(shell basename $(MAC_LOG)).out
 
 package: env
@@ -19,6 +19,8 @@ test_mr: tests/mr_cluster_mac_log.py mrjob.conf $(MAC_LOG) env dev
 		-c mrjob.conf \
 		-r local \
 		$(MAC_LOG) > $(MAC_OUT)
+	items_clustered=$(shell jq 'length' $(MAC_OUT) | awk '{s+=$$1} END {print s}')
+	$(info $(items_clustered))
 	$(PYTHON) scripts/eval_clusters.py \
 		--ground $(MAC_LOG) \
 		--clusters $(MAC_OUT)
