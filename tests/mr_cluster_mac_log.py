@@ -145,12 +145,12 @@ class MRCluster(MRJob):
             MRStep(mapper=self.cluster_mapper,
                    combiner=self.cluster_combiner,
                    reducer=self.cluster_reducer),
-            #MRStep(mapper=self.cluster_mapper,
-            #       combiner=self.cluster_combiner,
-            #       reducer=self.cluster_reducer),
-            #MRStep(mapper=self.cluster_mapper,
-            #       combiner=self.cluster_combiner,
-            #       reducer=self.cluster_reducer),
+            MRStep(mapper=self.cluster_mapper,
+                   combiner=self.cluster_combiner,
+                   reducer=self.cluster_reducer),
+            MRStep(mapper=self.cluster_mapper,
+                   combiner=self.cluster_combiner,
+                   reducer=self.cluster_reducer),
             MRStep(mapper=self.union_mapper,
                    reducer=self.union_reducer)
         ]
