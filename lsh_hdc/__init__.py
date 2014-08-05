@@ -309,7 +309,7 @@ def create_sig_selectors(width, bandwidth, scheme):
     return zip(indexes, create_getters(bands))
 
 
-class Shingler:
+class Shingler(object):
     def __init__(self, span=3, skip=0, unique=True, tokenizer=None, normalizer=None):
         """
         :param span: How many words should a shingle span
@@ -632,7 +632,7 @@ class SimHashSignature(Signature):
         return sum(1 << i for i in bits if v[i] > 0)
 
 
-class LSHC:
+class LSHC(object):
     """Locality sensitive hashing.  Uses a banding approach to hash
     similar signatures to the same buckets."""
     def __init__(self, bandwidth, width, scheme="a1"):

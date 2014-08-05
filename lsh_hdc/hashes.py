@@ -5,7 +5,7 @@ from itertools import imap
 from abc import abstractmethod
 
 
-class IHashFamily:
+class IHashFamily(object):
     """
     An interface for a hash family provider.  It provides a series of random hashes
     from a universal hash family.  This can then be used for minhashing.

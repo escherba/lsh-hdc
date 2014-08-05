@@ -240,7 +240,7 @@ class UncertaintySummarizer(Summarizer):
         return 1.0 - safe_div(self.numerator, denominator)
 
 
-class FeatureClusterSummarizer:
+class FeatureClusterSummarizer(object):
 
     def __init__(self):
         self.label2features = dict()
@@ -261,7 +261,7 @@ class FeatureClusterSummarizer:
         return s.get_summary()
 
 
-class StatResult:
+class StatResult(object):
     def __init__(self):
         self.TP = 0
         self.FP = 0
@@ -411,7 +411,7 @@ def mplot_roc_curves(mplt, rocs, names, pct=False, auc=False):
     mplt.show()
 
 
-class ROCSummarizer:
+class ROCSummarizer(object):
     """ROC curve summarizer"""
     def __init__(self):
         self.tps = []
