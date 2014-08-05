@@ -53,38 +53,31 @@ class MRCluster(MRJob):
             val = filter(lambda x: x[0] != lbl, sorted_data)
             yield t, (lsh, val)
 
-    def uniq_reducer(self, key, vals):
-        uniq = set()
-        for lsh, tuples in vals:
-            uniq.add(tuple(tuple(t) for t in tuples))
-        for val in uniq:
-            yield key, val
-
     def cluster_mapper(self, key, data):
 
-        # emit tuple -> (None, remaining_tuples) for each tuple in
-        # clustered groups
-        if key is None:
-            clustered_sketches = list(data)
-            if len(clustered_sketches) > 1:
-                for item in clustered_sketches:
-                    lbl = item[0]
-                    val = filter(lambda x: x[0] != lbl, clustered_sketches)
-                    yield item, (None, val)
+        if key is None:  # good cluster
+            items = list(data)
+            if len(items) > 1:
+                parent = min(items)  # minimal element becomes parent
+                parent_label = parent[0]
+                for child in items:
+                    if child[0] != parent_label:
+                        yield child, (None, parent)
         else:
             yield key, data
 
     def cluster_combiner(self, key, vals):
 
-        clustered_sketches = dict()
+        children = dict()
         for val in vals:
-            lsh, tuples = val
-            if lsh is None:
-                clustered_sketches.update(tuples)
+            lsh, child = val
+            if lsh is None:  # good cluster
+                children[child[0]] = child[1]
             else:
                 yield key, val
-        if len(clustered_sketches) > 0:
-            yield key, (None, clustered_sketches.items())
+        if len(children) > 0:
+            for child in children.iteritems():
+                yield child, (None, key)  # key becomes parent
 
     def cluster_reducer(self, key, vals):
 
@@ -93,19 +86,18 @@ class MRCluster(MRJob):
         min_support = hdc.min_support
         logical_op = hdc.sketch_operator
 
-        label, sketch = key
+        parent, sketch = key
         unclustered_counter = Counter()
         unclustered_sketches = dict()
-        clustered_sketches = {label: sketch}
+        parents = {parent: sketch}
         unclustered = []
-        for val in vals:
-            lsh, tuples = val
+        for lsh, val in vals:
             if lsh is None:
-                clustered_sketches.update(tuples)
+                parents[val[0]] = val[1]
             else:
-                unclustered_counter.update(t[0] for t in tuples)
-                unclustered_sketches.update(tuples)
-                unclustered.append(val)
+                unclustered_counter.update(t[0] for t in val)
+                unclustered_sketches.update(val)
+                unclustered.append((lsh, val))
 
         # from unclustered labels, obtain new labels to cluster
         is_close = lambda t: \
@@ -115,16 +107,16 @@ class MRCluster(MRJob):
                               if is_close(t))
 
         # merge new labels with already linked clusters
-        clustered_sketches.update((lbl, unclustered_sketches[lbl])
-                                  for lbl in filtered_labels)
+        parents.update((lbl, unclustered_sketches[lbl])
+                       for lbl in filtered_labels)
 
-        if len(clustered_sketches) > 1:
-            yield None, clustered_sketches.items()
+        if len(parents) > 1:
+            yield None, parents.items()
 
         # remove all the clustered labels from the unclustered groups and
         # emit unclustered groups on a rotated key
         for lsh, tuples in unclustered:
-            remaining = filter(lambda t: t[0] not in clustered_sketches,
+            remaining = filter(lambda t: t[0] not in parents,
                                tuples)
             if len(remaining) > 1:
                 yield remaining[0], (lsh, remaining[1:])
@@ -137,8 +129,8 @@ class MRCluster(MRJob):
     def union_reducer(self, key, vals):
         """ find connected components """
         uf = UnionFind()
-        for tuples in vals:
-            uf.union(*[t[0] for t in tuples])
+        for elements in vals:
+            uf.union(*[el[0] for el in elements])
         for i, s in enumerate(uf.sets()):
             yield i, s
 
@@ -153,12 +145,12 @@ class MRCluster(MRJob):
             MRStep(mapper=self.cluster_mapper,
                    combiner=self.cluster_combiner,
                    reducer=self.cluster_reducer),
-            MRStep(mapper=self.cluster_mapper,
-                   combiner=self.cluster_combiner,
-                   reducer=self.cluster_reducer),
-            MRStep(mapper=self.cluster_mapper,
-                   combiner=self.cluster_combiner,
-                   reducer=self.cluster_reducer),
+            #MRStep(mapper=self.cluster_mapper,
+            #       combiner=self.cluster_combiner,
+            #       reducer=self.cluster_reducer),
+            #MRStep(mapper=self.cluster_mapper,
+            #       combiner=self.cluster_combiner,
+            #       reducer=self.cluster_reducer),
             MRStep(mapper=self.union_mapper,
                    reducer=self.union_reducer)
         ]
