@@ -13,6 +13,14 @@ from logging import getLogger
 LOG = getLogger(__name__)
 
 
+def logical_and(x, y):
+    return x and y
+
+
+def logical_or(x, y):
+    return x or y
+
+
 class Cluster(object):
     """Clusters sets with Jaccard similarity above threshold with high
     probability.
@@ -23,23 +31,27 @@ class Cluster(object):
     3. Use UnionFind to merge buckets containing same values
     """
     def __init__(self, signer=None, sketch_dist_fn=None, max_dist=0,
-                 min_support=1):
+                 min_support=1, sketch_operator=logical_and):
         self.union_find = UnionFind()
         self.signer = signer
         self.buckets = defaultdict(dict)
         self.sketch_dist_fn = sketch_dist_fn
         self.max_dist = max_dist
         self.min_support = min_support
+        self.sketch_operator = sketch_operator
 
     def _closeness_measure(self, sketch):
+        min_support = self.min_support
         if sketch is None:
-            is_close = lambda sketch: True
+            return lambda support, sketch: \
+                support >= min_support
         else:
+            logical_op = self.sketch_operator
             max_dist = self.max_dist
             distance_from = partial(self.sketch_dist_fn, sketch)
-            is_close = lambda matched_sketch: distance_from(matched_sketch) \
-                <= max_dist
-        return is_close
+            return lambda support, matched_sketch: \
+                logical_op(support >= min_support,
+                           distance_from(matched_sketch) <= max_dist)
 
     def add_item(self, s, label=None, sketch=None):
         # Set default label for this set
@@ -63,14 +75,10 @@ class Cluster(object):
             counter.update(bucket.keys())
             sketches.update(bucket)
 
-        min_support = self.min_support
         is_close = self._closeness_measure(sketch)
         for matched_label, support in counter.iteritems():
-            if matched_label != label and support >= min_support:
-                matched_sketch = sketches[matched_label]
-                # Note: large improvement in precision when also
-                # ensuring distance > 0 below:
-                if is_close(matched_sketch):
+            if matched_label != label and \
+                    is_close(support, sketches[matched_label]):
                     uf.union(matched_label, label)
 
     def add_key(self, s, label=None, sketch=None):
@@ -143,14 +151,6 @@ class BaseContentFilter(object):
         returning Boolean"""
 
 
-def logical_and(x, y):
-    return x and y
-
-
-def logical_or(x, y):
-    return x or y
-
-
 class HDClustering(object):
 
     def __init__(self, cfg, content_filter=None, opts=None, trace_every=0,
@@ -214,7 +214,8 @@ class HDClustering(object):
                 else logical_or
         self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
                                        max_dist=self.max_dist,
-                                       min_support=self.min_support)
+                                       min_support=self.min_support,
+                                       sketch_operator=self.sketch_operator)
 
     def _map_iter(self, data):
         """Find clusters in an iterable"""
