@@ -152,7 +152,7 @@ def getpropval(obj):
             if not callable(val) and p[0] != '_')
 
 
-class JsonRepr:
+class JsonRepr(object):
 
     def as_dict(self):
         """
