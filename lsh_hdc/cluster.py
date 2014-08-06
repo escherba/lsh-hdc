@@ -31,11 +31,12 @@ class Cluster(object):
     3. Use UnionFind to merge buckets containing same values
     """
     def __init__(self, signer=None, sketch_dist_fn=None, max_dist=0,
-                 min_support=1, sketch_operator=logical_and):
+                 min_support=1, sketch_operator=logical_and, sketch_bits=0):
         self.union_find = UnionFind()
         self.signer = signer
         self.buckets = defaultdict(dict)
         self.sketch_dist_fn = sketch_dist_fn
+        self.sketch_bits = sketch_bits
         self.max_dist = max_dist
         self.min_support = min_support
         self.sketch_operator = sketch_operator
@@ -197,16 +198,17 @@ class HDClustering(object):
             except AttributeError:
                 raise RuntimeError("Unknown sketch model specified: '%s'"
                                    % algorithm_name)
-            sketch_bits = cfg_sketch['size'] * 8
+            self.sketch_bits = cfg_sketch['size'] * 8
             cfg_sketch_shingle = cfg_sketch['shingler']
             cfg_sketch_shingle.update(common_kwargs)
             self.sketch_shingler = Shingler(**cfg_sketch_shingle)
             if sketch_algorithm == SketchModel.simhash:
-                self.sketch_signer = SimHashSignature(bit_depth=sketch_bits)
+                self.sketch_signer = \
+                    SimHashSignature(bit_depth=self.sketch_bits)
             elif sketch_algorithm == SketchModel.minhash:
-                self.sketch_signer = MinHashSketchSignature(sketch_bits)
+                self.sketch_signer = MinHashSketchSignature(self.sketch_bits)
             self.max_dist = \
-                int(floor(sketch_bits *
+                int(floor(self.sketch_bits *
                           (1.0 - float(cfg_sketch['resemblance']))))
             self.sketch_dist_fn = hamming
             self.sketch_operator = logical_and \

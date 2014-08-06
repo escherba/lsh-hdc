@@ -608,27 +608,36 @@ class SimHashSignature(Signature):
 
         # iterate over word n-grams
         for token in tokens:
-            # this assigns weight of 1.0 to zero-length tokens:
-            nw = 1.0 + math.log1p(sum(imap(len, token)))
-            h = self.hash_fun(token, mod_base)
-            for i in bits:
-                if h & (1 << i):
-                    v[i] += nw
-                else:
-                    v[i] -= nw
+            # this assigns weight of >= 1.0 to zero-length tokens:
+            self._ash(bits, v,
+                      1.0 + math.log1p(sum(imap(len, token))),
+                      self.hash_fun(token, mod_base))
 
         # iterate over features
         for feature, weight in features:
             # unlike shingles, computed feature weight should be zero if we
             # set input weight to zero
-            nw = math.log1p(weight)
-            h = self.hash_fun(feature, mod_base)
-            for i in bits:
-                if h & (1 << i):
-                    v[i] += nw
-                else:
-                    v[i] -= nw
+            self._ash(bits, v,
+                      math.log1p(weight),
+                      self.hash_fun(feature, mod_base))
 
+        return sum(1 << i for i in bits if v[i] > 0)
+
+    @staticmethod
+    def _ash(bits, v, nw, h):
+        for i in bits:
+            if h & (1 << i):
+                v[i] += nw
+            else:
+                v[i] -= nw
+
+    def average(self, hashes):
+        """Find unweighted average of multiple signatures"""
+        bits = self.bits
+        bit_depth = len(bits)
+        v = [0] * bit_depth
+        for h in hashes:
+            self._ash(bits, v, 1, h)
         return sum(1 << i for i in bits if v[i] > 0)
 
 

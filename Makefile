@@ -15,6 +15,7 @@ test: env dev
 
 test_mr: tests/mr_cluster_mac_log.py mrjob.conf $(MAC_LOG) env dev
 	mkdir -p tests/out
+	rm -f $(MAC_OUT)
 	$(PYTHON_TIMED) tests/mr_cluster_mac_log.py \
 		-c mrjob.conf \
 		-r local \
