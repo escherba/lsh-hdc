@@ -48,61 +48,66 @@ class MRCluster(MRJob):
         sorted_data = sorted(data)  # sort on labels
 
         # key is label + sketch pair
-        for t in sorted_data:
-            lbl = t[0]
-            val = filter(lambda x: x[0] != lbl, sorted_data)
-            yield t, (lsh, val)
+        for label, meta in sorted_data:
+            val = filter(lambda x: x[0] != label, sorted_data)
+            yield label, ((lsh, val), meta)
 
-    def cc_mapper(self, key, data):
+    def cc_mapper(self, lsh, data):
 
-        if key is None:  # good cluster
-            items = list(data)
+        items = list(data)
+        if lsh is None:  # good cluster
             if len(items) > 1:
                 parent = min(items)  # minimal element becomes parent
                 parent_label = parent[0]
-                for child in items:
-                    if child[0] != parent_label:
-                        yield child, (None, parent)
+                for child, meta in items:
+                    if child != parent_label:
+                        yield child, ((None, parent), meta)
         else:
-            remaining = list(data)
-            for item in remaining:
-                new_label = item[0]
-                yield item, (key, filter(lambda x: x[0] != new_label,
-                                         remaining))
-            #yield remaining[0], (key, remaining[1:])
+            #for label, meta in items:
+            #    yield label, ((lsh, filter(lambda x: x[0] != label, items)),
+            #                  meta)
+            label, meta = items[0]
+            yield label, ((lsh, items[1:]), meta)
 
-    def cc_combiner(self, key, vals):
-
+    def cc_combiner(self, key, data):
         children = dict()
-        for val in vals:
-            lsh, child = val
-            if lsh is None:  # good cluster
-                children[child[0]] = child[1]
+        key_meta = None
+        for datum in data:
+            (lsh, val), meta = datum
+            key_meta = meta
+            if lsh is None:  # good cluster, val is single item
+                children[val[0]] = val[1]
             else:
-                yield key, val  # pass through unchanged
-        if len(children) > 0:
-            for child in children.iteritems():
-                yield child, (None, key)  # key becomes parent
+                yield key, datum  # pass through unchanged
 
-    def cc_reducer(self, key, vals):
+        if len(children) > 0:
+            for child, meta in children.iteritems():
+                # key becomes parent
+                yield child, ((None, (key, key_meta)), meta)
+
+    def cc_reducer(self, parent, data):
 
         sketch_dist = hdc.sketch_dist_fn
         max_dist = hdc.max_dist
         min_support = hdc.min_support
         logical_op = hdc.sketch_operator
 
-        parent, sketch = key
         unclustered_counter = Counter()
         unclustered_sketches = dict()
-        parents = {parent: sketch}
         unclustered = []
-        for lsh, val in vals:
+        parents = dict()
+        parent_sketch = None
+        for (lsh, val), sketch in data:
+            parent_sketch = sketch
             if lsh is None:
                 parents[val[0]] = val[1]
             else:
                 unclustered_counter.update(t[0] for t in val)
                 unclustered_sketches.update(val)
                 unclustered.append((lsh, val))
+
+        if parent_sketch is not None:
+            parents[parent] = parent_sketch
 
         # from unclustered labels, obtain new labels to cluster
         is_close = lambda t: \
@@ -112,8 +117,8 @@ class MRCluster(MRJob):
                               if is_close(t))
 
         # merge new labels with already linked clusters
-        parents.update((lbl, unclustered_sketches[lbl])
-                       for lbl in filtered_labels)
+        parents.update((label, unclustered_sketches[label])
+                       for label in filtered_labels)
 
         if len(parents) > 1:
             self.increment_counter('clustered', 'groups', 1)
@@ -123,8 +128,7 @@ class MRCluster(MRJob):
         # remove all the clustered labels from the unclustered groups and
         # emit unclustered groups on a rotated key
         for lsh, tuples in unclustered:
-            remaining = filter(lambda t: t[0] not in parents,
-                               tuples)
+            remaining = filter(lambda t: t[0] not in parents, tuples)
             if len(remaining) > 1:
                 self.increment_counter('unclustered', 'groups', 1)
                 self.increment_counter('unclustered', 'items', len(remaining))
@@ -135,7 +139,7 @@ class MRCluster(MRJob):
         if key is None:
             yield key, val
 
-    def union_reducer(self, key, vals):
+    def union_reducer(self, _, vals):
         """ find connected components """
         uf = UnionFind()
         for elements in vals:

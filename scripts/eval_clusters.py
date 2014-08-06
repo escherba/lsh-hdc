@@ -66,6 +66,7 @@ result = json.dumps(dict(
     metrics=dict(
         auc_scores={name: roc.get_auc_score()
                     for name, roc in zip(names, rocs)},
+        items_clustered=dict(zip(names, map(len, all_neighbors)))
     )
 ))
 
