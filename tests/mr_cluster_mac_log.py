@@ -7,7 +7,6 @@ from mrjob.job import MRJob
 from mrjob.step import MRStep
 from operator import itemgetter
 from collections import Counter
-from lsh_hdc import SimHashSignature
 from lsh_hdc.cluster import HDClustering
 from content_rules import ContentFilter
 from pkg_resources import resource_filename
