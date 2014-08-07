@@ -24,6 +24,10 @@ test_mr: tests/mr_cluster_mac_log.py mrjob.conf $(MAC_LOG) env dev
 		--ground $(MAC_LOG) \
 		--clusters $(MAC_OUT)
 
+cluster: tests/cluster_mac_log.py tests/mac-a0.yaml $(MAC_LOG)
+	$(PYTHON) tests/cluster_mac_log.py --config tests/mac-a0.yaml \
+		$(MAC_LOG) > $(MAC_OUT)
+
 roc: scripts/eval_clusters.py
 	$(PYTHON) scripts/eval_clusters.py \
 		--clusters $(MAC_OUT) \

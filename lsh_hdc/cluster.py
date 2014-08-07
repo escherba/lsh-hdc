@@ -275,8 +275,7 @@ class HDClustering(object):
         label = obj if get_label is None else get_label(obj)
         prefix = None if get_prefix is None else get_prefix(obj)
 
-        for out in self._map_item(obj, body, label, prefix):
-            keys, val = out
+        for keys, val in self._map_item(obj, body, label, prefix):
             for key in keys:
                 yield key, val
 
@@ -291,11 +290,7 @@ class HDClustering(object):
 
         # If not using sketches, we are done
         if self.sketch_dist_fn is None:
-            return key, list(set(t for t in tuple_gen))
+            return key, list(set(tuple_gen))
 
         # create a dict mappipng a label to a sketch
-        label2sketch = dict()
-        for label, sketch in tuple_gen:
-            label2sketch[label] = sketch
-
-        return key, label2sketch.items()
+        return key, dict(tuple_gen).items()
