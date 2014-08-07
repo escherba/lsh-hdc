@@ -401,7 +401,6 @@ nbco.ly
 nblo.gs
 nca.st
 neo.ly
-newsday.com
 newser.me
 newspr.es
 newsy.com
@@ -531,7 +530,6 @@ pwire.at
 qkme.me
 qr.ae
 qvc.co
-qz.com
 r29.co
 r29.us
 r8t.us

@@ -7,9 +7,20 @@ import string
 from functools import partial
 from tldextract import extract as tld_extract
 from itertools import imap
-from pkg_resources import resource_string
+from pkg_resources import resource_filename
 from abc import abstractmethod
 from HTMLParser import HTMLParser
+
+
+def read_text_file(filename):
+    """Read text file ignoring comments beginning with pound sign"""
+    data = []
+    with open(resource_filename(__name__, filename), 'r') as fh:
+        for line in fh:
+            li = line.strip()
+            if not li.startswith('#'):
+                data.append(li)
+    return data
 
 
 class MLStripper(HTMLParser):
@@ -49,7 +60,8 @@ class Normalizer(object):
 
 class HTMLNormalizer(Normalizer):
 
-    ZERO_WIDTH_CHARS = {k: None for k in (
+    # map zero-width characters to nothing
+    TRANSLATE_MAP = {k: None for k in (
         range(ord(u'\x00'), ord(u'\x08') + 1) +
         range(ord(u'\x0b'), ord(u'\x0c') + 1) +
         range(ord(u'\x0e'), ord(u'\x1f') + 1) +
@@ -64,6 +76,9 @@ class HTMLNormalizer(Normalizer):
         [ord(u'\ufeff')]
     )}
 
+    # translate all Unicode spaces to regular spaces
+    _normalize_whitespace = partial(re.compile(ur'(?u)\s+').sub, u' ')
+
     # also see IETF spec regex:
     # r'(([^\s:/?#]+):)(//([^\s/?#]*))?([^\s?#]*)(\\?([^\s#]*))?(#([^\s#]*))'
     # http://www.ietf.org/rfc/rfc3986.txt
@@ -71,9 +86,9 @@ class HTMLNormalizer(Normalizer):
     # for list of valid TLDs, see:
     # http://data.iana.org/TLD/tlds-alpha-by-domain.txt
 
-    _find_urls = partial(re.findall, re.compile(r"""
+    _find_urls = partial(re.findall, re.compile(ur"""
     (
-        ((?:https?|ftp):\/\/)?      # optional scheme
+        ((?:https?|ftp):\/\/)       # scheme
         (                           # begin authority
             (?:
                 (?:
@@ -81,7 +96,7 @@ class HTMLNormalizer(Normalizer):
                     [a-z0-9-]*      # middle of domain component
                     (?<=[a-z0-9])\. # last char of domain component, no hyphen
                 )+
-                [a-z]{2,10}         # top-level domain
+                (?:%(tlds)s)\b      # top-level domain
             )
             |                       # or
             (?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})             # IP address
@@ -92,15 +107,16 @@ class HTMLNormalizer(Normalizer):
             (?:\?(?:%(valid_chars)s+=%(valid_chars)s+&)*  # GET parameters
             %(valid_chars)s+=%(valid_chars)s+)?           # last GET parameter
         )
-        (\#[^\s]*)?                 # optional anchor
+        (\#(?u)[^\s\#%%\[\]\{\}\\"<>]*)?                  # optional anchor
     )
-    """ % dict(valid_chars=r"[a-z0-9$-_.+!*'(),%]"),
-        re.IGNORECASE | re.VERBOSE
+    """ % dict(
+        valid_chars=ur"[a-z0-9$-_.+!*'(),%]",
+        tlds='|'.join(read_text_file('tlds-alpha-by-domain.txt'))
+    ),
+        re.IGNORECASE | re.VERBOSE | re.UNICODE
     ))
 
-    URL_SHORTENERS = set(
-        resource_string(__name__, 'url_shorteners.txt').splitlines()
-    )
+    URL_SHORTENERS = set(read_text_file('url_shorteners.txt'))
 
     def __init__(self, lowercase=True):
         self.lowercase = lowercase
@@ -124,7 +140,8 @@ class HTMLNormalizer(Normalizer):
         text = clean_html(text)
 
         if text != u'':
-            text = text.translate(self.ZERO_WIDTH_CHARS)
+            text = text.translate(self.TRANSLATE_MAP)
+            text = self._normalize_whitespace(text)
             if self.lowercase:
                 text = text.lower()
 
