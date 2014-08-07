@@ -155,9 +155,8 @@ class HTMLNormalizer(Normalizer):
                     authority in self.URL_SHORTENERS:
                 authority_token = authority.replace(u'.', u'_')
                 replacement = \
-                    url[1] + \
-                    authority_token + \
-                    u'/' + authority_token + u'_PATH_'
+                    u' ' + url[1] + authority_token + \
+                    u'/' + authority_token + u'_PATH_ '
                 text = text.replace(url[0], replacement)
 
         return text
