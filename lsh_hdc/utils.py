@@ -4,7 +4,10 @@ import random
 import operator
 import json
 import string
+from functools import partial
+from tldextract import extract as tld_extract
 from itertools import imap
+from pkg_resources import resource_string
 from abc import abstractmethod
 from HTMLParser import HTMLParser
 
@@ -46,7 +49,7 @@ class Normalizer(object):
 
 class HTMLNormalizer(Normalizer):
 
-    normalize_map = {k: None for k in (
+    ZERO_WIDTH_CHARS = {k: None for k in (
         range(ord(u'\x00'), ord(u'\x08') + 1) +
         range(ord(u'\x0b'), ord(u'\x0c') + 1) +
         range(ord(u'\x0e'), ord(u'\x1f') + 1) +
@@ -60,6 +63,44 @@ class HTMLNormalizer(Normalizer):
         range(ord(u'\u206a'), ord(u'\u206f') + 1) +
         [ord(u'\ufeff')]
     )}
+
+    # also see IETF spec regex:
+    # r'(([^\s:/?#]+):)(//([^\s/?#]*))?([^\s?#]*)(\\?([^\s#]*))?(#([^\s#]*))'
+    # http://www.ietf.org/rfc/rfc3986.txt
+
+    # for list of valid TLDs, see:
+    # http://data.iana.org/TLD/tlds-alpha-by-domain.txt
+
+    _find_urls = partial(re.findall, re.compile(r"""
+    (
+        ((?:https?|ftp):\/\/)?      # optional scheme
+        (                           # begin authority
+            (?:
+                (?:
+                    [a-z0-9]        # first char of domain component, no hyphen
+                    [a-z0-9-]*      # middle of domain component
+                    (?<=[a-z0-9])\. # last char of domain component, no hyphen
+                )+
+                [a-z]{2,10}         # top-level domain
+            )
+            |                       # or
+            (?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})             # IP address
+        )                           # end authority
+            (?::[0-9]+)?            # optional port
+        (
+            (?:\/%(valid_chars)s+/?)*                     # path
+            (?:\?(?:%(valid_chars)s+=%(valid_chars)s+&)*  # GET parameters
+            %(valid_chars)s+=%(valid_chars)s+)?           # last GET parameter
+        )
+        (\#[^\s]*)?                 # optional anchor
+    )
+    """ % dict(valid_chars=r"[a-z0-9$-_.+!*'(),%]"),
+        re.IGNORECASE | re.VERBOSE
+    ))
+
+    URL_SHORTENERS = set(
+        resource_string(__name__, 'url_shorteners.txt').splitlines()
+    )
 
     def __init__(self, lowercase=True):
         self.lowercase = lowercase
@@ -83,11 +124,31 @@ class HTMLNormalizer(Normalizer):
         text = clean_html(text)
 
         if text != u'':
-            text = text.translate(self.normalize_map)
+            text = text.translate(self.ZERO_WIDTH_CHARS)
             if self.lowercase:
                 text = text.lower()
 
+        # 0                            1          2       3         4
+        # [('http://t.co:80/erwrw#er', 'http://', 't.co', '/erwrw', '#er')]
+
+        for url in self._find_urls(text):
+            authority = url[2]
+            domain = self._domain_from_url(authority)
+            if domain in self.URL_SHORTENERS or \
+                    authority in self.URL_SHORTENERS:
+                authority_token = authority.replace(u'.', u'_')
+                replacement = \
+                    url[1] + \
+                    authority_token + \
+                    u'/' + authority_token + u'_PATH_'
+                text = text.replace(url[0], replacement)
+
         return text
+
+    @staticmethod
+    def _domain_from_url(url):
+        parsed = tld_extract(url)
+        return '{}.{}'.format(parsed.domain, parsed.suffix)
 
 
 class Tokenizer(object):
@@ -105,13 +166,13 @@ class RegexTokenizer(Tokenizer):
             pattern = ur'(?u)\w+'
             pattern = ur'(?:\B[#@$£€¥₩฿])?(?u)\w+(?:[%\+]\B)?'
             pattern = ur'''
-                        (?:                # Either URL
-                        http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+
-                        |                  # or
-                        (?:\B[#@$£€¥₩฿])?  # (preceded by optional pound-, at-, or currency signs)
-                        (?u)\w+            # a Unicode word
-                        (?:[%\+]\B)?       # optionally followed by percentage or plus signs
-                        )
+(?:                # Either URL
+http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+
+|                  # or
+(?:\B[#@$£€¥₩฿])?  # (preceded by optional pound-, at-, or currency signs)
+(?u)\w+            # a Unicode word
+(?:[%\+]\B)?       # optionally followed by percentage or plus signs
+)
                         '''
             """
             pattern = ur'(?u)\w+'
