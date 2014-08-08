@@ -12,6 +12,8 @@ from funcy import compose
 from lsh_hdc.stats import get_roc_summaries, mplot_roc_curves
 
 parser = ArgumentParser()
+parser.add_argument('--curve', type=str, required=False, default=None,
+                    help="Type of curve (det, roc)")
 parser.add_argument('--clusters', nargs='+', type=str, required=True,
                     help="File(s) containig clusterings")
 parser.add_argument('--labels', nargs='*', type=str, required=False,
@@ -72,4 +74,6 @@ result = json.dumps(dict(
 
 print result
 
-mplot_roc_curves(matplotlib.pyplot, rocs, names, auc=True)
+if args.curve is not None:
+    mplot_roc_curves(matplotlib.pyplot, rocs, names, curve=args.curve,
+                     auc=True)

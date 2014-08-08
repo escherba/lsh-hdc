@@ -3,7 +3,7 @@
 PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
 PYTHON_TIMED = $(PYENV) time python
-MAC_LOG = ./tests/data/2014-01-14.detail.sorted
+MAC_LOG = ./tests/data/mac2.json
 MAC_OUT = tests/out/$(shell basename $(MAC_LOG)).out
 
 package: env
@@ -28,8 +28,9 @@ cluster: tests/cluster_mac_log.py tests/mac-a0.yaml $(MAC_LOG)
 	$(PYTHON) tests/cluster_mac_log.py --config tests/mac-a0.yaml \
 		$(MAC_LOG) > $(MAC_OUT)
 
-roc: scripts/eval_clusters.py
+det roc: scripts/eval_clusters.py
 	$(PYTHON) scripts/eval_clusters.py \
+		--curve $@ \
 		--clusters $(MAC_OUT) \
 		--ground $(MAC_LOG)
 

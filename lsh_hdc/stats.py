@@ -1,6 +1,5 @@
 from collections import Counter, defaultdict
 from functools import partial
-from operator import itemgetter
 from itertools import imap, izip, chain
 from math import log, fabs, copysign
 
@@ -370,7 +369,7 @@ def roc_auc(fpr, tpr, reorder=False):
         reorder=reorder)
 
 
-def mplot_roc_curves(mplt, rocs, names, pct=False, auc=False):
+def mplot_roc_curves(mplt, rocs, names, curve='roc', pct=False, auc=False):
     """Plot ROC curve with MATPLOTLIB
     :param mplt: matplotlib.pyplot module
     :type plt: module
@@ -384,6 +383,8 @@ def mplot_roc_curves(mplt, rocs, names, pct=False, auc=False):
     :type auc: bool
     """
 
+    transform = 'pct' if pct else None
+
     for i, (name, roc) in enumerate(izip(names, rocs)):
         if auc:
             auc_str = "AUC: {:.3f}".format(roc.get_auc_score())
@@ -394,7 +395,7 @@ def mplot_roc_curves(mplt, rocs, names, pct=False, auc=False):
             if name is None:
                 name = str(i)
 
-        mplt.plot(*roc.get_axes(), label=name)
+        mplt.plot(*roc.get_axes(curve=curve, transform=transform), label=name)
 
     if pct:
         suffix = ' (%)'
@@ -402,17 +403,60 @@ def mplot_roc_curves(mplt, rocs, names, pct=False, auc=False):
     else:
         suffix = ''
         mult = 1.0
-    mplt.ylabel('Recall' + suffix)
+
     mplt.xlabel('False Positive Rate' + suffix)
-    mplt.ylim([0.0, 1.0 * mult])
-    mplt.xlim([0.0, 0.1 * mult])
-    mplt.title('ROC Curve')
-    mplt.legend(loc='lower right')
+    if curve == 'roc':
+        mplt.title('ROC Curve')
+        mplt.ylabel('Recall' + suffix)
+        mplt.ylim([0.0, 1.0 * mult])
+        mplt.xlim([0.0, 0.1 * mult])
+        mplt.legend(loc='lower right')
+    else:
+        mplt.title('DET Curve')
+        mplt.ylabel('False Negative Rate' + suffix)
+        mplt.legend(loc='lower left')
     mplt.show()
 
 
+def safe_log(d):
+    if d < 0.0:
+        result = float('nan')
+    else:
+        try:
+            result = log(d)
+        except ValueError:
+            result = float('-inf')
+    return result
+
+
+def safe_logit(p):
+    """Return logit transform (don't throw exceptions)"""
+    return safe_log(safe_div(p, 1.0 - p))
+
+
+# from scipy.special import erfinv
+# def probit(p):
+#     return sqrt(2.0) * erfinv(2.0 * p - 1.0)
+
+
 class ROCSummarizer(object):
-    """ROC curve summarizer"""
+    """ROC curve summarizer
+
+    Can return plot-ready series for ROC (Receiver Operating Characterstic)
+    and DET (Detection Error Tradeoff) curves
+
+    """
+
+    VALID_CURVES = {'roc', 'det'}
+
+    TRANSFORMS = {
+        'logit': safe_logit,
+        'log': safe_log,
+        'pct': lambda x: 100.0 * x,
+        'id': lambda x: x,
+        # probit is harder to compute and practically the same as logit
+    }
+
     def __init__(self):
         self.tps = []
         self.fps = []
@@ -459,6 +503,13 @@ class ROCSummarizer(object):
         """
         return map(self._div, zip(self.fps, self.tns))
 
+    def get_fnrs(self):
+        """
+        :return: a list of false negative rate values
+        :rtype : list
+        """
+        return map(self._div, zip(self.fns, self.tps))
+
     def get_precisions(self):
         """
         :return: a list of precision values
@@ -466,28 +517,47 @@ class ROCSummarizer(object):
         """
         return map(self._div, zip(self.tps, self.fps))
 
-    def get_points(self):
+    def get_transform(self, transform='id'):
+        try:
+            return partial(map, self.TRANSFORMS[transform])
+        except KeyError:
+            raise ValueError("`transform' must be one of %s" %
+                             self.TRANSFORMS.keys())
+
+    def get_points(self, curve='roc', transform=None):
         """
         :return: a list of tuples (x, y)
         :rtype : list
         """
-        return sorted(zip(self.get_fprs(), self.get_tprs()))
 
-    def get_axes(self):
+        if curve == 'roc':
+            if transform is None:
+                transform = 'pct'
+            ft = self.get_transform(transform)
+            pts = ft(self.get_fprs()), ft(self.get_tprs())
+        elif curve == 'det':
+            if transform is None:
+                transform = 'logit'
+            ft = self.get_transform(transform)
+            pts = ft(self.get_fprs()), ft(self.get_fnrs())
+        else:
+            return ValueError("`curve' must be one of %" % self.VALID_CURVES)
+        return sorted(zip(*pts))
+
+    def get_axes(self, curve='roc', transform=None):
         """
         :return: tuple of [x], [y] lists (for plotting)
         :rtype : tuple
         """
-        points = self.get_points()
-        return map(itemgetter(0), points), map(itemgetter(1), points)
 
-    def get_axes_pct(self):
-        """
-        :return: tuple of [x], [y] lists (for plotting)
-        :rtype : tuple
-        """
-        points = self.get_points()
-        return [100.0 * p[0] for p in points], [100.0 * p[1] for p in points]
+        # set default transform
+        if transform is None:
+            if curve == 'roc':
+                transform = 'id'
+            elif curve == 'det':
+                transform = 'logit'
+
+        return zip(*self.get_points(curve=curve, transform=transform))
 
     def get_auc_score(self):
         """
