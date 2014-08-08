@@ -153,7 +153,7 @@ class HTMLNormalizer(Normalizer):
                 authority_token = authority.replace(u'.', u'_')
                 replacement = \
                     u' ' + url[1] + authority_token + \
-                    u'/_PATH_ '
+                    u'/' + authority_token + '_PATH '
                 text = text.replace(url[0], replacement)
 
         return text
