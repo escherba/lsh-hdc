@@ -541,7 +541,7 @@ class ROCSummarizer(object):
             ft = self.get_transform(transform)
             pts = ft(self.get_fprs()), ft(self.get_fnrs())
         else:
-            return ValueError("`curve' must be one of %" % self.VALID_CURVES)
+            raise ValueError("`curve' must be one of %s" % self.VALID_CURVES)
         return sorted(zip(*pts))
 
     def get_axes(self, curve='roc', transform=None):
