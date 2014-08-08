@@ -5,7 +5,6 @@ import operator
 import json
 import string
 from functools import partial
-from tldextract import extract as tld_extract
 from itertools import imap
 from pkg_resources import resource_filename
 from abc import abstractmethod
@@ -150,22 +149,14 @@ class HTMLNormalizer(Normalizer):
 
         for url in self._find_urls(text):
             authority = url[2]
-            domain = self._domain_from_url(authority)
-            if domain in self.URL_SHORTENERS or \
-                    authority in self.URL_SHORTENERS:
+            if authority in self.URL_SHORTENERS:
                 authority_token = authority.replace(u'.', u'_')
                 replacement = \
-                    url[1] + \
-                    authority_token + \
-                    u'/' + authority_token + u'_PATH_'
+                    u' ' + url[1] + authority_token + \
+                    u'/_PATH_ '
                 text = text.replace(url[0], replacement)
 
         return text
-
-    @staticmethod
-    def _domain_from_url(url):
-        parsed = tld_extract(url)
-        return '{}.{}'.format(parsed.domain, parsed.suffix)
 
 
 class Tokenizer(object):
