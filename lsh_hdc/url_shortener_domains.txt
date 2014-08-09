@@ -28,6 +28,7 @@ agileit.co
 aje.me
 al.st
 alj.am
+alturl.com
 amcurl.com
 amzn.com
 amzn.to
@@ -65,6 +66,7 @@ bbyurl.us
 bcene.ws
 bcool.bz
 bcove.me
+bddy.me
 be.net
 beats.is
 beebe.in
@@ -122,6 +124,7 @@ cjky.it
 cl.ly
 cld.me
 cli.gs
+clm.bz
 cln.me
 clrlv.rs
 cmsc.re
@@ -210,6 +213,7 @@ exm.nr
 f-st.co
 facebook.appstore.com
 fandw.me
+fanpa.ge
 fatc.co
 fb.me
 fb.nbcsports.com
@@ -217,6 +221,7 @@ fcnews.tv
 feedzil.la
 ff.im
 ffce.bz
+fie-r.it
 fifa.to
 fileshar.es
 fitm.ag
@@ -243,6 +248,7 @@ fw.to
 fxn.ws
 g.co
 ga.co
+gag.gl
 gap.us
 gathr.us
 gaw.kr
@@ -371,11 +377,13 @@ ls.ly
 lstart.it
 lts.cr
 lx.im
+m.diau.me
 m.tri.be
 m1.io
 macrumo.rs
 mad.ly
 mapq.st
+mash.trib.al
 mbist.ro
 mcd.to
 mctr.st
@@ -383,6 +391,7 @@ mdtm.pl
 mediate.com
 mee.bo
 meetu.ps
+mf.tt
 mgob.lu
 mi.tt
 michael.ph
@@ -430,6 +439,7 @@ nbcnews.to
 nbco.ly
 nblo.gs
 nca.st
+ncld.co
 necoleb.it
 neo.ly
 newser.me
@@ -440,6 +450,7 @@ nie.mn
 ning.it
 nixle.us
 njour.nl
+noconow.co
 nod2.me
 noip.co
 nokia.ly
@@ -457,12 +468,15 @@ occip.it
 ofa.bo
 ohdev.in
 oink.com
+okla.st
 okmag.co
 omgf.ac
+on-ajc.com
 on-msn.com
 on.11alive.com
 on.app.com
 on.azcentral.com
+on.bild.de
 on.bofa.com
 on.cc.com
 on.cnn.com
@@ -482,6 +496,7 @@ on.mtv.com
 on.natgeo.com
 on.news10.net
 on.nfib.com
+on.nfl.com
 on.pier1.com
 on.pnj.com
 on.rt.com
@@ -497,6 +512,7 @@ on.wbir.com
 on.wcsh6.com
 on.wfmy.com
 on.wgrz.com
+on.wisports.com
 on.wkyc.com
 on.wlbz2.com
 on.wltx.com
@@ -518,6 +534,7 @@ otak.hu
 ow.ly
 owl.li
 p.ost.im
+p.tl
 p1r.es
 p4k.in
 pape.rs
@@ -550,6 +567,7 @@ pocket.co
 pojonews.co
 politi.co
 poll.fm
+polyv.re
 pops.ci
 popsu.gr
 post.cr
@@ -606,9 +624,11 @@ sbn.to
 sbux.co
 sc.org
 sch.mp
+sco.lt
 scoble.it
 scri.bi
 scty.asia
+sdrv.ms
 sdtk.fm
 seati.ms
 see.sc
@@ -639,6 +659,7 @@ slidesha.re
 sm.drpepper.com
 sm.mg
 smart.cr
+smarturl.it
 smashed.by
 smf.is
 smgm.us
@@ -658,6 +679,7 @@ social.vzw.com
 social.zune.net
 sockroll.com
 some.ly
+sot.ag
 soup.ps
 spag.es
 spdr.mn
@@ -752,6 +774,7 @@ twurl.nl
 txex.es
 txt.bo
 ucla.in
+uefa.to
 umurl.us
 uni.vi
 uninews.us
@@ -779,9 +802,11 @@ volu.sn
 vrge.co
 vsb.li
 vult.re
+vwoa.us
 vz.to
 w.fullsail.edu
 walmarturl.com
+wapo.st
 wbtrnd.co
 wbur.fm
 we.tl
@@ -801,6 +826,7 @@ wrd.cm
 wrdm.ag
 wsm.co
 wthms.co
+wtim.es
 wwz.rs
 wxch.nl
 x.up.com
