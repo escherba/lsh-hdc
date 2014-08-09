@@ -15,6 +15,7 @@ abc.tv
 abc11.tv
 abc7ne.ws
 abcn.ws
+abt.cm
 accura.cc
 acosm.in
 action.me
@@ -23,6 +24,7 @@ add.vc
 adnews.ms
 adobe.ly
 advmo.us
+adweek.it
 aexp.co
 agileit.co
 aje.me
@@ -218,6 +220,7 @@ fatc.co
 fb.me
 fb.nbcsports.com
 fcnews.tv
+feedly.com
 feedzil.la
 ff.im
 ffce.bz
@@ -254,6 +257,7 @@ gathr.us
 gaw.kr
 gbpg.net
 georiot.co
+getbook.at
 getm.pt
 gigam.es
 gizmo.do
@@ -266,9 +270,12 @@ go.nasa.gov
 go.ostp.gov
 go.unl.edu
 go.usa.gov
+go.wfu.edu
+go.wvu.edu
 goduke.us
 gohe.at
 gokev.in
+golff.it
 goo.gl
 gossi.pr
 gossipcop.com
@@ -289,6 +296,7 @@ hailo.to
 hatne.ws
 hbspk.co
 hefr.in
+hhs87.co
 hip.mu
 hndiary.com
 hops.to
@@ -369,6 +377,7 @@ livingsoci.al
 lnch.co
 lnkd.in
 logo.tv
+logt.ly
 lohud.us
 longrep.ly
 low.es
@@ -402,6 +411,7 @@ mirr.im
 mitne.ws
 mklnd.com
 mkt.com
+mktfan.es
 mlan.co
 mlks.co
 mln.im
@@ -421,6 +431,7 @@ msft.it
 mstr.cd
 mths.be
 mtln.us
+mtvne.ws
 muo.fm
 mvp.to
 mwne.ws
@@ -454,6 +465,7 @@ noconow.co
 nod2.me
 noip.co
 nokia.ly
+noles.co
 nowth.is
 nssn.co
 nydn.us
@@ -464,6 +476,7 @@ nyti.ms
 nzh.tw
 o.ea.com
 oads.co
+oak.ctx.ly
 occip.it
 ofa.bo
 ohdev.in
@@ -527,6 +540,7 @@ onforb.es
 onion.com
 onmsnbc.co
 opb.is
+oran.ge
 oreil.ly
 oshko.sh
 osky.co
@@ -575,6 +589,7 @@ ppche.ro
 press.sn
 prn.to
 prnt.in
+ptab.it
 ptrani.me
 pub.vitrue.com
 pulse.me
@@ -629,6 +644,7 @@ scoble.it
 scri.bi
 scty.asia
 sdrv.ms
+sds.to
 sdtk.fm
 seati.ms
 see.sc
@@ -650,6 +666,7 @@ short.nr
 shpst.ly
 shpws.me
 shrd.by
+shrt.tl
 shz.am
 signon.org
 simp.ly
@@ -678,6 +695,7 @@ social.jcp.com
 social.vzw.com
 social.zune.net
 sockroll.com
+solo.mn
 some.ly
 sot.ag
 soup.ps
@@ -709,6 +727,7 @@ sups.us
 svy.mk
 t.co
 t.st
+t.usnews.com
 tbd.ly
 tbf.me
 tcat.tc
@@ -766,6 +785,7 @@ tw.appstore.com
 tw.medicalexpress.com
 tw.nbcsports.com
 twaud.io
+twb.ly
 twhite.me
 twl.sh
 twrt.me
@@ -827,6 +847,7 @@ wrdm.ag
 wsm.co
 wthms.co
 wtim.es
+www.pulse.me
 wwz.rs
 wxch.nl
 x.up.com
