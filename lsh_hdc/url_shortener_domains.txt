@@ -87,7 +87,6 @@ budurl.com
 buff.ly
 bull.hn
 buswk.co
-buzztap.com
 bzfd.it
 campl.us
 capi.tl
@@ -699,7 +698,6 @@ tw.medicalexpress.com
 tw.nbcsports.com
 twaud.io
 twhite.me
-twitpic.com
 twl.sh
 twrt.me
 twtr.to

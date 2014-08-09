@@ -4,22 +4,12 @@ import random
 import operator
 import json
 import string
+from collections import namedtuple
 from functools import partial
 from itertools import imap
-from pkg_resources import resource_filename
+from pymaptools.utils import read_text_file
 from abc import abstractmethod
 from HTMLParser import HTMLParser
-
-
-def read_text_file(filename):
-    """Read text file ignoring comments beginning with pound sign"""
-    data = []
-    with open(resource_filename(__name__, filename), 'r') as fh:
-        for line in fh:
-            li = line.strip()
-            if not li.startswith('#'):
-                data.append(li)
-    return data
 
 
 class MLStripper(HTMLParser):
@@ -56,6 +46,69 @@ class Normalizer(object):
     def normalize(self, text):
         """Tokenize text"""
 
+# Content of URLComponents:
+# 0                          1          2       3      4        5
+# [('http://t.co:80/path#a', 'http://', 't.co', ':80', '/path', '#a')]
+URLComponents = namedtuple('URLComponents',
+                           'string scheme authority port path anchor')
+
+
+class URLFinder(object):
+    # also see IETF spec regex:
+    # r'(([^\s:/?#]+):)(//([^\s/?#]*))?([^\s?#]*)(\\?([^\s#]*))?(#([^\s#]*))'
+    # http://www.ietf.org/rfc/rfc3986.txt
+
+    # for list of valid TLDs, see:
+    # http://data.iana.org/TLD/tlds-alpha-by-domain.txt
+
+    _find_urls = partial(re.findall, re.compile(
+        ur"""
+    (
+        ((?:https?|ftp):\/\/)       # scheme
+        (                           # begin authority
+            (?:
+                (?:
+                    [a-z0-9]        # first char of domain component, no hyphen
+                    [a-z0-9-]*      # middle of domain component
+                    (?<=[a-z0-9])\. # last char of domain component, no hyphen
+                )+
+                (?:%(tlds)s)\b      # top-level domain
+            )
+            |                       # or
+            (?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})             # IP address
+        )                           # end authority
+            (:[0-9]+)?              # optional port
+        (
+            (?:\/%(valid_chars)s+/?)*                     # path
+            (?:\?(?:%(valid_chars)s+=%(valid_chars)s+&)*  # GET parameters
+            %(valid_chars)s+=%(valid_chars)s+)?           # last GET parameter
+        )
+        (\#(?u)[^\s\#%%\[\]\{\}\\"<>]*)?                  # optional anchor
+    )
+    """ %
+        dict(
+            valid_chars=ur"[a-z0-9$-_.+!*'(),%]",
+            tlds='|'.join(read_text_file(__name__, 'tlds-alpha-by-domain.txt'))
+        ),
+        re.IGNORECASE | re.VERBOSE | re.UNICODE
+    ))
+
+    URL_SHORTENERS = set(read_text_file(__name__, 'url_shortener_domains.txt'))
+
+    def find_urls(self, text):
+        for t in self._find_urls(text):
+            yield URLComponents(*t)
+
+    def is_shortener(self, url):
+        return url.authority in self.URL_SHORTENERS
+
+    def find_shortener_urls(self, text):
+        """Find all urls and return those whose domain is one of the
+        known URL shorteners"""
+        for url in self.find_urls(text):
+            if self.is_shortener(url):
+                yield url
+
 
 class HTMLNormalizer(Normalizer):
 
@@ -78,48 +131,11 @@ class HTMLNormalizer(Normalizer):
     # translate all Unicode spaces to regular spaces
     _normalize_whitespace = partial(re.compile(ur'(?u)\s+').sub, u' ')
 
-    # also see IETF spec regex:
-    # r'(([^\s:/?#]+):)(//([^\s/?#]*))?([^\s?#]*)(\\?([^\s#]*))?(#([^\s#]*))'
-    # http://www.ietf.org/rfc/rfc3986.txt
-
-    # for list of valid TLDs, see:
-    # http://data.iana.org/TLD/tlds-alpha-by-domain.txt
-
-    _find_urls = partial(re.findall, re.compile(ur"""
-    (
-        ((?:https?|ftp):\/\/)       # scheme
-        (                           # begin authority
-            (?:
-                (?:
-                    [a-z0-9]        # first char of domain component, no hyphen
-                    [a-z0-9-]*      # middle of domain component
-                    (?<=[a-z0-9])\. # last char of domain component, no hyphen
-                )+
-                (?:%(tlds)s)\b      # top-level domain
-            )
-            |                       # or
-            (?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})             # IP address
-        )                           # end authority
-            (?::[0-9]+)?            # optional port
-        (
-            (?:\/%(valid_chars)s+/?)*                     # path
-            (?:\?(?:%(valid_chars)s+=%(valid_chars)s+&)*  # GET parameters
-            %(valid_chars)s+=%(valid_chars)s+)?           # last GET parameter
-        )
-        (\#(?u)[^\s\#%%\[\]\{\}\\"<>]*)?                  # optional anchor
-    )
-    """ % dict(
-        valid_chars=ur"[a-z0-9$-_.+!*'(),%]",
-        tlds='|'.join(read_text_file('tlds-alpha-by-domain.txt'))
-    ),
-        re.IGNORECASE | re.VERBOSE | re.UNICODE
-    ))
-
-    URL_SHORTENERS = set(read_text_file('url_shorteners.txt'))
-
-    def __init__(self, lowercase=True):
+    def __init__(self, lowercase=True, normalize_shortener_urls=True):
         self.lowercase = lowercase
         self.html_parser = HTMLParser()
+        self.url_finder = URLFinder()
+        self.normalize_shortener_urls = normalize_shortener_urls
 
     def normalize(self, text, input_encoding='UTF-8'):
         """
@@ -144,17 +160,13 @@ class HTMLNormalizer(Normalizer):
             if self.lowercase:
                 text = text.lower()
 
-        # 0                            1          2       3         4
-        # [('http://t.co:80/erwrw#er', 'http://', 't.co', '/erwrw', '#er')]
-
-        for url in self._find_urls(text):
-            authority = url[2]
-            if authority in self.URL_SHORTENERS:
-                authority_token = authority.replace(u'.', u'_')
+        if self.normalize_shortener_urls:
+            for url in self.url_finder.find_shortener_urls(text):
+                authority_tok = (url.authority + url.port).replace(u'.', u'_')
                 replacement = \
-                    u' ' + url[1] + authority_token + \
-                    u'/' + authority_token + '_PATH '
-                text = text.replace(url[0], replacement)
+                    u' ' + url.scheme + authority_tok + \
+                    u'/' + authority_tok + '_PATH '
+                text = text.replace(url.string, replacement)
 
         return text
 
