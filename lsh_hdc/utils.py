@@ -61,9 +61,12 @@ class URLFinder(object):
     # for list of valid TLDs, see:
     # http://data.iana.org/TLD/tlds-alpha-by-domain.txt
 
-    # For a good example of a similar regex see
+    # For examples of similar patterns:
     # http://daringfireball.net/2010/07/improved_regex_for_matching_urls
     # https://gist.github.com/uogbuji/705383
+    # https://gist.github.com/gruber/249502
+    # http://alanstorm.com/url_regex_explained
+    # http://mathiasbynens.be/demo/url-regex
 
     RE_URL_FINDER = re.compile(
         ur"""
@@ -109,9 +112,9 @@ class URLFinder(object):
 
     URL_SHORTENERS = set(read_text_file(__name__, 'url_shortener_domains.txt'))
 
-    def find_urls(self, s):
+    def find_urls(self, s, overlapped=True):
         urls = []
-        for url_ in re.findall(self.RE_URL_FINDER, s, overlapped=True):
+        for url_ in re.findall(self.RE_URL_FINDER, s, overlapped=overlapped):
             url = URLComponents(*url_)
             # prevent run-on URLs
             if len(urls) > 0 and urls[-1].string.endswith(url.string) and \
