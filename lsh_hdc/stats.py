@@ -1,9 +1,14 @@
 from collections import Counter, defaultdict
 from functools import partial
+from operator import itemgetter
 from itertools import imap, izip, chain
 from math import log, fabs, copysign
+from urllib import urlencode
+import locale
 
 __author__ = 'escherba'
+
+locale.setlocale(locale.LC_ALL, 'en_US')
 
 
 def safe_div(num, denom):
@@ -592,3 +597,99 @@ def get_roc_summaries(iterable, level_getters, ground_pos):
         for d, get_level in izip(ds, level_getters):
             d[get_level(item)].add(ground_truth, True)
     return map(get_roc, ds)
+
+
+def int2str(i):
+    return locale.format("%d", i, grouping=True)
+
+
+class VennDiagram(object):
+
+    PREFIX = '_'
+
+    def __init__(self, pandas):
+        self._pd = pandas
+        self.venn = Counter()
+
+    def add_fact(self, fact):
+        """Add a fact (a list of key-value pairs)"""
+        tuples = sorted(fact.iteritems(), key=itemgetter(0))
+        self.venn[tuple(tuples)] += 1
+
+    def get_dataframe(self, prefix=PREFIX):
+        dicts = []
+        for tuples, val in self.venn.iteritems():
+            keys = [(prefix + k, v) for k, v in tuples]
+            dicts.append(dict(chain(keys, [("count", val)])))
+
+        return self._pd.DataFrame.from_dict(dicts)
+
+    @staticmethod
+    def get_google_venn2(df, columns):
+        cols = columns[:2]
+        A, B = cols
+        counts = map(lambda x: x if isinstance(x, int) else
+                     df.__getitem__(x)['count'].sum(),
+                     [df[A], df[B], 0, df[A] & df[B], 0, 0, 0])
+        return cols, counts
+
+    @staticmethod
+    def get_google_venn3(df, columns):
+        cols = columns[:3]
+        A, B, C = cols
+        counts = map(lambda x: df.__getitem__(x)['count'].sum(),
+                     [df[A], df[B], df[C], df[A] & df[B], df[A] & df[C],
+                      df[B] & df[C], df[A] & df[B] & df[C]])
+        return cols, counts
+
+    def get_googlechart(self, df, columns, w=400, h=400):
+
+        """return URL for Google Chart API
+        :param df: data frame
+        :type df: pandas.DataFrame
+        :param columns: list of columns sorted by frequency
+        :type columns: list
+        """
+
+        num_columns = len(columns)
+        if num_columns >= 3:
+            cols, counts = self.get_google_venn3(df, columns)
+        elif num_columns == 2:
+            cols, counts = self.get_google_venn2(df, columns)
+        else:
+            raise ValueError("Do not know how to create a Venn diagram"
+                             "from {} sets".format(num_columns))
+
+        prefix_len = len(self.PREFIX)
+        lbls = '|'.join(col[prefix_len:] + ': ' + int2str(c)
+                        for col, c in izip(cols, counts))
+
+        mult = 100.0 / float(max(counts))
+        norm = [round(float(c) * mult, 1) for c in counts]
+        stri = ','.join(map(str, norm))
+        return "https://chart.googleapis.com/chart?" + urlencode(dict(
+            cht='v',
+            chs='%dx%d' % (w, h),
+            chd='t:' + stri,
+            chdl=lbls,
+            # chco='FF6342,ADDE63,63C6DE'
+        ))
+
+    def show(self, circles=None):
+
+        df = self.get_dataframe(prefix=self.PREFIX)
+        if circles is None:
+            circle_sizes = [(c, df[df[c]]['count'].sum())
+                            for c in df.columns[:-1]]
+            circles = map(itemgetter(0), sorted(circle_sizes,
+                                                key=itemgetter(1),
+                                                reverse=True))
+        else:
+            circles = [self.PREFIX + lbl for lbl in circles]
+
+        print
+        print "Venn Diagram"
+        print df.groupby(circles).sum()
+        print
+        print 'Link: ' + self.get_googlechart(df, circles)
+        print

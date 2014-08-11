@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import re
+import regex as re
 import random
 import operator
 import json
@@ -61,7 +61,11 @@ class URLFinder(object):
     # for list of valid TLDs, see:
     # http://data.iana.org/TLD/tlds-alpha-by-domain.txt
 
-    _find_urls = partial(re.findall, re.compile(
+    # For a good example of a similar regex see
+    # http://daringfireball.net/2010/07/improved_regex_for_matching_urls
+    # https://gist.github.com/uogbuji/705383
+
+    RE_URL_FINDER = re.compile(
         ur"""
     (
         ((?:https?|ftp):\/\/)       # scheme
@@ -70,34 +74,57 @@ class URLFinder(object):
                 (?:
                     [a-z0-9]        # first char of domain component, no hyphen
                     [a-z0-9-]*      # middle of domain component
-                    (?<=[a-z0-9])\. # last char of domain component, no hyphen
+                    (?<!-)          # last char cannot be a hyphen
+                    \.
                 )+
                 (?:%(tlds)s)\b      # top-level domain
             )
             |                       # or
-            (?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})             # IP address
+            (?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})    # IP address
         )                           # end authority
             (:[0-9]+)?              # optional port
         (
-            (?:\/%(valid_chars)s+/?)*                     # path
-            (?:\?(?:%(valid_chars)s+=%(valid_chars)s+&)*  # GET parameters
-            %(valid_chars)s+=%(valid_chars)s+)?           # last GET parameter
+            # (?:\/%(qvalid)s*/?)*                  path
+            (?:                     # One or more:
+                [^\s\(\)<>]+        # Run of non-space, non-()<>
+                |                                       # or
+                \((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\)  # balanced parens,
+                                                        # up to 2 levels
+            )*
+            (?:\?(?:%(qvalid)s+=%(qvalid)s+&)*  # GET parameters
+            %(qvalid)s+=%(qvalid)s+)?           # last GET parameter
         )
-        (\#(?u)[^\s\#%%\[\]\{\}\\"<>]*)?                  # optional anchor
+        (
+            \#(?u)[^\(\)\s\#%%\[\]\{\}\\"<>]*
+        )?                                      # optional anchor
+        (?<!(?u)[\s`\!\[\]{};:'".,<>\?«»“”‘’])  # avoid punctuation at the end
     )
     """ %
         dict(
-            valid_chars=ur"[a-z0-9$-_.+!*'(),%]",
+            qvalid=ur"[a-z0-9$-_.+!*'(),%]",
             tlds='|'.join(read_text_file(__name__, 'tlds-alpha-by-domain.txt'))
         ),
         re.IGNORECASE | re.VERBOSE | re.UNICODE
-    ))
+    )
 
     URL_SHORTENERS = set(read_text_file(__name__, 'url_shortener_domains.txt'))
 
-    def find_urls(self, text):
-        for t in self._find_urls(text):
-            yield URLComponents(*t)
+    def find_urls(self, s):
+        urls = []
+        for url_ in re.findall(self.RE_URL_FINDER, s, overlapped=True):
+            url = URLComponents(*url_)
+            # prevent run-on URLs
+            if len(urls) > 0 and urls[-1].string.endswith(url.string) and \
+                    not urls[-1].string == url.string:
+                print "Warning: %s ends with %s" % (urls[-1].string, url.string)
+                prev_urls = re.findall(self.RE_URL_FINDER,
+                                       urls[-1].string[:-len(url.string)],
+                                       overlapped=False)
+                if len(prev_urls) > 0:
+                    print "setting %s to %s" % (urls[-1].string, prev_urls[0])
+                    urls[-1] = URLComponents(*prev_urls[0])
+            urls.append(url)
+        return urls
 
     def is_shortener(self, url):
         return url.authority in self.URL_SHORTENERS
