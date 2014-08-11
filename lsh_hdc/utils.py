@@ -116,12 +116,10 @@ class URLFinder(object):
             # prevent run-on URLs
             if len(urls) > 0 and urls[-1].string.endswith(url.string) and \
                     not urls[-1].string == url.string:
-                print "Warning: %s ends with %s" % (urls[-1].string, url.string)
                 prev_urls = re.findall(self.RE_URL_FINDER,
                                        urls[-1].string[:-len(url.string)],
                                        overlapped=False)
                 if len(prev_urls) > 0:
-                    print "setting %s to %s" % (urls[-1].string, prev_urls[0])
                     urls[-1] = URLComponents(*prev_urls[0])
             urls.append(url)
         return urls
