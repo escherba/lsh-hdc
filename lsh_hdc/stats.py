@@ -34,7 +34,7 @@ def median(xs):
 
 
 def entropy(N, n):
-    """Calculate Shannon entropy given n, N
+    """Calculate Shannon entropy given N, n
 
     :param N: sample count
     :type N: int
@@ -43,11 +43,11 @@ def entropy(N, n):
     :return: (Information) entropy
     :rtype: float
     """
-    n_ = float(n)
-    if n_ > 0.0:
-        ratio = n_ / float(N)
+    assert n <= N
+    if n > 0:
+        ratio = float(n) / float(N)
         return - ratio * log(ratio)
-    elif n_ == 0.0:
+    elif n == 0:
         return 0.0
     else:
         return float('nan')
@@ -62,7 +62,7 @@ def average(l):
     :rtype: float
     """
     xs = list(l)
-    return float(reduce(lambda x, y: x + y, xs)) / float(len(xs))
+    return safe_div(float(reduce(lambda x, y: x + y, xs)), float(len(xs)))
 
 
 def sumsq(l):
@@ -165,8 +165,8 @@ class MADRatioSummarizer(Summarizer):
 
         :rtype : float
         """
-        return 1.0 - (weighted_median(self.mad_values, self.weights)
-                      / mad(self.total_values)) ** 2
+        return 1.0 - safe_div(weighted_median(self.mad_values, self.weights),
+                              mad(self.total_values)) ** 2
 
 
 class VarianceSummarizer(Summarizer):
@@ -189,7 +189,7 @@ class VarianceSummarizer(Summarizer):
         :return: weighted variance
         :rtype: float
         """
-        return self.total_ss / float(self.N)
+        return safe_div(self.total_ss, float(self.N))
 
 
 class ExplainedVarianceSummarizer(Summarizer):
@@ -215,31 +215,62 @@ class ExplainedVarianceSummarizer(Summarizer):
         return 1.0 - safe_div(self.residual, sumsq(self.all))
 
 
-def theil_index(labels_true, labels_pred):
+def counts_entropy(counts):
+    """Find entropy of a list of counts
+
+    Assumes every entry in the list corresponds to a different class
+
+    :param counts: list of counts, e.g. [10, 2, 3, 1]
+    :type counts: list
+    :return: entropy
+    :rtype: float
     """
-    Meant to be a plug-in replacement for `normalized_mutual_info_score'
-    from `sklearn.metrics'
+    fun = partial(entropy, sum(counts))
+    return sum(fun(val) for val in counts)
+
+
+def uncertainty_score(labels_true, labels_pred):
+    """Uncertainty coefficient (Theil's U)
+
+    :param labels_true: a list of true labels
+    :type labels_true: collections.Iterable
+    :param labels_pred: a list of predicted labels
+    :type labels_pred: collections.Iterable
+    :return: uncertainty coefficient
+    :rtype: float
+
+    This function is meant to be a plug-in replacement for SciKit-Learn's
+    `normalized_mutual_info_score'. For more info, see:
+    http://en.wikipedia.org/wiki/Uncertainty_coefficient
 
     Behaves similarly to the NMI score except it is always zero for non-
     informative cases where only one cluster is predicted:
 
-    >>> from sklearn.metrics import normalized_mutual_info_score as NMI_index
+    >>> from sklearn.metrics import normalized_mutual_info_score as NMI_score
     >>> labels_true = [0,1,1]
     >>> labels_pred = [1,1,1]
-    >>> NMI_index(labels_true, labels_pred)
+    >>> NMI_score(labels_true, labels_pred)
     5.5511151231257827e-07
-    >>> theil_index(labels_true, labels_pred)
+    >>> uncertainty_score(labels_true, labels_pred)
     0.0
 
-    For other cases:
+    This means that when clusters are perfectly homogeneous, regardless of the
+    number of clusters, the index will be 1.0. It gives us a clean metric for
+    cases when cluster number is fixed and all items are clustered. Otherwise
+    using this metric will result in a preference for very small clusters.
+
+    For an example given in
+    http://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-clustering-1.html
 
     >>> labels_true = [0,0,0,0,0,1,0,1,1,1,2,1,0,0,2,2,2]
     >>> labels_pred = [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2]
-    >>> NMI_index(labels_true, labels_pred)
+    >>> NMI_score(labels_true, labels_pred)
     0.36462479619424287
-    >>> theil_index(labels_true, labels_pred)
+    >>> uncertainty_score(labels_true, labels_pred)
     0.3709496570219556
 
+    Note that unlike NMI score, this metric is not symmetric with respect to
+    its arguments
     """
 
     c = defaultdict(Counter)
@@ -247,24 +278,18 @@ def theil_index(labels_true, labels_pred):
     for p, t in izip(labels_pred, labels_true):
         c[p][t] += 1
 
-    cluster_entropy = 0.0
-    num_clusters = 0
-    total_class_counts = Counter()
+    X_counter = Counter()
+    XY_entropy = 0.0
+    num_X_classes = 0
 
-    for cluster, class_counts in c.iteritems():
-        total_class_counts.update(class_counts)
-        class_entropy = partial(entropy, sum(class_counts.itervalues()))
-        cluster_entropy += sum(class_entropy(cc)
-                               for cc in class_counts.itervalues())
-        num_clusters += 1
+    for XY_counter in c.itervalues():
+        X_counter.update(XY_counter)
+        XY_entropy += counts_entropy(XY_counter.values())
+        num_X_classes += 1
 
-    H_I_C = cluster_entropy / float(num_clusters)
-
-    class_entropy = partial(entropy, sum(total_class_counts.itervalues()))
-    total_class_entropy = sum(class_entropy(cc)
-                              for cc in total_class_counts.itervalues())
-
-    return 1.0 - H_I_C / total_class_entropy
+    X_entropy = counts_entropy(X_counter.values())
+    XY_information = safe_div(XY_entropy, float(num_X_classes))
+    return 1.0 - safe_div(XY_information, X_entropy)
 
 
 class UncertaintySummarizer(Summarizer):
@@ -716,7 +741,7 @@ class VennDiagram(object):
         lbls = '|'.join(col[prefix_len:] + ': ' + int2str(c)
                         for col, c in izip(cols, counts))
 
-        mult = 100.0 / float(max(counts))
+        mult = safe_div(100.0, float(max(counts)))
         norm = [round(float(c) * mult, 1) for c in counts]
         stri = ','.join(map(str, norm))
         return "https://chart.googleapis.com/chart?" + urlencode(dict(
