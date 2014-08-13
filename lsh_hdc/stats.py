@@ -243,8 +243,8 @@ def uncertainty_score(labels_true, labels_pred):
     `normalized_mutual_info_score'. For more info, see:
     http://en.wikipedia.org/wiki/Uncertainty_coefficient
 
-    Behaves similarly to the NMI score except it is always zero for non-
-    informative cases where only one cluster is predicted:
+    This is an asymmetric coefficient. It is zero for non- informative cases
+    where only one cluster is predicted:
 
     >>> from sklearn.metrics import normalized_mutual_info_score as NMI_score
     >>> labels_true = [0,1,1]
@@ -269,8 +269,6 @@ def uncertainty_score(labels_true, labels_pred):
     >>> uncertainty_score(labels_true, labels_pred)
     0.3709496570219556
 
-    Note that unlike NMI score, this metric is not symmetric with respect to
-    its arguments
     """
 
     c = defaultdict(Counter)

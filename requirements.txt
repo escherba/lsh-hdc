@@ -1,2 +1,3 @@
 git+git://github.com/escherba/cityhash#egg=cityhash-0.0.2
 git+git://github.com/escherba/pymaptools#egg=pymaptools-0.0.2
+regex
