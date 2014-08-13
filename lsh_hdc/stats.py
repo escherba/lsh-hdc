@@ -1,9 +1,14 @@
 from collections import Counter, defaultdict
 from functools import partial
+from operator import itemgetter
 from itertools import imap, izip, chain
 from math import log, fabs, copysign
+from urllib import urlencode
+import locale
 
 __author__ = 'escherba'
+
+locale.setlocale(locale.LC_ALL, 'en_US')
 
 
 def safe_div(num, denom):
@@ -29,7 +34,7 @@ def median(xs):
 
 
 def entropy(N, n):
-    """Calculate Shannon entropy given n, N
+    """Calculate Shannon entropy given N, n
 
     :param N: sample count
     :type N: int
@@ -38,12 +43,14 @@ def entropy(N, n):
     :return: (Information) entropy
     :rtype: float
     """
-    n_ = float(n)
-    if n_ > 0.0:
-        ratio = n_ / float(N)
+    assert n <= N
+    if n > 0:
+        ratio = float(n) / float(N)
         return - ratio * log(ratio)
-    else:
+    elif n == 0:
         return 0.0
+    else:
+        return float('nan')
 
 
 def average(l):
@@ -55,7 +62,7 @@ def average(l):
     :rtype: float
     """
     xs = list(l)
-    return float(reduce(lambda x, y: x + y, xs)) / float(len(xs))
+    return safe_div(float(reduce(lambda x, y: x + y, xs)), float(len(xs)))
 
 
 def sumsq(l):
@@ -158,8 +165,8 @@ class MADRatioSummarizer(Summarizer):
 
         :rtype : float
         """
-        return 1.0 - (weighted_median(self.mad_values, self.weights)
-                      / mad(self.total_values)) ** 2
+        return 1.0 - safe_div(weighted_median(self.mad_values, self.weights),
+                              mad(self.total_values)) ** 2
 
 
 class VarianceSummarizer(Summarizer):
@@ -182,7 +189,7 @@ class VarianceSummarizer(Summarizer):
         :return: weighted variance
         :rtype: float
         """
-        return self.total_ss / float(self.N)
+        return safe_div(self.total_ss, float(self.N))
 
 
 class ExplainedVarianceSummarizer(Summarizer):
@@ -206,6 +213,81 @@ class ExplainedVarianceSummarizer(Summarizer):
         :rtype : float
         """
         return 1.0 - safe_div(self.residual, sumsq(self.all))
+
+
+def counts_entropy(counts):
+    """Find entropy of a list of counts
+
+    Assumes every entry in the list corresponds to a different class
+
+    :param counts: list of counts, e.g. [10, 2, 3, 1]
+    :type counts: list
+    :return: entropy
+    :rtype: float
+    """
+    fun = partial(entropy, sum(counts))
+    return sum(fun(val) for val in counts)
+
+
+def uncertainty_score(labels_true, labels_pred):
+    """Uncertainty coefficient (Theil's U)
+
+    :param labels_true: a list of true labels
+    :type labels_true: collections.Iterable
+    :param labels_pred: a list of predicted labels
+    :type labels_pred: collections.Iterable
+    :return: uncertainty coefficient
+    :rtype: float
+
+    This function is meant to be a plug-in replacement for SciKit-Learn's
+    `normalized_mutual_info_score'. For more info, see:
+    http://en.wikipedia.org/wiki/Uncertainty_coefficient
+
+    This is an asymmetric coefficient. It is zero for non- informative cases
+    where only one cluster is predicted:
+
+    >>> from sklearn.metrics import normalized_mutual_info_score as NMI_score
+    >>> labels_true = [0,1,1]
+    >>> labels_pred = [1,1,1]
+    >>> NMI_score(labels_true, labels_pred)
+    5.5511151231257827e-07
+    >>> uncertainty_score(labels_true, labels_pred)
+    0.0
+
+    This means that when clusters are perfectly homogeneous, regardless of the
+    number of clusters, the index will be 1.0. It gives us a clean metric for
+    cases when cluster number is fixed and all items are clustered. Otherwise
+    using this metric will result in a preference for very small clusters.
+
+    For an example given in
+    http://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-clustering-1.html
+
+    >>> labels_true = [0,0,0,0,0,1,0,1,1,1,2,1,0,0,2,2,2]
+    >>> labels_pred = [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2]
+    >>> NMI_score(labels_true, labels_pred)
+    0.36462479619424287
+    >>> uncertainty_score(labels_true, labels_pred)
+    0.3709496570219556
+
+    """
+
+    c = defaultdict(Counter)
+
+    for p, t in izip(labels_pred, labels_true):
+        c[p][t] += 1
+
+    X_counter = Counter()
+    XY_entropy = 0.0
+    num_X_classes = 0
+
+    for XY_counter in c.itervalues():
+        X_counter.update(XY_counter)
+        XY_entropy += counts_entropy(XY_counter.values())
+        num_X_classes += 1
+
+    X_entropy = counts_entropy(X_counter.values())
+    XY_information = safe_div(XY_entropy, float(num_X_classes))
+    return 1.0 - safe_div(XY_information, X_entropy)
 
 
 class UncertaintySummarizer(Summarizer):
@@ -419,14 +501,12 @@ def mplot_roc_curves(mplt, rocs, names, curve='roc', pct=False, auc=False):
 
 
 def safe_log(d):
-    if d < 0.0:
-        result = float('nan')
+    if d > 0.0:
+        return log(d)
+    elif d == 0.0:
+        return float('-inf')
     else:
-        try:
-            result = log(d)
-        except ValueError:
-            result = float('-inf')
-    return result
+        return float('nan')
 
 
 def safe_logit(p):
@@ -592,3 +672,103 @@ def get_roc_summaries(iterable, level_getters, ground_pos):
         for d, get_level in izip(ds, level_getters):
             d[get_level(item)].add(ground_truth, True)
     return map(get_roc, ds)
+
+
+def int2str(i):
+    return locale.format("%d", i, grouping=True)
+
+
+class VennDiagram(object):
+
+    PREFIX = '_'
+
+    def __init__(self, pandas):
+        self._pd = pandas
+        self.venn = Counter()
+
+    def add_fact(self, fact):
+        """Add a fact (a list of key-value pairs)"""
+        tuples = sorted(fact.iteritems(), key=itemgetter(0))
+        self.venn[tuple(tuples)] += 1
+
+    def get_dataframe(self, prefix=PREFIX):
+        dicts = []
+        for tuples, val in self.venn.iteritems():
+            keys = [(prefix + k, v) for k, v in tuples]
+            dicts.append(dict(chain(keys, [("count", val)])))
+
+        return self._pd.DataFrame.from_dict(dicts)
+
+    @staticmethod
+    def get_google_venn2(df, columns):
+        cols = columns[:2]
+        A, B = cols
+        counts = map(lambda x: x if isinstance(x, int) else
+                     df.__getitem__(x)['count'].sum(),
+                     [df[A], df[B], 0, df[A] & df[B], 0, 0, 0])
+        return cols, counts
+
+    @staticmethod
+    def get_google_venn3(df, columns):
+        cols = columns[:3]
+        A, B, C = cols
+        counts = map(lambda x: df.__getitem__(x)['count'].sum(),
+                     [df[A], df[B], df[C], df[A] & df[B], df[A] & df[C],
+                      df[B] & df[C], df[A] & df[B] & df[C]])
+        return cols, counts
+
+    def get_googlechart(self, df, columns, w=400, h=400):
+
+        """return URL for Google Chart API
+        :param df: data frame
+        :type df: pandas.DataFrame
+        :param columns: list of columns sorted by frequency
+        :type columns: list
+        """
+
+        num_columns = len(columns)
+        if num_columns >= 3:
+            cols, counts = self.get_google_venn3(df, columns)
+        elif num_columns == 2:
+            cols, counts = self.get_google_venn2(df, columns)
+        else:
+            raise ValueError("Do not know how to create a Venn diagram"
+                             "from {} sets".format(num_columns))
+
+        prefix_len = len(self.PREFIX)
+        lbls = '|'.join(col[prefix_len:] + ': ' + int2str(c)
+                        for col, c in izip(cols, counts))
+
+        mult = safe_div(100.0, float(max(counts)))
+        norm = [round(float(c) * mult, 1) for c in counts]
+        stri = ','.join(map(str, norm))
+        return "https://chart.googleapis.com/chart?" + urlencode(dict(
+            cht='v',
+            chs='%dx%d' % (w, h),
+            chd='t:' + stri,
+            chdl=lbls,
+            # chco='FF6342,ADDE63,63C6DE'
+        ))
+
+    def show(self, circles=None):
+
+        df = self.get_dataframe(prefix=self.PREFIX)
+        if circles is None:
+            circle_sizes = [(c, df[df[c]]['count'].sum())
+                            for c in df.columns[:-1]]
+            circles = map(itemgetter(0), sorted(circle_sizes,
+                                                key=itemgetter(1),
+                                                reverse=True))
+        else:
+            circles = [self.PREFIX + lbl for lbl in circles]
+
+        print
+        print "Venn Diagram"
+        print df.groupby(circles).sum()
+        print
+        print 'Link: ' + self.get_googlechart(df, circles)
+        print
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
