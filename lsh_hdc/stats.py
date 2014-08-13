@@ -47,8 +47,10 @@ def entropy(N, n):
     if n_ > 0.0:
         ratio = n_ / float(N)
         return - ratio * log(ratio)
-    else:
+    elif n_ == 0.0:
         return 0.0
+    else:
+        return float('nan')
 
 
 def average(l):
@@ -211,6 +213,58 @@ class ExplainedVarianceSummarizer(Summarizer):
         :rtype : float
         """
         return 1.0 - safe_div(self.residual, sumsq(self.all))
+
+
+def theil_index(labels_true, labels_pred):
+    """
+    Meant to be a plug-in replacement for `normalized_mutual_info_score'
+    from `sklearn.metrics'
+
+    Behaves similarly to the NMI score except it is always zero for non-
+    informative cases where only one cluster is predicted:
+
+    >>> from sklearn.metrics import normalized_mutual_info_score as NMI_index
+    >>> labels_true = [0,1,1]
+    >>> labels_pred = [1,1,1]
+    >>> NMI_index(labels_true, labels_pred)
+    5.5511151231257827e-07
+    >>> theil_index(labels_true, labels_pred)
+    0.0
+
+    For other cases:
+
+    >>> labels_true = [0,0,0,0,0,1,0,1,1,1,2,1,0,0,2,2,2]
+    >>> labels_pred = [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2]
+    >>> NMI_index(labels_true, labels_pred)
+    0.36462479619424287
+    >>> theil_index(labels_true, labels_pred)
+    0.3709496570219556
+
+    """
+
+    c = defaultdict(Counter)
+
+    for p, t in izip(labels_pred, labels_true):
+        c[p][t] += 1
+
+    cluster_entropy = 0.0
+    num_clusters = 0
+    total_class_counts = Counter()
+
+    for cluster, class_counts in c.iteritems():
+        total_class_counts.update(class_counts)
+        class_entropy = partial(entropy, sum(class_counts.itervalues()))
+        cluster_entropy += sum(class_entropy(cc)
+                               for cc in class_counts.itervalues())
+        num_clusters += 1
+
+    H_I_C = cluster_entropy / float(num_clusters)
+
+    class_entropy = partial(entropy, sum(total_class_counts.itervalues()))
+    total_class_entropy = sum(class_entropy(cc)
+                              for cc in total_class_counts.itervalues())
+
+    return 1.0 - H_I_C / total_class_entropy
 
 
 class UncertaintySummarizer(Summarizer):
@@ -424,14 +478,12 @@ def mplot_roc_curves(mplt, rocs, names, curve='roc', pct=False, auc=False):
 
 
 def safe_log(d):
-    if d < 0.0:
-        result = float('nan')
+    if d > 0.0:
+        return log(d)
+    elif d == 0.0:
+        return float('-inf')
     else:
-        try:
-            result = log(d)
-        except ValueError:
-            result = float('-inf')
-    return result
+        return float('nan')
 
 
 def safe_logit(p):
@@ -693,3 +745,7 @@ class VennDiagram(object):
         print
         print 'Link: ' + self.get_googlechart(df, circles)
         print
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
