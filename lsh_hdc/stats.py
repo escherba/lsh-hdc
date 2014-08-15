@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from collections import Counter, defaultdict
 from functools import partial
 from operator import itemgetter
@@ -12,9 +14,11 @@ locale.setlocale(locale.LC_ALL, 'en_US')
 
 
 def safe_div(num, denom):
-    """Divide numbers, returning inf when dividing by zero"""
+    """Divide numbers, returning inf when dividing by zero
+    :rtype: float
+    """
     try:
-        return num / denom
+        return float(num) / float(denom)
     except ZeroDivisionError:
         return copysign(float('inf'), num)
 
@@ -337,7 +341,7 @@ class ClusteringComparator(object):
 
     @staticmethod
     def _format_summary(result):
-        # Prepare a nice-looking summary
+        """Prepare a human-readable summary """
         total = sum(item[1] for item in result)
         res = ", ".join("{}: {:>6.1%}"
                         .format(item[0], safe_div(float(item[1]), total))
@@ -380,6 +384,18 @@ class ClusteringComparator(object):
         else:
             return result
 
+    def freq_pred(self, label_pred):
+        """Return frequency of a predicted label"""
+        return sum(self.predicted2true[label_pred].itervalues())
+
+    def grand_total(self):
+        """Return total number of items"""
+        return sum(self._true_counts.itervalues())
+
+    def freq_ratio_pred(self, label_pred):
+        """Return frequency ratio of a predicted label among all labels"""
+        return safe_div(self.freq_pred(label_pred), self.grand_total())
+
     def summarize(self):
         """
         :rtype: dict
@@ -394,6 +410,16 @@ class ClusteringComparator(object):
         )
         result.update(self.base_opts)
         return result
+
+    def print_table(self):
+        print_table = lambda t, s: print(u"{: <20} {: <30}".format(t, s))
+        print()
+        for topic in self.predicted2true.keys():
+            print_table(topic, self.summarize_pred(topic, formatted=True))
+        print_table(self.default_pred,
+                    self.summarize_pred(self.default_pred, formatted=True))
+        print_table("total", self.true_counts(formatted=True))
+        print()
 
 
 class FeatureClusterSummarizer(object):
@@ -837,12 +863,12 @@ class VennDiagram(object):
         else:
             circles = [self.PREFIX + lbl for lbl in circles]
 
-        print
-        print "Venn Diagram"
-        print df.groupby(circles).sum()
-        print
-        print 'Link: ' + self.get_googlechart(df, circles)
-        print
+        print()
+        print("Venn Diagram")
+        print(df.groupby(circles).sum())
+        print()
+        print('Link: ' + self.get_googlechart(df, circles))
+        print()
 
 if __name__ == "__main__":
     import doctest
