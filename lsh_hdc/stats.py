@@ -321,6 +321,81 @@ class UncertaintySummarizer(Summarizer):
         return 1.0 - safe_div(self.numerator, denominator)
 
 
+class ClusteringComparator(object):
+    def __init__(self, opts=None):
+        """
+        :type opts: dict
+        """
+        self.base_opts = {} \
+            if opts is None \
+            else {'_' + k: v for k, v in opts.iteritems()}
+        self.true_labels = []
+        self.predicted_labels = []
+        self.predicted2true = defaultdict(Counter)
+        self._true_counts = Counter()
+        self.default_pred = '(none)'
+
+    @staticmethod
+    def _format_summary(result):
+        # Prepare a nice-looking summary
+        total = sum(item[1] for item in result)
+        res = ", ".join("{}: {:>6.1%}"
+                        .format(item[0], safe_div(float(item[1]), total))
+                        for item in result) + ", Total: {}".format(total)
+        return res
+
+    def add(self, label_true, label_pred):
+        """Add a fact about clusterings
+
+        Add a "fact" which consists of two labels: label_true which refers
+        to the ground truth clustering classification and label_pred which
+        refers to the newly predicted cluster
+
+        :type label_pred: object
+        :type label_true: object
+        """
+        self.true_labels.append(label_true)
+        self.predicted_labels.append(label_pred)
+        self._true_counts[label_true] += 1
+        self.predicted2true[label_pred][label_true] += 1
+
+    def summarize_pred(self, label_pred, formatted=False):
+        """
+        :type label_pred: object
+        :type formatted: bool
+        :rtype: list, str
+        """
+        counts = self.predicted2true[label_pred]
+        keys = sorted(self._true_counts.iterkeys())
+        result = [(k, counts.get(k, 0)) for k in keys]
+        if formatted:
+            return self._format_summary(result)
+        else:
+            return result
+
+    def true_counts(self, formatted=False):
+        result = sorted(self._true_counts.iteritems())
+        if formatted:
+            return self._format_summary(result)
+        else:
+            return result
+
+    def summarize(self):
+        """
+        :rtype: dict
+        """
+        # Note: can also use sklearn.metrics here such as
+        # normalized_mutual_info_score and others
+        args = (self.true_labels, self.predicted_labels)
+        args_inv = (self.predicted_labels, self.true_labels)
+        result = dict(
+            us=uncertainty_score(*args),
+            us_inv=uncertainty_score(*args_inv)
+        )
+        result.update(self.base_opts)
+        return result
+
+
 class FeatureClusterSummarizer(object):
 
     def __init__(self):
