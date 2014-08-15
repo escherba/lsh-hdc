@@ -339,7 +339,8 @@ class ClusteringComparator(object):
     def _format_summary(result):
         # Prepare a nice-looking summary
         total = sum(item[1] for item in result)
-        res = ", ".join("{}: {:>6.1%}".format(item[0], float(item[1]) / total)
+        res = ", ".join("{}: {:>6.1%}"
+                        .format(item[0], safe_div(float(item[1]), total))
                         for item in result) + ", Total: {}".format(total)
         return res
 
