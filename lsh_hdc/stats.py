@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from collections import Counter, defaultdict
 from functools import partial
 from operator import itemgetter
@@ -337,16 +335,10 @@ class ClusteringComparator(object):
         self.predicted_labels = []
         self.predicted2true = defaultdict(Counter)
         self._true_counts = Counter()
-        self.default_pred = '(none)'
-
-    @staticmethod
-    def _format_summary(result):
-        """Prepare a human-readable summary """
-        total = sum(item[1] for item in result)
-        res = ", ".join("{}: {:>6.1%}"
-                        .format(item[0], safe_div(float(item[1]), total))
-                        for item in result) + ", Total: {}".format(total)
-        return res
+        self._pred_counts = Counter()
+        self.default_pred = u'(unclustered)'
+        self._lb_summary = u'Total'
+        self._tr_summary = u'Total'
 
     def add(self, label_true, label_pred):
         """Add a fact about clusterings
@@ -361,28 +353,8 @@ class ClusteringComparator(object):
         self.true_labels.append(label_true)
         self.predicted_labels.append(label_pred)
         self._true_counts[label_true] += 1
+        self._pred_counts[label_pred] += 1
         self.predicted2true[label_pred][label_true] += 1
-
-    def summarize_pred(self, label_pred, formatted=False):
-        """
-        :type label_pred: object
-        :type formatted: bool
-        :rtype: list, str
-        """
-        counts = self.predicted2true[label_pred]
-        keys = sorted(self._true_counts.iterkeys())
-        result = [(k, counts.get(k, 0)) for k in keys]
-        if formatted:
-            return self._format_summary(result)
-        else:
-            return result
-
-    def true_counts(self, formatted=False):
-        result = sorted(self._true_counts.iteritems())
-        if formatted:
-            return self._format_summary(result)
-        else:
-            return result
 
     def freq_pred(self, label_pred):
         """Return frequency of a predicted label"""
@@ -411,15 +383,117 @@ class ClusteringComparator(object):
         result.update(self.base_opts)
         return result
 
-    def print_table(self):
-        print_table = lambda t, s: print(u"{: <20} {: <30}".format(t, s))
-        print()
-        for topic in self.predicted2true.keys():
-            print_table(topic, self.summarize_pred(topic, formatted=True))
-        print_table(self.default_pred,
-                    self.summarize_pred(self.default_pred, formatted=True))
-        print_table("total", self.true_counts(formatted=True))
-        print()
+    @staticmethod
+    def _sorted_opts(sort_order):
+        if sort_order is None:
+            # sort by labels (always ascending)
+            sort_key = 0
+            reverse_sort = False
+        else:
+            # sort by counts
+            sort_key = 1
+            reverse_sort = True if sort_order < 0 else False
+        return dict(key=itemgetter(sort_key), reverse=reverse_sort)
+
+    def column_headers(self, sort_order=None):
+        sorted_opts = self._sorted_opts(sort_order)
+        return map(itemgetter(0), sorted(
+            self._true_counts.iteritems(),
+            **sorted_opts)) + [self._tr_summary]
+
+    def row_headers(self, sort_order=None):
+        sorted_opts = self._sorted_opts(sort_order)
+        return map(itemgetter(0), sorted(
+            filter(lambda x: x[0] != self.default_pred,
+                   self._pred_counts.iteritems()),
+            **sorted_opts))
+
+    def counts_for_columns(self, columns, label_pred=None, pct=False):
+        """
+        :type label_pred: object
+        :type formatted: bool
+        :rtype: list
+        """
+        counts = self._true_counts \
+            if label_pred is None \
+            else self.predicted2true[label_pred]
+        total = sum(counts.itervalues())
+        transform = (lambda x: safe_div(x, total)) if pct else (lambda x: x)
+        return [transform(counts.get(c, 0)) for c in columns] + [total]
+
+    def cross_tab(self, row_order=None, col_order=None):
+        """Prepare a cross-tabulation summary
+
+        :param row_order: if positive, sort rows by count in asc. order
+                          if negative, sort rows by count in desc. order
+                          if None, sort rows by name in asc. order
+        :param col_order: if positive, sort columns by count in asc. order
+                          if negative, sort columns by count in desc. order
+                          if None, sort columns by name in asc. order
+        :return: ready-to-print contingency table
+        :rtype: unicode
+        """
+
+        rows = []
+        spacing = 2
+
+        show_default = self._pred_counts[self.default_pred] > 0
+
+        row_headers = self.row_headers(sort_order=row_order)
+        col_headers = self.column_headers(sort_order=col_order)
+
+        all_row_headers = map(unicode, row_headers) + [self._lb_summary]
+        if show_default:
+            all_row_headers.append(self.default_pred)
+
+        fst_col_size = max(map(len, all_row_headers))
+        col_sizes = [fst_col_size] + \
+            [max(6, len(unicode(h))) + spacing for h in col_headers]
+        max_row_length = sum(col_sizes)
+        header_formats = \
+            [u'{: <' + unicode(col_sizes[0]) + u'}'] + \
+            [u'{: >' + unicode(sz) + u'}' for sz in col_sizes[1:]]
+        row_formats = \
+            [u'{: <' + unicode(col_sizes[0]) + u'}'] + \
+            [u'{: >' + unicode(sz) + u'.1%}' for sz in col_sizes[1:-1]] + \
+            [u'{: >' + unicode(col_sizes[-1]) + u'}']
+        format_header = lambda vals: u'' \
+            .join(f.format(v) for f, v in zip(header_formats, vals))
+        format_row = lambda vals: u'' \
+            .join(f.format(v) for f, v in zip(row_formats, vals))
+
+        # add_header
+        rows.append('=' * max_row_length)
+        rows.append(format_header([u''] + map(unicode, col_headers)))
+        rows.append('-' * max_row_length)
+
+        # add cluster rows
+        for topic in row_headers:
+            row = [topic] + self.counts_for_columns(
+                col_headers[:-1], label_pred=topic, pct=True)
+            rows.append(format_row(row))
+
+        # add row for "unclustered"
+        if show_default:
+            row = [self.default_pred] + self.counts_for_columns(
+                col_headers[:-1], label_pred=self.default_pred, pct=True)
+            rows.append(format_row(row))
+
+        # add row for "total"
+        row = [self._lb_summary] + self.counts_for_columns(
+            col_headers[:-1], pct=True)
+        rows.append('-' * max_row_length)
+        rows.append(format_row(row))
+        rows.append('=' * max_row_length)
+
+        return u'\n'.join(rows)
+
+
+def get_clust_comp(labels_true, labels_pred):
+    cs = ClusteringComparator()
+    for t, p in izip(labels_true, labels_pred):
+        cs.add(t, p)
+    return cs
 
 
 class FeatureClusterSummarizer(object):
