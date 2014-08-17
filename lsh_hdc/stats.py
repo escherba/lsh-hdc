@@ -421,7 +421,7 @@ class ClusteringComparator(object):
         transform = (lambda x: safe_div(x, total)) if pct else (lambda x: x)
         return [transform(counts.get(c, 0)) for c in columns] + [total]
 
-    def cross_tab(self, row_order=None, col_order=None):
+    def cross_tab(self, row_order=None, col_order=None, pct=True):
         """Prepare a cross-tabulation summary
 
         :param row_order: if positive, sort rows by count in asc. order
@@ -453,9 +453,11 @@ class ClusteringComparator(object):
         header_formats = \
             [u'{: <' + unicode(col_sizes[0]) + u'}'] + \
             [u'{: >' + unicode(sz) + u'}' for sz in col_sizes[1:]]
+        pct_format = u'.1%' if pct else u''
         row_formats = \
             [u'{: <' + unicode(col_sizes[0]) + u'}'] + \
-            [u'{: >' + unicode(sz) + u'.1%}' for sz in col_sizes[1:-1]] + \
+            [u'{: >' + unicode(sz) + pct_format + u'}'
+             for sz in col_sizes[1:-1]] + \
             [u'{: >' + unicode(col_sizes[-1]) + u'}']
         format_header = lambda vals: u'' \
             .join(f.format(v) for f, v in zip(header_formats, vals))
@@ -470,18 +472,18 @@ class ClusteringComparator(object):
         # add cluster rows
         for topic in row_headers:
             row = [topic] + self.counts_for_columns(
-                col_headers[:-1], label_pred=topic, pct=True)
+                col_headers[:-1], label_pred=topic, pct=pct)
             rows.append(format_row(row))
 
         # add row for "unclustered"
         if show_default:
             row = [self.default_pred] + self.counts_for_columns(
-                col_headers[:-1], label_pred=self.default_pred, pct=True)
+                col_headers[:-1], label_pred=self.default_pred, pct=pct)
             rows.append(format_row(row))
 
         # add row for "total"
         row = [self._lb_summary] + self.counts_for_columns(
-            col_headers[:-1], pct=True)
+            col_headers[:-1], pct=pct)
         rows.append('-' * max_row_length)
         rows.append(format_row(row))
         rows.append('=' * max_row_length)
