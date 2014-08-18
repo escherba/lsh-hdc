@@ -381,8 +381,8 @@ class ClusteringComparator(object):
         args = (self.true_labels, self.predicted_labels)
         args_inv = (self.predicted_labels, self.true_labels)
         result = dict(
-            us=uncertainty_score(*args),
-            us_inv=uncertainty_score(*args_inv)
+            homogeneity=uncertainty_score(*args),
+            completeness=uncertainty_score(*args_inv)
         )
         result.update(self.base_opts)
         return result
