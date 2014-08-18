@@ -42,14 +42,15 @@ def entropy(N, n):
     :type N: int
     :param n: number of bits
     :type n: int
-    :return: (Information) entropy
+    :return: a positive float between 0.0 and 0.5
     :rtype: float
     """
-    assert n <= N
-    if n > 0:
+    if N > n > 0:
         ratio = float(n) / float(N)
-        return - ratio * log(ratio)
+        return abs(ratio * log(ratio, 2.0))
     elif n == 0:
+        return 0.0
+    elif n == N:
         return 0.0
     else:
         return float('nan')
@@ -241,18 +242,18 @@ def uncertainty_score(labels_true, labels_pred):
     :return: uncertainty coefficient
     :rtype: float
 
-    This function is meant to be a plug-in replacement for SciKit-Learn's
-    `normalized_mutual_info_score'. For more info, see:
-    http://en.wikipedia.org/wiki/Uncertainty_coefficient
-
     This is an asymmetric coefficient. It is zero for non- informative cases
     where only one cluster is predicted:
 
-    >>> from sklearn.metrics import normalized_mutual_info_score as NMI_score
+    >>> from sklearn.metrics import \
+        normalized_mutual_info_score as NMI_score, \
+        homogeneity_score
     >>> labels_true = [0,1,1]
     >>> labels_pred = [1,1,1]
     >>> NMI_score(labels_true, labels_pred)
     5.5511151231257827e-07
+    >>> homogeneity_score(labels_true, labels_pred)
+    8.7211179257751962e-17
     >>> uncertainty_score(labels_true, labels_pred)
     0.0
 
@@ -268,8 +269,10 @@ def uncertainty_score(labels_true, labels_pred):
     >>> labels_pred = [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2]
     >>> NMI_score(labels_true, labels_pred)
     0.36462479619424287
+    >>> homogeneity_score(labels_true, labels_pred)
+    0.37146812574591798
     >>> uncertainty_score(labels_true, labels_pred)
-    0.3709496570219556
+    0.37146812574591814
 
     """
 
@@ -280,15 +283,16 @@ def uncertainty_score(labels_true, labels_pred):
 
     X_counter = Counter()
     XY_entropy = 0.0
-    num_X_classes = 0
+    X_grand_total = 0
 
     for XY_counter in c.itervalues():
         X_counter.update(XY_counter)
-        XY_entropy += counts_entropy(XY_counter.values())
-        num_X_classes += 1
+        X_total = sum(XY_counter.itervalues())
+        X_grand_total += X_total
+        XY_entropy += X_total * counts_entropy(XY_counter.values())
 
     X_entropy = counts_entropy(X_counter.values())
-    XY_information = safe_div(XY_entropy, float(num_X_classes))
+    XY_information = safe_div(XY_entropy, float(X_grand_total))
     return 1.0 - safe_div(XY_information, X_entropy)
 
 
@@ -377,8 +381,8 @@ class ClusteringComparator(object):
         args = (self.true_labels, self.predicted_labels)
         args_inv = (self.predicted_labels, self.true_labels)
         result = dict(
-            us=uncertainty_score(*args),
-            us_inv=uncertainty_score(*args_inv)
+            homogeneity=uncertainty_score(*args),
+            completeness=uncertainty_score(*args_inv)
         )
         result.update(self.base_opts)
         return result
