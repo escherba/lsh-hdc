@@ -11,7 +11,7 @@ package: env
 	$(PYTHON) setup.py sdist
 
 test: env dev
-	$(PYENV) nosetests $(NOSEARGS)
+	$(PYENV) nosetests --with-doctest $(NOSEARGS)
 
 test_mr: tests/mr_cluster_mac_log.py mrjob.conf $(MAC_LOG) env dev
 	mkdir -p tests/out

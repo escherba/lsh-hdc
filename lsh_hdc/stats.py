@@ -245,15 +245,8 @@ def uncertainty_score(labels_true, labels_pred):
     This is an asymmetric coefficient. It is zero for non- informative cases
     where only one cluster is predicted:
 
-    >>> from sklearn.metrics import \
-        normalized_mutual_info_score as NMI_score, \
-        homogeneity_score
     >>> labels_true = [0,1,1]
     >>> labels_pred = [1,1,1]
-    >>> NMI_score(labels_true, labels_pred)
-    5.5511151231257827e-07
-    >>> homogeneity_score(labels_true, labels_pred)
-    8.7211179257751962e-17
     >>> uncertainty_score(labels_true, labels_pred)
     0.0
 
@@ -267,10 +260,6 @@ def uncertainty_score(labels_true, labels_pred):
 
     >>> labels_true = [0,0,0,0,0,1,0,1,1,1,2,1,0,0,2,2,2]
     >>> labels_pred = [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2]
-    >>> NMI_score(labels_true, labels_pred)
-    0.36462479619424287
-    >>> homogeneity_score(labels_true, labels_pred)
-    0.37146812574591798
     >>> uncertainty_score(labels_true, labels_pred)
     0.37146812574591814
 

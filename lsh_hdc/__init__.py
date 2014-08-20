@@ -142,12 +142,18 @@ def nskip(l, skip):
     :type skip: int
     :returns: sequence with skipped words
     :rtype: collections.iterable
+
+    >>> list(nskip("abcdefg", 2))
+    ['a', 'd', 'g']
+    >>> list(nskip("abc", 5))
+    ['a']
+
     """
     n = skip + 1
     return (v for i, v in enumerate(l) if not (i % n))
 
 
-def shinglify(it, span=3, skip=0):
+def shinglify(it, span, skip=0):
     """Extract shingles from an iterable
 
     :param it: Iterable
@@ -157,15 +163,65 @@ def shinglify(it, span=3, skip=0):
     :param skip: How many words to skip
     :type skip: int
     :returns: sequence of tuples (shingles)
-    :rtype : collections.iterable
+    :rtype : list
+
+    >>> shingles = list(shinglify("abracadabra", 5, skip=1))
+    >>> len(shingles)
+    7
+    >>> ('d', 'b', 'a') in shingles
+    True
+
+    Must return a single shingle when span > len(tokens)
+    >>> list(shinglify("abc", 4))
+    [('a', 'b', 'c')]
+
+    Must return an emmpty list when span=0
+    >>> list(shinglify("abc", 0))
+    []
+
+    Must return the last pair
+    >>> list(shinglify("abcde", 4, skip=1))
+    [('a', 'c'), ('b', 'd'), ('c', 'e')]
+
+    Must skip tokens even when len(tokens) < span
+    >>> list(shinglify("abc", 4, skip=1))
+    [('a', 'c')]
+
     """
     tokens = list(it)
-    token_count = len(tokens)
-    if token_count > span:
-        for offset in xrange(token_count - span + 1):
-            yield tuple(nskip(tokens[offset:(offset + span)], skip))
+    if len(tokens) >= span:
+        return zip(*nskip((tokens[i:] for i in range(span)), skip))
     else:
-        yield tuple(tokens)
+        return [tuple(nskip(tokens, skip))]
+
+
+def mshinglify(it, span, skip=0):
+    """Same as shingligy except repeatedly mask one word
+
+    :param it: Iterable
+    :type it: collections.iterable
+    :param span: shingle span
+    :type span: int
+    :returns: sequence of tuples (shingles)
+    :rtype : list
+
+
+    >>> list(mshinglify("a", 10, skip=1))
+    []
+
+    """
+    tokens = list(it)
+
+    # range of indices where masking is allowed
+    mask = range(1, min(len(tokens) - skip, span // (skip + 1) + 1))
+    s = None
+    result = []
+    for s in shinglify(tokens, span, skip=skip):
+        for m in mask:
+            result.append(s[:m] + s[m + 1:])
+    if mask and (s is not None) and (len(s) > 1):
+        result.append(s[1:])
+    return result
 
 
 def create_getters(lot):
@@ -300,7 +356,7 @@ def create_sig_selectors(width, bandwidth, scheme):
         if ramp < 1:
             raise ValueError("for b-schemes, ramp value must be >= 1")
         bands = cntuplesx(width, bandwidth, ramp)
-        #indexes = list(chain(*[[x] * ramp for x in range(width / ramp)]))
+        # indexes = list(chain(*[[x] * ramp for x in range(width / ramp)]))
         indexes = range(len(bands))
     else:
         raise ValueError("Invalid scheme")
@@ -339,10 +395,12 @@ class Shingler(object):
         :return: A set of shingles (tuples)
         :rtype: set, list
         """
-        text = input_text if self.normalizer is None else self.normalizer.normalize(input_text)
+        text = input_text \
+            if self.normalizer is None \
+            else self.normalizer.normalize(input_text)
         it = text if self.tokenizer is None else self.tokenizer.tokenize(text)
         final_it = it if prefix is None else chain((prefix,), it)
-        shingles = shinglify(final_it, span=self.span, skip=self.skip)
+        shingles = shinglify(final_it, self.span, skip=self.skip)
         if self.unique:
             return set(shingles)
         else:
@@ -452,8 +510,8 @@ class MinHashSignature(Signature):
             else:
                 f = lambda x: CityHash64(salt_seed + str(x) + "salt") % universe_size_
             return f
-            #return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
-            #return lambda x: hash(prefix + str(x) + "salt")
+            # return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
+            # return lambda x: hash(prefix + str(x) + "salt")
 
         universe_size_ = self.universe_size
         return map(hash_factory, range(self.width))
@@ -674,3 +732,7 @@ class LSHC(object):
         for prefix, selector in self.selectors:
             band = selector(list_sig)
             yield '{}:{}'.format(prefix, CityHash64("salt" + repr(band) + "tlas"))
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
