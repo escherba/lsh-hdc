@@ -8,7 +8,7 @@ import locale
 
 __author__ = 'escherba'
 
-locale.setlocale(locale.LC_ALL, 'en_US')
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 
 def safe_div(num, denom):

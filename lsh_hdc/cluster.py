@@ -7,7 +7,7 @@ from math import floor
 from pymaptools.utils import deepupdate
 from lsh_hdc import Shingler, SimHashSignature, hamming, \
     MinHashSketchSignature, MinHashSignature, LSHC
-from lsh_hdc.utils import RegexTokenizer, HTMLNormalizer
+from lflearn.feature_extract import RegexTokenizer, HTMLNormalizer
 from logging import getLogger
 
 LOG = getLogger(__name__)
