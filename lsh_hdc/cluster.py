@@ -4,10 +4,8 @@ from collections import defaultdict, Counter
 from abc import abstractmethod
 from math import floor
 
-from pymaptools.utils import deepupdate
 from lsh_hdc import Shingler, SimHashSignature, hamming, \
     MinHashSketchSignature, MinHashSignature, LSHC
-from lflearn.feature_extract import RegexTokenizer, HTMLNormalizer
 from logging import getLogger
 
 LOG = getLogger(__name__)
@@ -164,11 +162,6 @@ class HDClustering(object):
         self._get_prefix = get_prefix
 
         self.trace_every = trace_every
-        common_kwargs = dict(
-            normalizer=HTMLNormalizer(),
-            tokenizer=RegexTokenizer()
-        )
-        deepupdate(common_kwargs, opts or {})
 
         # Set options
         self.content_filter = content_filter
@@ -183,7 +176,7 @@ class HDClustering(object):
 
         # Configure shingler
         cfg_key_shingle = cfg['shingler']
-        cfg_key_shingle.update(common_kwargs)
+        cfg_key_shingle.update(opts)
         self.shingler = Shingler(**cfg_key_shingle)
 
         # Configure sketch comparison algorithm
@@ -200,7 +193,7 @@ class HDClustering(object):
                                    % algorithm_name)
             self.sketch_bits = cfg_sketch['size'] * 8
             cfg_sketch_shingle = cfg_sketch['shingler']
-            cfg_sketch_shingle.update(common_kwargs)
+            cfg_sketch_shingle.update(opts)
             self.sketch_shingler = Shingler(**cfg_sketch_shingle)
             if sketch_algorithm == SketchModel.simhash:
                 self.sketch_signer = \
