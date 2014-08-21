@@ -5,7 +5,7 @@ PYTHON = $(PYENV) python
 CUSTOM_PKG_REPO=http://packages.livefyre.com/buildout/packages/
 
 package: env
-	$(PYTHON) setup.py bdist_wheel
+	$(PYTHON) setup.py bdist_egg
 	$(PYTHON) setup.py sdist
 
 test: env dev
