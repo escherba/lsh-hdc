@@ -9,7 +9,7 @@ from itertools import imap
 from collections import Counter
 from functools import partial
 from funcy import compose
-from lsh_hdc.stats import get_roc_summaries, mplot_roc_curves
+from lflearn.metrics import get_roc_summaries, mplot_roc_curves
 
 parser = ArgumentParser()
 parser.add_argument('--curve', type=str, required=False, default=None,

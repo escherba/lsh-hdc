@@ -7,7 +7,7 @@ import argparse
 from itertools import chain, izip, repeat, islice
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
-from lsh_hdc.stats import FeatureClusterSummarizer, describe_clusters
+from lflearn.metrics import FeatureClusterSummarizer, describe_clusters
 
 
 def random_string(length=4, alphabet=string.letters):

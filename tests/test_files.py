@@ -10,8 +10,8 @@ from pkg_resources import resource_filename
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster, HDClustering
 from lflearn.feature_extract import RegexTokenizer
+from lflearn.metrics import FeatureClusterSummarizer, describe_clusters
 from lsh_hdc.utils import read_json_file
-from lsh_hdc.stats import FeatureClusterSummarizer, describe_clusters
 from content_rules import ContentFilter
 
 get_resource_name = partial(resource_filename, __name__)
