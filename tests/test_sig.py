@@ -5,7 +5,7 @@ from cityhash import CityHash128
 from lsh_hdc.utils import randset, sigsim, randstr
 from lsh_hdc import MinHashSignature, SimHashSignature, \
     jaccard_sim, hamming, Shingler, from_bitstring, bitstring_padded
-from lsh_hdc.utils import RegexTokenizer
+from lflearn.feature_extract import RegexTokenizer
 
 
 class TestSig(unittest.TestCase):

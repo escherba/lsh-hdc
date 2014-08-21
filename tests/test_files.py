@@ -9,59 +9,13 @@ from pkg_resources import resource_filename
 
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster, HDClustering
-from lsh_hdc.utils import RegexTokenizer, read_json_file
-from lsh_hdc.stats import FeatureClusterSummarizer, describe_clusters
-from content_rules import ContentFilter
+from lflearn.feature_extract import RegexTokenizer
+from lflearn.metrics import FeatureClusterSummarizer, describe_clusters
 
 get_resource_name = partial(resource_filename, __name__)
 
 
 class TestFiles(unittest.TestCase):
-
-    def test_mac(self):
-        """test a file in MAC log format"""
-
-        with open(get_resource_name('test_files.mac.yaml'), 'r') as fh:
-            mac_cfg = yaml.load(fh)
-
-        data = []
-        positives = set()
-        for json_obj in read_json_file(get_resource_name('data/mac.json')):
-            obj = json_obj['object']
-            data.append(obj)
-            imp_section = json_obj.get('impermium', {}) or {}
-            imp_result = imp_section.get('result', {}) or {}
-            imp_tags = imp_result.get('tag_details', {}) or {}
-            if 'bulk' in imp_tags:
-                positives.add(obj['post_id'])
-
-        hdc = HDClustering(cfg=mac_cfg['model'],
-                           content_filter=ContentFilter(),
-                           get_body=itemgetter('content'),
-                           get_label=itemgetter('post_id'),
-                           get_prefix=itemgetter('user_id'),
-                           )
-        clusters = hdc.clusters_from_iter(data)
-
-        num_clusters = len([x for x in clusters if len(x) > 1])
-        print "Found %d clusters" % num_clusters
-        print "Points not clustered: %d" % (len(data) - num_clusters)
-
-        is_label_positive = lambda lbl: lbl in positives
-        results = dict(stats=describe_clusters(clusters, is_label_positive))
-
-        c = results['stats']
-        recall = c.get_recall()
-        precision = c.get_precision()
-        print json.dumps(dict(
-            stats=c.dict(),
-            ratios=dict(
-                precision=precision,
-                recall=recall
-            )
-        ))
-        self.assertGreaterEqual(recall, 0.272)
-        self.assertGreaterEqual(precision, 0.453)
 
     def test_names(self):
         """Should return 281 clusters of names.
