@@ -24,12 +24,5 @@ nuke: clean
 env virtualenv: env/bin/activate
 env/bin/activate: requirements.txt setup.py
 	test -f env/bin/activate || virtualenv --no-site-packages env
-	ln -fs env/bin .
 	$(PYENV) pip install --process-dependency-links -e . -r requirements.txt
-	touch env/bin/activate
-
-upgrade:
-	test -f env/bin/activate || virtualenv --no-site-packages env
-	ln -fs env/bin .
-	$(PYENV) pip install --process-dependency-links -e . -r requirements.txt --upgrade
 	touch env/bin/activate
