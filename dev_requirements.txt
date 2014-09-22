@@ -3,4 +3,4 @@ coverage
 nosexcover
 mock
 PyYAML>=3.11
-lflearn>=0.0.1
+lflearn
