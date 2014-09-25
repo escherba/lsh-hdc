@@ -1,7 +1,6 @@
 from functools import partial
 from pymaptools import UnionFind
 from collections import defaultdict, Counter
-from abc import abstractmethod
 from math import floor
 
 from lsh_hdc import Shingler, SimHashSignature, hamming, \
@@ -140,14 +139,6 @@ class SketchModel(object):
     """A pseudo-enum of supported models"""
     simhash = 0
     minhash = 1
-
-
-class BaseContentFilter(object):
-
-    @abstractmethod
-    def accept(self, obj):
-        """Process an input object according to our rules,
-        returning Boolean"""
 
 
 class HDClustering(object):

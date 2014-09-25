@@ -42,7 +42,7 @@ dependency_links = dep_links1 + dep_links2
 
 setup(
     name="lsh-hdc",
-    version="0.0.24",
+    version="0.0.25",
     author="Eugene Scherba",
     author_email="escherba@livefyre.com",
     description=("Algorithms for locality-sensitive hashing on text data"),
