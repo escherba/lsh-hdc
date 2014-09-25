@@ -8,6 +8,9 @@ package: env
 	$(PYTHON) setup.py bdist_wheel
 	$(PYTHON) setup.py sdist
 
+dist: env
+	$(PYTHON) setup.py sdist
+
 test: env dev
 	$(PYENV) nosetests --with-doctest $(NOSEARGS)
 
