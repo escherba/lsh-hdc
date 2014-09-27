@@ -44,6 +44,7 @@ setup(
     name="lsh-hdc",
     version="0.0.25",
     author="Eugene Scherba",
+    license="MIT",
     author_email="escherba@livefyre.com",
     description=("Algorithms for locality-sensitive hashing on text data"),
     url='https://github.com/escherba/lsh-hdc',
@@ -52,7 +53,14 @@ setup(
     install_requires=install_requires,
     dependency_links=dependency_links,
     tests_require=tests_require,
+    data_files=[("", ["LICENSE"])],
     test_suite='nose.collector',
     classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: MIT License',
+        'Intended Audience :: Developers',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+        'Topic :: Text Processing :: Filters',
     ],
 )
