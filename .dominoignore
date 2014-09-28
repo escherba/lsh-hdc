@@ -1,0 +1,52 @@
+# Domino
+domino.log
+dominodump-*
+
+# Source control
+.git/
+.gitignore
+.svn/
+
+# IntelliJ/PyCharm project files
+.idea/
+
+# Python
+*.py[cod]
+
+# R
+.Rhistory
+*.r.Rout
+*.R.Rout
+*.Rproj
+.Rproj.user/
+Rprof.out
+
+# Matlab/Octave
+octave-core
+*.asv
+*.m~
+
+# Mac OS X system files
+.DS_Store
+
+.ropeproject/
+
+# Vim
+*.sw[op]
+
+# Distribution / packaging
+.Python
+env/
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg

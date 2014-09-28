@@ -28,6 +28,8 @@ pip-log.txt
 .tox
 nosetests.xml
 
+.ropeproject/
+.noseids
 cover/
 coverage.xml
 *~
@@ -42,13 +44,20 @@ coverage.xml
 
 # IntelliJ/PyCharm files
 .idea/
-env
 
 # Eclipse
 .settings/
 
-.noseids
+# Virtualenv
+env/
 
-.ropeproject/
+# Domino
+.domino/
+results/
+domino.log
 
+# Misc
+data/
+tmp/
+out/
 tests/out/
