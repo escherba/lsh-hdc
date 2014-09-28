@@ -1,0 +1,8 @@
+--find-links http://packages.livefyre.com/buildout/packages/
+nose
+coverage
+nosexcover
+mock
+PyYAML>=3.11
+mrdomino>=0.0.10
+lflearn>=0.0.7

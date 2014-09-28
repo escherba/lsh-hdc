@@ -1,2 +1,3 @@
-git+git://github.com/Livefyre/pycityhash#egg=cityhash-0.0.3
-git+git://github.com/escherba/pymaptools#egg=pymaptools-0.0.2
+--find-links http://packages.livefyre.com/buildout/packages/
+cityhash>=0.0.3
+pymaptools>=0.0.2
