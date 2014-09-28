@@ -1,6 +1,0 @@
-nose
-coverage
-nosexcover
-mock
-PyYAML>=3.11
-lflearn
