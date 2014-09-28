@@ -7,7 +7,7 @@ CUSTOM_PKG_REPO=http://packages.livefyre.com/buildout/packages/
 MAC_LOG = data/2014-01-18.detail.sorted.10000.gz
 
 test_mrdomino: dev
-	$(PYTHON_TIMED) scripts/mrdomino_cluster.py $(MAC_LOG_LARGE)
+	$(PYTHON_TIMED) scripts/mrdomino_cluster.py $(MAC_LOG)
 	$(PYTHON) -m lflearn.cluster.eval_clusters \
 		--ground $(MAC_LOG) \
 		--clusters out/reduce.out
