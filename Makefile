@@ -4,13 +4,18 @@ PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
 CUSTOM_PKG_REPO=http://packages.livefyre.com/buildout/packages/
 
-MAC_LOG = data/2014-01-18.detail.sorted.gz
+MAC_LOG = data/2014-01-18.detail.sorted.10000.gz
+MAC_OUT = out/reduce.out
 
 test_mrdomino: dev
-	$(PYTHON_TIMED) scripts/mrdomino_cluster.py $(MAC_LOG)
+	$(PYTHON_TIMED) scripts/mrdomino_cluster.py \
+		--use_domino \
+		--n_concurrent_machines 4 \
+		--out $(MAC_OUT) \
+		$(MAC_LOG)
 	$(PYTHON) -m lflearn.cluster.eval_clusters \
 		--ground $(MAC_LOG) \
-		--clusters out/reduce.out
+		--clusters $(MAC_OUT)
 
 package: env
 	$(PYTHON) setup.py bdist_wheel
@@ -25,6 +30,7 @@ dev: env requirements-tests.txt
 clean:
 	$(PYTHON) setup.py clean
 	rm -rf build dist
+	rm -rf tmp/* out/*
 	find . -type f -name "*.pyc" -exec rm {} \;
 
 nuke: clean
