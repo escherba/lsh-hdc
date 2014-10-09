@@ -4,5 +4,5 @@ coverage
 nosexcover
 mock
 PyYAML>=3.11
-mrdomino>=0.0.10
+mrdomino>=0.1.1
 lflearn>=0.0.7

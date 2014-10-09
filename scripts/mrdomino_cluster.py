@@ -1,8 +1,7 @@
 #!/usr/bin/env python2
 
-import sys
 from lflearn.cluster.mrcluster import MRClusterMixinHDC
-from mrdomino import MRJob, MRStep, MRSettings, protocol as mr_protocol
+from mrdomino import MRJob, MRStep, protocol as mr_protocol
 
 
 class MRCluster(MRClusterMixinHDC, MRJob):
@@ -29,21 +28,9 @@ class MRCluster(MRClusterMixinHDC, MRJob):
         ]
 
     def settings(self):
-        return MRSettings(
-            input_files=[sys.argv[1]],
-            output_dir='out',
-            tmp_dir='tmp',
-            use_domino=False,
-            n_concurrent_machines=2,
-            n_shards_per_machine=3,
-            step_config={
-                0: dict(n_mappers=4, n_reducers=4),
-                1: dict(n_mappers=2, n_reducers=2),
-                2: dict(n_mappers=6, n_reducers=2),
-                3: dict(n_mappers=2, n_reducers=2),
-                4: dict(n_mappers=2, n_reducers=2),
-            }
-        )
+        return [
+            '--step_config', ['8:8', '4:4', '12:4', '4:4', '4:4']
+        ]
 
 
 if __name__ == '__main__':
