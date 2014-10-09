@@ -2,5 +2,5 @@
 cityhash>=0.0.3
 pymaptools>=0.0.6
 PyYAML>=3.11
-mrdomino>=0.1.0
+mrdomino>=0.1.1
 lflearn>=0.0.7
