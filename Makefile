@@ -4,7 +4,7 @@ PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
 CUSTOM_PKG_REPO=http://packages.livefyre.com/buildout/packages/
 
-MAC_LOG = data/2014-01-18.detail.sorted.10000.gz
+MAC_LOG = data/2014-01-18.detail.sorted.gz
 
 test_mrdomino: dev
 	$(PYTHON_TIMED) scripts/mrdomino_cluster.py $(MAC_LOG)

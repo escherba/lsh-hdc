@@ -33,7 +33,7 @@ class MRCluster(MRClusterMixinHDC, MRJob):
             input_files=[sys.argv[1]],
             output_dir='out',
             tmp_dir='tmp',
-            use_domino=False,
+            use_domino=True,
             n_concurrent_machines=2,
             n_shards_per_machine=3,
             step_config={
