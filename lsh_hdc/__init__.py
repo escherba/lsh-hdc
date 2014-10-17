@@ -214,13 +214,11 @@ def mshinglify(it, span, skip=0):
     # range of indices where masking is allowed
     mask = range(1, min(len(tokens) - skip, span // (skip + 1) + 1))
     s = None
-    result = []
     for s in shinglify(tokens, span, skip=skip):
         for m in mask:
-            result.append(s[:m] + s[m + 1:])
+            yield s[:m] + s[m + 1:]
     if mask and (s is not None) and (len(s) > 1):
-        result.append(s[1:])
-    return result
+        yield s[1:]
 
 
 def create_getters(lot):
@@ -229,13 +227,11 @@ def create_getters(lot):
 
     :param lot: a list of tuples
     :type lot: list
-    :returns: a list of item getters
-    :rtype: list
+    :returns: a generator of item getters
+    :rtype: generator
     """
-    getters = []
-    for t in lot:
-        getters.append(operator.itemgetter(*t) if t else lambda x: ())
-    return getters
+    for tup in lot:
+        yield operator.itemgetter(*tup) if tup else lambda x: ()
 
 
 def cntuples(m, n):
@@ -733,7 +729,7 @@ class LSHC(object):
         :rtype: collections.iterable
         """
 
-        list_sig = sig if type(sig) == list else list(sig)
+        list_sig = sig if isinstance(sig, list) else list(sig)
         for prefix, selector in self.selectors:
             band = selector(list_sig)
             yield '{}:{}'.format(prefix, CityHash64("salt" + repr(band) + "tlas"))
