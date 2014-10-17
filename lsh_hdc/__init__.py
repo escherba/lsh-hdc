@@ -535,15 +535,7 @@ class MinHashSignature(Signature):
         :rtype : list
         """
         kmin = self.kmin
-        if kmin == 1:
-            # Choose one minimal hash
-            if len(s) > 0:
-                sig_fun = lambda f: min(imap(f, s))
-            else:
-                # support empty sets by treating them as empty strings
-                sig_fun = lambda f: f("")
-            result = map(sig_fun, self.hashes)
-        else:
+        if kmin > 1:
             # Choose k smallest hashes
             if len(s) > 0:
                 sig_fun = lambda f: extend(heapq.nsmallest(kmin, imap(f, s)), kmin)
@@ -551,6 +543,14 @@ class MinHashSignature(Signature):
                 # support empty sets by treating them as empty strings
                 sig_fun = lambda f: extend([f("")], kmin)
             result = sum(imap(sig_fun, self.hashes), [])
+        else:
+            # Choose one minimal hash
+            if len(s) > 0:
+                sig_fun = lambda f: min(imap(f, s))
+            else:
+                # support empty sets by treating them as empty strings
+                sig_fun = lambda f: f("")
+            result = map(sig_fun, self.hashes)
         return result
 
     def get_signature(self, s):
