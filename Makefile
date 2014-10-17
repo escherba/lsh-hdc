@@ -22,13 +22,13 @@ package: env
 	$(PYTHON) setup.py sdist
 
 test: dev
-	$(PYENV) nosetests --with-doctest $(NOSEARGS)
+	$(PYTHON) `which nosetests` $(NOSEARGS)
 
 dev: env requirements-tests.txt
 	$(PYENV) pip install -e . -r requirements-tests.txt
 
 clean:
-	$(PYTHON) setup.py clean
+	python setup.py clean
 	rm -rf build dist
 	rm -rf tmp/* out/*
 	find . -type f -name "*.pyc" -exec rm {} \;
