@@ -174,7 +174,7 @@ def shinglify(it, span, skip=0):
     >>> list(shinglify("abc", 4))
     [('a', 'b', 'c')]
 
-    Must return an emmpty list when span=0
+    Must return an empty list when span=0
     >>> list(shinglify("abc", 0))
     []
 
@@ -204,10 +204,10 @@ def mshinglify(it, span, skip=0):
     :returns: sequence of tuples (shingles)
     :rtype : list
 
-
+    >>> list(mshinglify("abcde", 10, skip=1))
+    [('a', 'e'), ('a', 'c'), ('a', 'c', 'e'), ('c', 'e')]
     >>> list(mshinglify("a", 10, skip=1))
     []
-
     """
     tokens = list(it)
 
@@ -298,11 +298,6 @@ def lsh_combinations(width, bandwidth, ramp):
 def lsh_bands(width, bandwidth):
     """Generate indexes for non-overlapping LSH band selectors
 
-        The zip() clause converts a 1D-list to a list of b-dimensional
-        tuples such that:
-        [1,2,3,4,5,6] -> [(1,2), (3,4), (5,6)] if bandwidth == 2
-                      -> [(1,2,3), (4,5,6)]    if bandwidth == 3
-
     :param width: expected signature length
     :type width: int
     :param bandwidth: band size
@@ -310,6 +305,12 @@ def lsh_bands(width, bandwidth):
     :return: a sequence of tuples with elements representing indexes in
              signature vector
     :rtype: list
+
+    >>> lsh_bands(6, 2)
+    [(0, 1), (2, 3), (4, 5)]
+    >>> lsh_bands(6, 3)
+    [(0, 1, 2), (3, 4, 5)]
+
     """
     return zip(*(iter(xrange(width)),) * bandwidth)
 
