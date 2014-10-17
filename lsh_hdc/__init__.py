@@ -732,7 +732,3 @@ class LSHC(object):
         for prefix, selector in self.selectors:
             band = selector(list_sig)
             yield '{}:{}'.format(prefix, CityHash64("salt" + repr(band) + "tlas"))
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
