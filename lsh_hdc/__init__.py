@@ -150,7 +150,7 @@ def nskip(l, skip):
 
     """
     n = skip + 1
-    return (v for i, v in enumerate(l) if not (i % n))
+    return (v for i, v in enumerate(l) if not i % n)
 
 
 def shinglify(it, span, skip=0):
@@ -478,6 +478,19 @@ class Signature(object):
         """
 
 
+def extend(lst, k):
+    """
+    extend a list to length k by duplicating last item
+
+    >>> extend([1, 2, 3], 5)
+    [1, 2, 3, 3, 3]
+    """
+    len_l = len(lst)
+    if len_l < k:
+        lst.extend([lst[-1]] * (k - len_l))
+    return lst
+
+
 class MinHashSignature(Signature):
     """Creates signatures for sets/tuples using minhash."""
 
@@ -522,13 +535,6 @@ class MinHashSignature(Signature):
         :returns: a signature vector
         :rtype : list
         """
-
-        def extend(l, k):
-            len_l = len(l)
-            if len_l < k:
-                l.extend([l[-1]] * (k - len_l))
-            return l
-
         kmin = self.kmin
         if kmin == 1:
             # Choose one minimal hash
