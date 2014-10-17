@@ -6,9 +6,9 @@ Algorithms based on 'Mining of Massive Datasets'
 
 import re
 import sys
-import operator
 import math
 import heapq
+import operator as op
 from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from collections import defaultdict
@@ -231,7 +231,7 @@ def create_getters(lot):
     :rtype: generator
     """
     for tup in lot:
-        yield operator.itemgetter(*tup) if tup else lambda x: ()
+        yield op.itemgetter(*tup) if tup else lambda x: ()
 
 
 def cntuples(m, n):
@@ -490,7 +490,7 @@ def extend(lst, k):
 class MinHashSignature(Signature):
     """Creates signatures for sets/tuples using minhash."""
 
-    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1):
+    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1, seed=0):
         self.universe_size = universe_size
         if type(kmin) != int:
             raise TypeError("kmin must be an integer")
@@ -500,8 +500,9 @@ class MinHashSignature(Signature):
             raise ValueError("width must be a multiple of kmin")
         self.width = width / kmin
         self.lsh_hasher = lsh_hasher
-        self.hashes = self.create_hash_functions()
         self.kmin = kmin
+        self.seed = seed
+        self.hashes = self.create_hash_functions()
 
     def create_hash_functions(self):
         """Returns an array of length self.width consisting of
@@ -530,7 +531,7 @@ class MinHashSignature(Signature):
                 fun = lambda x: CityHash64(salt_seed + str(x) + "salt") % universe_size_
             return fun
 
-        return map(hash_factory, range(self.width))
+        return map(hash_factory, [op.xor(self.seed, i) for i in range(self.width)])
 
     def _get_minhashes(self, s):
         """Returns minhash signature from a feature vector
@@ -711,7 +712,7 @@ class SimHashSignature(Signature):
 class LSHC(object):
     """Locality sensitive hashing.  Uses a banding approach to hash
     similar signatures to the same buckets."""
-    def __init__(self, bandwidth, width, scheme="a1"):
+    def __init__(self, bandwidth, width, scheme="a1", seed=0):
         """
         :param bandwidth: Band size
         :type bandwidth: int
@@ -722,6 +723,7 @@ class LSHC(object):
                 When following number is equal to bandwidth, get all possible combinations
         :type scheme: str
         """
+        self.seed = seed
         self.selectors = create_sig_selectors(width, bandwidth, scheme)
 
     def hash(self, sig):
@@ -735,9 +737,18 @@ class LSHC(object):
         :type sig: collections.iterable
         :return: 64-bit hash digest
         :rtype: collections.iterable
+
+        Instead of XOR-ing, we could also do this:
+
+        .. code-block:: python
+
+            lsh_sig = CityHash64("salt" + repr(band) + "tlas")
+
         """
 
+        seed = self.seed
         list_sig = sig if isinstance(sig, list) else list(sig)
         for prefix, selector in self.selectors:
             band = selector(list_sig)
-            yield '{}:{}'.format(prefix, CityHash64("salt" + repr(band) + "tlas"))
+            lsh_sig = reduce(op.__xor__, band, seed)
+            yield '{}:{}'.format(prefix, lsh_sig)

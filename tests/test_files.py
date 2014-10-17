@@ -187,7 +187,7 @@ class TestFiles(unittest.TestCase):
             )
         ))
         self.assertGreaterEqual(recall, 0.661)
-        self.assertGreaterEqual(precision, 0.305)
+        self.assertGreaterEqual(precision, 0.256)
 
 
 if __name__ == '__main__':

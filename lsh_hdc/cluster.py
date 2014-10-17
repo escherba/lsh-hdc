@@ -128,9 +128,11 @@ class MinHashCluster(Cluster):
                               cardinality
         :type universe_size: long
         """
+        lsh_hasher = LSHC(bandwidth, width=width, scheme=lsh_scheme) \
+            if bandwidth > 1 \
+            else None
         signer = MinHashSignature(width,
-                                  lsh_hasher=LSHC(bandwidth, width=width,
-                                                  scheme=lsh_scheme),
+                                  lsh_hasher=lsh_hasher,
                                   universe_size=universe_size,
                                   kmin=kmin)
         super(MinHashCluster, self).__init__(signer=signer)
