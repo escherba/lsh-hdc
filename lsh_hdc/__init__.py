@@ -204,10 +204,10 @@ def mshinglify(it, span, skip=0):
     :returns: sequence of tuples (shingles)
     :rtype : list
 
-
+    >>> list(mshinglify("abcde", 10, skip=1))
+    [('a', 'e'), ('a', 'c'), ('a', 'c', 'e'), ('c', 'e')]
     >>> list(mshinglify("a", 10, skip=1))
     []
-
     """
     tokens = list(it)
 
