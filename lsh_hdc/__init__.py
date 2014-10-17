@@ -507,22 +507,29 @@ class MinHashSignature(Signature):
         """Returns an array of length self.width consisting of
         different hash functions
 
-        Note: hash() is not as uniform as haslib.md5
+        Note: hash() is not as uniform as haslib.md5. For more examples see
         See http://michaelnielsen.org/blog/consistent-hashing/
-        for examples
+
+
+        Other possible hash funcitons include:
+
+        .. code-block:: python
+
+            lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
+            lambda x: hash(prefix + str(x) + "salt")
+
         """
+
+        universe_size_ = self.universe_size
 
         def hash_factory(seed):
             salt_seed = "salt" + repr(seed)
             if universe_size_ is None:
-                f = lambda x: CityHash64(salt_seed + str(x) + "salt")
+                fun = lambda x: CityHash64(salt_seed + str(x) + "salt")
             else:
-                f = lambda x: CityHash64(salt_seed + str(x) + "salt") % universe_size_
-            return f
-            # return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
-            # return lambda x: hash(prefix + str(x) + "salt")
+                fun = lambda x: CityHash64(salt_seed + str(x) + "salt") % universe_size_
+            return fun
 
-        universe_size_ = self.universe_size
         return map(hash_factory, range(self.width))
 
     def _get_minhashes(self, s):
