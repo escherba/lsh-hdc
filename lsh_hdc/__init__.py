@@ -1,5 +1,4 @@
-__version__ = "0.0.26"
-
+__version__ = "0.0.27"
 
 """
 Algorithms based on 'Mining of Massive Datasets'
