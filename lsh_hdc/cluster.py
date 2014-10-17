@@ -1,5 +1,6 @@
 from functools import partial
 from pymaptools import UnionFind
+from itertools import imap
 from collections import defaultdict, Counter
 from math import floor
 
@@ -68,7 +69,7 @@ class Cluster(object):
         # Unite labels with same LSH keys
         counter = Counter()
         sketches = dict()
-        for bucket in map(self.buckets.__getitem__, keys):
+        for bucket in imap(self.buckets.__getitem__, keys):
             bucket[label] = sketch
             counter.update(bucket.keys())
             sketches.update(bucket)

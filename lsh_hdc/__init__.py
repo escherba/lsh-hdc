@@ -1,5 +1,4 @@
-__version__ = "0.0.26"
-
+__version__ = "0.0.27"
 
 """
 Algorithms based on 'Mining of Massive Datasets'
@@ -150,7 +149,7 @@ def nskip(l, skip):
 
     """
     n = skip + 1
-    return (v for i, v in enumerate(l) if not (i % n))
+    return (v for i, v in enumerate(l) if not i % n)
 
 
 def shinglify(it, span, skip=0):
@@ -175,7 +174,7 @@ def shinglify(it, span, skip=0):
     >>> list(shinglify("abc", 4))
     [('a', 'b', 'c')]
 
-    Must return an emmpty list when span=0
+    Must return an empty list when span=0
     >>> list(shinglify("abc", 0))
     []
 
@@ -190,7 +189,7 @@ def shinglify(it, span, skip=0):
     """
     tokens = list(it)
     if len(tokens) >= span:
-        return zip(*nskip((tokens[i:] for i in range(span)), skip))
+        return izip(*nskip((tokens[i:] for i in range(span)), skip))
     else:
         return [tuple(nskip(tokens, skip))]
 
@@ -205,23 +204,21 @@ def mshinglify(it, span, skip=0):
     :returns: sequence of tuples (shingles)
     :rtype : list
 
-
+    >>> list(mshinglify("abcde", 10, skip=1))
+    [('a', 'e'), ('a', 'c'), ('a', 'c', 'e'), ('c', 'e')]
     >>> list(mshinglify("a", 10, skip=1))
     []
-
     """
     tokens = list(it)
 
     # range of indices where masking is allowed
     mask = range(1, min(len(tokens) - skip, span // (skip + 1) + 1))
     s = None
-    result = []
     for s in shinglify(tokens, span, skip=skip):
         for m in mask:
-            result.append(s[:m] + s[m + 1:])
+            yield s[:m] + s[m + 1:]
     if mask and (s is not None) and (len(s) > 1):
-        result.append(s[1:])
-    return result
+        yield s[1:]
 
 
 def create_getters(lot):
@@ -230,13 +227,11 @@ def create_getters(lot):
 
     :param lot: a list of tuples
     :type lot: list
-    :returns: a list of item getters
-    :rtype: list
+    :returns: a generator of item getters
+    :rtype: generator
     """
-    getters = []
-    for t in lot:
-        getters.append(operator.itemgetter(*t) if t else lambda x: ())
-    return getters
+    for tup in lot:
+        yield operator.itemgetter(*tup) if tup else lambda x: ()
 
 
 def cntuples(m, n):
@@ -290,7 +285,7 @@ def lsh_combinations(width, bandwidth, ramp):
     master = list(combinations(range(width), bandwidth))
     cols = set(range(bandwidth))
     left_cols = list(combinations(cols, ramp))
-    right_cols = [tsorted(cols - s) for s in map(set, left_cols)]
+    right_cols = [tsorted(cols - s) for s in imap(set, left_cols)]
     left_getters = create_getters(left_cols)
     right_getters = create_getters(right_cols)
     d = defaultdict(list)
@@ -303,11 +298,6 @@ def lsh_combinations(width, bandwidth, ramp):
 def lsh_bands(width, bandwidth):
     """Generate indexes for non-overlapping LSH band selectors
 
-        The zip() clause converts a 1D-list to a list of b-dimensional
-        tuples such that:
-        [1,2,3,4,5,6] -> [(1,2), (3,4), (5,6)] if bandwidth == 2
-                      -> [(1,2,3), (4,5,6)]    if bandwidth == 3
-
     :param width: expected signature length
     :type width: int
     :param bandwidth: band size
@@ -315,6 +305,12 @@ def lsh_bands(width, bandwidth):
     :return: a sequence of tuples with elements representing indexes in
              signature vector
     :rtype: list
+
+    >>> lsh_bands(6, 2)
+    [(0, 1), (2, 3), (4, 5)]
+    >>> lsh_bands(6, 3)
+    [(0, 1, 2), (3, 4, 5)]
+
     """
     return zip(*(iter(xrange(width)),) * bandwidth)
 
@@ -361,7 +357,7 @@ def create_sig_selectors(width, bandwidth, scheme):
     else:
         raise ValueError("Invalid scheme")
     LOG.info("Choosing LSH bands: " + ", ".join("{}: {}".format(index, band)
-                                                for index, band in zip(indexes, bands)))
+                                                for index, band in izip(indexes, bands)))
     return zip(indexes, create_getters(bands))
 
 
@@ -478,6 +474,19 @@ class Signature(object):
         """
 
 
+def extend(lst, k):
+    """
+    extend a list to length k by duplicating last item
+
+    >>> extend([1, 2, 3], 5)
+    [1, 2, 3, 3, 3]
+    """
+    len_l = len(lst)
+    if len_l < k:
+        lst.extend([lst[-1]] * (k - len_l))
+    return lst
+
+
 class MinHashSignature(Signature):
     """Creates signatures for sets/tuples using minhash."""
 
@@ -522,15 +531,16 @@ class MinHashSignature(Signature):
         :returns: a signature vector
         :rtype : list
         """
-
-        def extend(l, k):
-            len_l = len(l)
-            if len_l < k:
-                l.extend([l[-1]] * (k - len_l))
-            return l
-
         kmin = self.kmin
-        if kmin == 1:
+        if kmin > 1:
+            # Choose k smallest hashes
+            if len(s) > 0:
+                sig_fun = lambda f: extend(heapq.nsmallest(kmin, imap(f, s)), kmin)
+            else:
+                # support empty sets by treating them as empty strings
+                sig_fun = lambda f: extend([f("")], kmin)
+            result = sum(imap(sig_fun, self.hashes), [])
+        else:
             # Choose one minimal hash
             if len(s) > 0:
                 sig_fun = lambda f: min(imap(f, s))
@@ -538,14 +548,6 @@ class MinHashSignature(Signature):
                 # support empty sets by treating them as empty strings
                 sig_fun = lambda f: f("")
             result = map(sig_fun, self.hashes)
-        else:
-            # Choose k smallest hashes
-            if len(s) > 0:
-                sig_fun = lambda f: extend(heapq.nsmallest(kmin, imap(f, s)), kmin)
-            else:
-                # support empty sets by treating them as empty strings
-                sig_fun = lambda f: extend([f("")], kmin)
-            result = sum(map(sig_fun, self.hashes), [])
         return result
 
     def get_signature(self, s):
@@ -728,11 +730,7 @@ class LSHC(object):
         :rtype: collections.iterable
         """
 
-        list_sig = sig if type(sig) == list else list(sig)
+        list_sig = sig if isinstance(sig, list) else list(sig)
         for prefix, selector in self.selectors:
             band = selector(list_sig)
             yield '{}:{}'.format(prefix, CityHash64("salt" + repr(band) + "tlas"))
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
