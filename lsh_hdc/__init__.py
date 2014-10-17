@@ -190,7 +190,7 @@ def shinglify(it, span, skip=0):
     """
     tokens = list(it)
     if len(tokens) >= span:
-        return zip(*nskip((tokens[i:] for i in range(span)), skip))
+        return izip(*nskip((tokens[i:] for i in range(span)), skip))
     else:
         return [tuple(nskip(tokens, skip))]
 
@@ -290,7 +290,7 @@ def lsh_combinations(width, bandwidth, ramp):
     master = list(combinations(range(width), bandwidth))
     cols = set(range(bandwidth))
     left_cols = list(combinations(cols, ramp))
-    right_cols = [tsorted(cols - s) for s in map(set, left_cols)]
+    right_cols = [tsorted(cols - s) for s in imap(set, left_cols)]
     left_getters = create_getters(left_cols)
     right_getters = create_getters(right_cols)
     d = defaultdict(list)
@@ -361,7 +361,7 @@ def create_sig_selectors(width, bandwidth, scheme):
     else:
         raise ValueError("Invalid scheme")
     LOG.info("Choosing LSH bands: " + ", ".join("{}: {}".format(index, band)
-                                                for index, band in zip(indexes, bands)))
+                                                for index, band in izip(indexes, bands)))
     return zip(indexes, create_getters(bands))
 
 
@@ -551,7 +551,7 @@ class MinHashSignature(Signature):
             else:
                 # support empty sets by treating them as empty strings
                 sig_fun = lambda f: extend([f("")], kmin)
-            result = sum(map(sig_fun, self.hashes), [])
+            result = sum(imap(sig_fun, self.hashes), [])
         return result
 
     def get_signature(self, s):
