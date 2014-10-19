@@ -2,10 +2,12 @@
 import unittest
 import random
 from cityhash import CityHash128
+from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import randset, sigsim, randstr
-from lsh_hdc import MinHashSignature, SimHashSignature, \
+from lsh_hdc import MinHashSignature, SimHashSignature, MinHashSketchSignature, \
     jaccard_sim, hamming, Shingler, from_bitstring, bitstring_padded
 from lflearn.preprocess import RegexTokenizer
+from lflearn.metrics import FeatureClusterSummarizer
 
 
 class TestSig(unittest.TestCase):
@@ -41,15 +43,13 @@ class TestSig(unittest.TestCase):
         self.assertEqual(mh.get_signature(s), mh.get_signature(s))
 
     def test_simhash64(self):
-        """Simhash signature of an empty string should be zero
-        and unicode and regular strings should give the same
-        simhash signatures
+        """Simhash signature of an empty string should be zero and unicode and
+        regular strings should give the same simhash signatures
         """
         sh = SimHashSignature(64)
 
         sig1 = sh.get_signature("")
         sig2 = sh.get_signature(u"")
-        self.assertEqual(sig1, 0)
         self.assertEqual(sig1, sig2)
 
         sig3 = sh.get_signature("abracadabra")
@@ -63,9 +63,8 @@ class TestSig(unittest.TestCase):
         self.assertNotEqual(sig5, sig6)
 
     def test_simhash128(self):
-        """Simhash signature of an empty string should be zero
-        and unicode and regular strings should give the same
-        simhash signatures
+        """Simhash signature of an empty string should be zero and unicode and
+        regular strings should give the same simhash signatures
         """
         sh = SimHashSignature(128)
 
@@ -85,7 +84,8 @@ class TestSig(unittest.TestCase):
         self.assertNotEqual(sig5, sig6)
 
     def test_simhash128_addition(self):
-        """Test that our technique of combining two numbers works"""
+        """Test that our technique of combining two numbers works
+        """
         for _ in range(100):
             rstr = randstr(random.randint(0, 10))
             a, b = CityHash128(rstr)
@@ -98,9 +98,23 @@ class TestSig(unittest.TestCase):
         sh = SimHashSignature(64)
 
         sig1 = sh.get_signature("abracadabra")
+        sig2 = sh.get_signature("abracadabra")
+        dist = hamming(sig1, sig2)
+        self.assertEqual(dist, 0)
+
+        sig1 = sh.get_signature("abracadabra")
+        sig2 = sh.get_signature("arbcd")
+        dist = hamming(sig1, sig2)
+        self.assertEqual(dist, 13)
+
+        sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 25)
+        self.assertEqual(dist, 32)
+
+    def test_minhash_sketch_similarity(self):
+        """Signatures should be consistent"""
+        sh = MinHashSketchSignature(64)
 
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracadabra")
@@ -108,9 +122,14 @@ class TestSig(unittest.TestCase):
         self.assertEqual(dist, 0)
 
         sig1 = sh.get_signature("abracadabra")
-        sig2 = sh.get_signature("abracdabra")
+        sig2 = sh.get_signature("arbcd")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 6)
+        self.assertEqual(dist, 0)
+
+        sig1 = sh.get_signature("abracadabra")
+        sig2 = sh.get_signature("")
+        dist = hamming(sig1, sig2)
+        self.assertEqual(dist, 24)
 
     def test_simhash_feature_weights(self):
         """Features should be weighted and should contribute to
@@ -121,12 +140,12 @@ class TestSig(unittest.TestCase):
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracdabra")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 6)
+        self.assertEqual(dist, 3)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 0))
         sig2 = sh.get_signature("abracdabra", ("dogs", 0))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 6)
+        self.assertEqual(dist, 3)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 0))
         sig2 = sh.get_signature("abracadabra", ("dogs", 0))
@@ -141,12 +160,12 @@ class TestSig(unittest.TestCase):
         sig1 = sh.get_signature("abracadabra", ("ca", 5))
         sig2 = sh.get_signature("abracadabra", ("do", 5))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 7)
+        self.assertEqual(dist, 5)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 200))
         sig2 = sh.get_signature("abracadabra", ("dogs", 200))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 17)
+        self.assertEqual(dist, 8)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 10))
         sig2 = sh.get_signature("abracadabra", ("cats", 10))
@@ -154,8 +173,9 @@ class TestSig(unittest.TestCase):
         self.assertEqual(dist, 0)
 
     def test_signature_similarity(self):
-        """The probability that two sets' signatures match at some index
-        are equal is equal to the Jaccard similarity between the two"""
+        """The probability that two sets' signatures match at some index are
+        equal is equal to the Jaccard similarity between the two
+        """
         n_tests = 100
         expected_error = 1.0 / 10  # Expected error is O(1/sqrt(dim))
         mh = MinHashSignature(10 * 10)
