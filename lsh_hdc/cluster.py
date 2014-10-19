@@ -1,3 +1,4 @@
+import operator
 from functools import partial
 from pymaptools import UnionFind
 from itertools import imap
@@ -11,14 +12,6 @@ from logging import getLogger
 LOG = getLogger(__name__)
 
 
-def logical_and(x, y):
-    return x and y
-
-
-def logical_or(x, y):
-    return x or y
-
-
 class Cluster(object):
     """Clusters sets with Jaccard similarity above threshold with high
     probability.
@@ -29,7 +22,8 @@ class Cluster(object):
     3. Use UnionFind to merge buckets containing same values
     """
     def __init__(self, signer=None, sketch_dist_fn=None, max_dist=0,
-                 min_support=1, sketch_operator=logical_and, sketch_bits=0):
+                 min_support=1, sketch_operator=operator.__and__,
+                 sketch_bits=0):
         self.union_find = UnionFind()
         self.signer = signer
         self.buckets = defaultdict(dict)
@@ -52,19 +46,19 @@ class Cluster(object):
                 logical_op(support >= min_support,
                            distance_from(matched_sketch) <= max_dist)
 
-    def add_item(self, s, label=None, sketch=None):
+    def add_item(self, item, label=None, sketch=None):
         # Set default label for this set
         if label is None:
-            label = s
+            label = item
 
         # Add to union-find structure
-        uf = self.union_find
-        uf.__getitem__(label)
+        union_find = self.union_find
+        union_find.__getitem__(label)
 
         # Get signature vector and hash it
-        keys = s \
+        keys = item \
             if self.signer is None \
-            else self.signer.get_signature(s)
+            else self.signer.get_signature(item)
 
         # Unite labels with same LSH keys
         counter = Counter()
@@ -78,22 +72,22 @@ class Cluster(object):
         for matched_label, support in counter.iteritems():
             if matched_label != label and \
                     is_close(support, sketches[matched_label]):
-                    uf.union(matched_label, label)
+                union_find.union(matched_label, label)
 
-    def add_key(self, s, label=None, sketch=None):
+    def add_key(self, key, label=None, sketch=None):
         """Add one LSH key only (with associated info)
         Cannot use min_support in this case (it is always equal to one)
         """
         # Set default label for this set
         if label is None:
-            label = s
+            label = key
 
         # Add to union-find structure
-        uf = self.union_find
-        uf.__getitem__(label)
+        union_find = self.union_find
+        union_find.__getitem__(label)
 
         # Unite labels with same LSH keys
-        bucket = self.buckets[s]
+        bucket = self.buckets[key]
         bucket[label] = sketch
 
         is_close = self._closeness_measure(sketch)
@@ -103,7 +97,7 @@ class Cluster(object):
                 # Note: large improvement in precision when also ensuring that
                 # distance > 0 below:
                 if is_close(matched_sketch):
-                    uf.union(matched_label, label)
+                    union_find.union(matched_label, label)
 
     def get_clusters(self):
         """
@@ -115,7 +109,7 @@ class Cluster(object):
 
 class MinHashCluster(Cluster):
     def __init__(self, width=12, bandwidth=3, lsh_scheme="a0",
-                 universe_size=None, kmin=1):
+                 universe_size=None, kmin=1, seed=0):
         """
 
         :param width: Number of bands
@@ -128,11 +122,14 @@ class MinHashCluster(Cluster):
                               cardinality
         :type universe_size: long
         """
+        lsh_hasher = LSHC(bandwidth, width=width, scheme=lsh_scheme) \
+            if bandwidth > 1 \
+            else None
         signer = MinHashSignature(width,
-                                  lsh_hasher=LSHC(bandwidth, width=width,
-                                                  scheme=lsh_scheme),
+                                  lsh_hasher=lsh_hasher,
                                   universe_size=universe_size,
-                                  kmin=kmin)
+                                  kmin=kmin,
+                                  seed=seed)
         super(MinHashCluster, self).__init__(signer=signer)
 
 
@@ -145,7 +142,7 @@ class SketchModel(object):
 class HDClustering(object):
 
     def __init__(self, cfg, content_filter=None, opts=None, trace_every=0,
-                 get_body=None, get_label=None, get_prefix=None):
+                 get_body=None, get_label=None, get_prefix=None, seed=0):
 
         """Read configuration"""
         self.cfg = cfg
@@ -189,16 +186,17 @@ class HDClustering(object):
             self.sketch_shingler = Shingler(**cfg_sketch_shingle)
             if sketch_algorithm == SketchModel.simhash:
                 self.sketch_signer = \
-                    SimHashSignature(bit_depth=self.sketch_bits)
+                    SimHashSignature(bit_depth=self.sketch_bits, seed=seed)
             elif sketch_algorithm == SketchModel.minhash:
-                self.sketch_signer = MinHashSketchSignature(self.sketch_bits)
+                self.sketch_signer = MinHashSketchSignature(self.sketch_bits,
+                                                            seed=seed)
             self.max_dist = \
                 int(floor(self.sketch_bits *
                           (1.0 - float(cfg_sketch['resemblance']))))
             self.sketch_dist_fn = hamming
-            self.sketch_operator = logical_and \
+            self.sketch_operator = operator.__and__ \
                 if cfg_sketch.get('operator', 'and') == 'and' \
-                else logical_or
+                else operator.__or__
         self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
                                        max_dist=self.max_dist,
                                        min_support=self.min_support,
