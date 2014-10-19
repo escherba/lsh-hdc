@@ -1,4 +1,4 @@
-__version__ = "0.0.27"
+__version__ = "0.0.28"
 
 """
 Algorithms based on 'Mining of Massive Datasets'
@@ -510,7 +510,6 @@ class MinHashSignature(Signature):
 
         Note: hash() is not as uniform as haslib.md5. For more examples see
         See http://michaelnielsen.org/blog/consistent-hashing/
-
 
         Other possible hash funcitons include:
 
