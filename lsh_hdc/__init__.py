@@ -490,18 +490,24 @@ def extend(lst, k):
 class MinHashSignature(Signature):
     """Creates signatures for sets/tuples using minhash."""
 
-    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1, seed=0):
-        self.universe_size = universe_size
-        if type(kmin) != int:
-            raise TypeError("kmin must be an integer")
-        if kmin < 1:
-            raise ValueError("kmin must be >= 1")
+    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1,
+                 seed=0, with_sketch=False):
         if width % kmin != 0:
             raise ValueError("width must be a multiple of kmin")
+        if type(kmin) != int:
+            raise TypeError("kmin must be an integer")
+        elif kmin > 1:
+            self._get_minhashes = self._get_minhashes_kmin1p
+        elif kmin == 1:
+            self._get_minhashes = self._get_minhashes_kmin1
+        else:
+            raise ValueError("kmin must be >= 1")
+        self.universe_size = universe_size
         self.width = width / kmin
         self.lsh_hasher = lsh_hasher
         self.kmin = kmin
         self.seed = seed
+        self._with_sketch = with_sketch
         self.hashes = self.create_hash_functions()
 
     def create_hash_functions(self):
@@ -520,41 +526,45 @@ class MinHashSignature(Signature):
 
         """
 
-        universe_size_ = self.universe_size
+        universe_size = self.universe_size
 
         def hash_factory(seed):
-            if universe_size_ is None:
+            if universe_size is None:
                 fun = lambda x: CityHash64WithSeed(repr(x), seed)
             else:
-                fun = lambda x: CityHash64WithSeed(repr(x), seed) % universe_size_
+                fun = lambda x: CityHash64WithSeed(repr(x), seed) % universe_size
             return fun
 
         return map(hash_factory, [xor(self.seed, i) for i in range(self.width)])
 
-    def _get_minhashes(self, s):
+    def _get_minhashes_kmin1p(self, s):
         """Returns minhash signature from a feature vector
-
         :returns: a signature vector
         :rtype : list
         """
         kmin = self.kmin
-        if kmin > 1:
-            # Choose k smallest hashes
-            if len(s) > 0:
-                sig_fun = lambda f: extend(nsmallest(kmin, imap(f, s)), kmin)
-            else:
-                # support empty sets by treating them as empty strings
-                sig_fun = lambda f: extend([f("")], kmin)
-            result = sum(imap(sig_fun, self.hashes), [])
+        # Choose k smallest hashes
+        if len(s) > 0:
+            sig_fun = lambda f: extend(nsmallest(kmin, imap(f, s)), kmin)
         else:
-            # Choose one minimal hash
-            if len(s) > 0:
-                sig_fun = lambda f: min(imap(f, s))
-            else:
-                # support empty sets by treating them as empty strings
-                sig_fun = lambda f: f("")
-            result = map(sig_fun, self.hashes)
-        return result
+            # support empty sets by treating them as empty strings
+            sig_fun = lambda f: extend([f("")], kmin)
+
+        # flatten list of lists
+        return sum(imap(sig_fun, self.hashes), [])
+
+    def _get_minhashes_kmin1(self, s):
+        """Returns minhash signature from a feature vector
+        :returns: a signature vector
+        :rtype : list
+        """
+        # Choose one minimal hash
+        if len(s) > 0:
+            sig_fun = lambda f: min(imap(f, s))
+        else:
+            # support empty sets by treating them as empty strings
+            sig_fun = lambda f: f("")
+        return map(sig_fun, self.hashes)
 
     def get_signature(self, s):
         """Returns minhash signature from a feature vector (with optional LSH)
@@ -562,12 +572,12 @@ class MinHashSignature(Signature):
         :returns: a signature vector
         :rtype : list
         """
-        gen = self._get_minhashes(s)
+        minhashes = self._get_minhashes(s)
         lsh = self.lsh_hasher
         if lsh is None:
-            return ["{}:{}".format(i, num) for i, num in enumerate(gen)]
+            return ["{}:{}".format(i, num) for i, num in enumerate(minhashes)]
         else:
-            return list(lsh.hash(gen))
+            return list(lsh.hash(minhashes))
 
     def get_threshold(self):
         """
@@ -674,19 +684,18 @@ class SimHashSignature(Signature):
         mod_base = 1 << bit_depth
         vec = [0] * bit_depth
 
-        # iterate over word n-grams
+        # iterate over word n-grams: will assign weights of >= 1.0 to allow
+        # zero-length tokens
         _add_to_vector = self._add_to_vector
         hash_fun = self.hash_fun
         seed = self.seed
         for token in tokens:
-            # this assigns weight of >= 1.0 to zero-length tokens:
             _add_to_vector(vec, bits, 1.0 + log1p(sum(imap(len, token))),
                            hash_fun(token, mod_base, seed))
 
-        # iterate over features
+        # iterate over features: unlike with n-grams, computed feature weight
+        # should be zero if input weight is zero
         for feature, weight in features:
-            # unlike shingles, computed feature weight should be zero if we
-            # set input weight to zero
             _add_to_vector(vec, bits, log1p(weight),
                            hash_fun(feature, mod_base, seed))
 
