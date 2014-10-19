@@ -672,39 +672,43 @@ class SimHashSignature(Signature):
         bits = self.bits
         bit_depth = len(bits)
         mod_base = 1 << bit_depth
-        v = [0] * bit_depth
+        vec = [0] * bit_depth
 
         # iterate over word n-grams
+        _add_to_vector = self._add_to_vector
+        hash_fun = self.hash_fun
+        seed = self.seed
         for token in tokens:
             # this assigns weight of >= 1.0 to zero-length tokens:
-            self._ash(bits, v, 1.0 + log1p(sum(imap(len, token))),
-                      self.hash_fun(token, mod_base, self.seed))
+            _add_to_vector(vec, bits, 1.0 + log1p(sum(imap(len, token))),
+                           hash_fun(token, mod_base, seed))
 
         # iterate over features
         for feature, weight in features:
             # unlike shingles, computed feature weight should be zero if we
             # set input weight to zero
-            self._ash(bits, v, log1p(weight),
-                      self.hash_fun(feature, mod_base, self.seed))
+            _add_to_vector(vec, bits, log1p(weight),
+                           hash_fun(feature, mod_base, seed))
 
-        return sum(1 << i for i in bits if v[i] > 0)
+        return sum(1 << i for i in bits if vec[i] > 0)
 
     @staticmethod
-    def _ash(bits, v, nw, h):
+    def _add_to_vector(vec, bits, nw, h):
+        # TODO: rewrite in Cython
         for i in bits:
             if h & (1 << i):
-                v[i] += nw
+                vec[i] += nw
             else:
-                v[i] -= nw
+                vec[i] -= nw
 
     def average(self, hashes):
         """Find unweighted average of multiple signatures"""
         bits = self.bits
         bit_depth = len(bits)
-        v = [0] * bit_depth
+        vec = [0] * bit_depth
         for h in hashes:
-            self._ash(bits, v, 1, h)
-        return sum(1 << i for i in bits if v[i] > 0)
+            self._add_to_vector(vec, bits, 1, h)
+        return sum(1 << i for i in bits if vec[i] > 0)
 
 
 class LSHC(object):
