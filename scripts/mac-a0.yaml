@@ -14,9 +14,10 @@ model:
     enabled: true
     operator: "or"  # [and, or]
     algorithm: "simhash"  # [simhash, minhash]
-    size: 1  # Length of sketch vector, in bytes
+    size: 8  # Length of sketch vector, in bits
     resemblance: 0.75  # Minimum Hamming similarity of bit vectors (set to zero to remove this constraint)
     shingler:
+      enabled: true
       span: 3       # Length of shingles (in words)
       skip: 1       # How many words to skip
       unique: true  # Discard duplicates

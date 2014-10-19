@@ -221,6 +221,29 @@ def mshinglify(it, span, skip=0):
         yield s[1:]
 
 
+def consistent_sampler(pool_length=24, step=3, sample_size=8):
+    """Return samples from a list of runs starting from run heads
+
+    >>> consistent_sampler(24, 3, 7)
+    [0, 3, 6, 9, 12, 15, 18]
+    >>> consistent_sampler(24, 3, 8)
+    [0, 3, 6, 9, 12, 15, 18, 21]
+    >>> consistent_sampler(24, 3, 9)
+    [0, 3, 6, 9, 12, 15, 18, 21, 1]
+    """
+    sample_indices = []
+    count = 0
+    for i in range(step):
+        if count >= sample_size:
+            break
+        for j in range(i, pool_length, step):
+            if count >= sample_size:
+                break
+            sample_indices.append(j)
+            count += 1
+    return sample_indices
+
+
 def create_getters(lot):
     """A wrapper that fixes operator.itemgetter behavior
     where it returns a scalar for tuple input of cardinality one
@@ -268,7 +291,7 @@ def cntuplesx(m, n, kmin=1):
 
 
 def lsh_combinations(width, bandwidth, ramp):
-    """Generate indexes for overlapping LSH band selectors
+    """Generate indices for overlapping LSH band selectors
 
     :param width: expected signature length
     :type width: int
@@ -279,7 +302,7 @@ def lsh_combinations(width, bandwidth, ramp):
                  such that their number corresponds to (width choose ramp)
                  combinations
     :type ramp: int
-    :return: a sequence of tuples with elements representing indexes
+    :return: a sequence of tuples with elements representing indices
     :rtype: list
     """
     master = list(combinations(range(width), bandwidth))
@@ -296,13 +319,13 @@ def lsh_combinations(width, bandwidth, ramp):
 
 
 def lsh_bands(width, bandwidth):
-    """Generate indexes for non-overlapping LSH band selectors
+    """Generate indices for non-overlapping LSH band selectors
 
     :param width: expected signature length
     :type width: int
     :param bandwidth: band size
     :type bandwidth: int
-    :return: a sequence of tuples with elements representing indexes in
+    :return: a sequence of tuples with elements representing indices in
              signature vector
     :rtype: list
 
@@ -316,7 +339,7 @@ def lsh_bands(width, bandwidth):
 
 
 def create_sig_selectors(width, bandwidth, scheme):
-    """Generate indexes for LSH band selectors
+    """Generate indices for LSH band selectors
 
     :param width:
     :type width: int
@@ -347,18 +370,18 @@ def create_sig_selectors(width, bandwidth, scheme):
             bands = lsh_combinations(width, bandwidth, ramp)
         else:
             raise ValueError("ramp parameter cannot be negative")
-        indexes = range(len(bands))
+        indices = range(len(bands))
     elif scheme_code == "b":
         if ramp < 1:
             raise ValueError("for b-schemes, ramp value must be >= 1")
         bands = cntuplesx(width, bandwidth, ramp)
-        # indexes = list(chain(*[[x] * ramp for x in range(width / ramp)]))
-        indexes = range(len(bands))
+        # indices = list(chain(*[[x] * ramp for x in range(width / ramp)]))
+        indices = range(len(bands))
     else:
         raise ValueError("Invalid scheme")
-    LOG.info("Choosing LSH bands: " + ", ".join("{}: {}".format(index, band)
-                                                for index, band in izip(indexes, bands)))
-    return zip(indexes, create_getters(bands))
+    LOG.info("Choosing LSH bands: " + ", ".join("{}: {}".format(idx, band)
+                                                for idx, band in izip(indices, bands)))
+    return zip(indices, create_getters(bands))
 
 
 class Shingler(object):
@@ -488,10 +511,10 @@ def extend(lst, k):
 
 
 class MinHashSignature(Signature):
-    """Creates signatures for sets/tuples using minhash."""
+    """Obtain minhash signature"""
 
     def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1,
-                 seed=0, with_sketch=False):
+                 seed=0, sketch_type='minhash', sketch_size=None):
         if width % kmin != 0:
             raise ValueError("width must be a multiple of kmin")
         if type(kmin) != int:
@@ -502,17 +525,29 @@ class MinHashSignature(Signature):
             self._get_minhashes = self._get_minhashes_kmin1
         else:
             raise ValueError("kmin must be >= 1")
-        self.universe_size = universe_size
         self.width = width / kmin
-        self.lsh_hasher = lsh_hasher
         self.kmin = kmin
+
+        self.lsh_hasher = lsh_hasher
         self.seed = seed
-        self._with_sketch = with_sketch
+        self.universe_size = universe_size
+
+        assert sketch_type in {'minhash', 'simhash'}
+        self._sketch_type = sketch_type
+        self._sketch_getter = self.create_sketch_getter(sketch_size)
         self.hashes = self.create_hash_functions()
 
+    def create_sketch_getter(self, sketch_size):
+        """Wrapper around consistent_sampler to return itemgetter instance"""
+        if sketch_size is None:
+            sketch_size = self.width
+        pool_length = self.width * self.kmin
+        assert sketch_size <= pool_length
+        indices = consistent_sampler(pool_length, self.kmin, sketch_size)
+        return itemgetter(*indices)
+
     def create_hash_functions(self):
-        """Returns an array of length self.width consisting of
-        different hash functions
+        """Return a list of length self.width of different hash functions
 
         Note: hash() is not as uniform as haslib.md5. For more examples see
         See http://michaelnielsen.org/blog/consistent-hashing/
@@ -566,18 +601,27 @@ class MinHashSignature(Signature):
             sig_fun = lambda f: f("")
         return map(sig_fun, self.hashes)
 
-    def get_signature(self, s):
+    def get_signature(self, s, with_sketch=False):
         """Returns minhash signature from a feature vector (with optional LSH)
 
         :returns: a signature vector
         :rtype : list
         """
-        minhashes = self._get_minhashes(s)
+        minhashes = list(self._get_minhashes(s))
         lsh = self.lsh_hasher
         if lsh is None:
-            return ["{}:{}".format(i, num) for i, num in enumerate(minhashes)]
+            sig_vector = ["{}:{}".format(idx, minhash)
+                          for idx, minhash in enumerate(minhashes)]
         else:
-            return list(lsh.hash(minhashes))
+            sig_vector = list(lsh.hash(minhashes))
+
+        if with_sketch:
+            minhash_sample = self._sketch_getter(minhashes)
+            bits = (1 & minhash for minhash in minhash_sample)
+            sketch = sum(1 << idx for idx, bit in enumerate(bits) if bit > 0)
+            return sig_vector, sketch
+        else:
+            return sig_vector
 
     def get_threshold(self):
         """
@@ -592,16 +636,14 @@ class MinHashSignature(Signature):
 class MinHashSketchSignature(MinHashSignature):
 
     def __init__(self, width=64, universe_size=None, kmin=1, seed=0):
-        MinHashSignature.__init__(self, width,
-                                  universe_size=universe_size,
-                                  kmin=kmin)
+        MinHashSignature.__init__(self, width, universe_size=universe_size,
+                                  kmin=kmin, sketch_type='minhash', seed=seed,
+                                  sketch_size=width)
         self._actual_width = width
-        self.seed = seed
 
     def get_signature(self, tokens, *features):
-        result = self._get_minhashes(tokens, *features)
-        bits = [1 & i for i in result]
-        return sum(1 << i for i in xrange(self._actual_width) if bits[i] > 0)
+        _, sketch = MinHashSignature.get_signature(self, tokens, with_sketch=True)
+        return sketch
 
 
 class SimHashSignature(Signature):
