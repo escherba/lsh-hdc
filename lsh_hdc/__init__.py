@@ -1,4 +1,4 @@
-__version__ = "0.0.27"
+__version__ = "0.0.28"
 
 """
 Algorithms based on 'Mining of Massive Datasets'
@@ -6,15 +6,15 @@ Algorithms based on 'Mining of Massive Datasets'
 
 import re
 import sys
-import operator
-import math
-import heapq
+from math import log1p
+from operator import xor, itemgetter
+from heapq import nsmallest
 from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from collections import defaultdict
 from abc import abstractmethod
 
-from cityhash import CityHash64, CityHash128
+from cityhash import CityHash64, CityHash64WithSeed, CityHash128WithSeed
 from lsh_hdc.utils import totuple, tsorted
 
 
@@ -231,7 +231,7 @@ def create_getters(lot):
     :rtype: generator
     """
     for tup in lot:
-        yield operator.itemgetter(*tup) if tup else lambda x: ()
+        yield itemgetter(*tup) if tup else lambda x: ()
 
 
 def cntuples(m, n):
@@ -490,7 +490,7 @@ def extend(lst, k):
 class MinHashSignature(Signature):
     """Creates signatures for sets/tuples using minhash."""
 
-    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1):
+    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1, seed=0):
         self.universe_size = universe_size
         if type(kmin) != int:
             raise TypeError("kmin must be an integer")
@@ -500,30 +500,36 @@ class MinHashSignature(Signature):
             raise ValueError("width must be a multiple of kmin")
         self.width = width / kmin
         self.lsh_hasher = lsh_hasher
-        self.hashes = self.create_hash_functions()
         self.kmin = kmin
+        self.seed = seed
+        self.hashes = self.create_hash_functions()
 
     def create_hash_functions(self):
         """Returns an array of length self.width consisting of
         different hash functions
 
-        Note: hash() is not as uniform as haslib.md5
+        Note: hash() is not as uniform as haslib.md5. For more examples see
         See http://michaelnielsen.org/blog/consistent-hashing/
-        for examples
+
+        Other possible hash funcitons include:
+
+        .. code-block:: python
+
+            lambda x: long2int(long(md5(repr(x)).hexdigest(), 16))
+            lambda x: hash(repr(x))
+
         """
 
-        def hash_factory(seed):
-            salt_seed = "salt" + repr(seed)
-            if universe_size_ is None:
-                f = lambda x: CityHash64(salt_seed + str(x) + "salt")
-            else:
-                f = lambda x: CityHash64(salt_seed + str(x) + "salt") % universe_size_
-            return f
-            # return lambda x: long2int(long(md5(prefix + str(x) + "salt").hexdigest(), 16))
-            # return lambda x: hash(prefix + str(x) + "salt")
-
         universe_size_ = self.universe_size
-        return map(hash_factory, range(self.width))
+
+        def hash_factory(seed):
+            if universe_size_ is None:
+                fun = lambda x: CityHash64WithSeed(repr(x), seed)
+            else:
+                fun = lambda x: CityHash64WithSeed(repr(x), seed) % universe_size_
+            return fun
+
+        return map(hash_factory, [xor(self.seed, i) for i in range(self.width)])
 
     def _get_minhashes(self, s):
         """Returns minhash signature from a feature vector
@@ -535,7 +541,7 @@ class MinHashSignature(Signature):
         if kmin > 1:
             # Choose k smallest hashes
             if len(s) > 0:
-                sig_fun = lambda f: extend(heapq.nsmallest(kmin, imap(f, s)), kmin)
+                sig_fun = lambda f: extend(nsmallest(kmin, imap(f, s)), kmin)
             else:
                 # support empty sets by treating them as empty strings
                 sig_fun = lambda f: extend([f("")], kmin)
@@ -575,26 +581,28 @@ class MinHashSignature(Signature):
 
 class MinHashSketchSignature(MinHashSignature):
 
-    def __init__(self, width, universe_size=None, kmin=1):
+    def __init__(self, width=64, universe_size=None, kmin=1, seed=0):
         MinHashSignature.__init__(self, width,
                                   universe_size=universe_size,
                                   kmin=kmin)
         self._actual_width = width
+        self.seed = seed
 
     def get_signature(self, tokens, *features):
-        result = MinHashSignature._get_minhashes(self, tokens, *features)
+        result = self._get_minhashes(tokens, *features)
         bits = [1 & i for i in result]
         return sum(1 << i for i in xrange(self._actual_width) if bits[i] > 0)
 
 
 class SimHashSignature(Signature):
 
-    def __init__(self, bit_depth=64):
+    def __init__(self, bit_depth=64, seed=0):
         """
         :param bit_depth: Length of binary vector (bit resolution)
         :type bit_depth: int
         """
         self.bits = range(bit_depth)
+        self.seed = seed
         if bit_depth <= 64:
             self.hash_fun = self._hash_fun_64
         elif bit_depth <= 128:
@@ -606,7 +614,7 @@ class SimHashSignature(Signature):
         raise NotImplementedError
 
     @staticmethod
-    def _hash_fun_64(x, mod_base):
+    def _hash_fun_64(x, mod_base, seed=0):
         type_of_x = type(x)
         if type_of_x == str:
             v = x
@@ -614,10 +622,10 @@ class SimHashSignature(Signature):
             v = x.encode("utf-8")
         else:
             v = repr(x)
-        return CityHash64(v) % mod_base
+        return CityHash64WithSeed(v, seed) % mod_base
 
     @staticmethod
-    def _hash_fun_128(x, mod_base):
+    def _hash_fun_128(x, mod_base, seed=0):
         type_of_x = type(x)
         if type_of_x == str:
             v = x
@@ -625,11 +633,11 @@ class SimHashSignature(Signature):
             v = x.encode("utf-8")
         else:
             v = repr(x)
-        a, b = CityHash128(v)
+        a, b = CityHash128WithSeed(v, (seed, seed))
         return ((1 << 64) * a + b) % mod_base
 
     @staticmethod
-    def _hash_fun_long(x, mod_base):
+    def _hash_fun_long(x, mod_base, seed=0):
         """A variable-length version of Python's builtin hash"""
         type_of_x = type(x)
         v = x if type_of_x == str or type_of_x == unicode else repr(x)
@@ -669,17 +677,15 @@ class SimHashSignature(Signature):
         # iterate over word n-grams
         for token in tokens:
             # this assigns weight of >= 1.0 to zero-length tokens:
-            self._ash(bits, v,
-                      1.0 + math.log1p(sum(imap(len, token))),
-                      self.hash_fun(token, mod_base))
+            self._ash(bits, v, 1.0 + log1p(sum(imap(len, token))),
+                      self.hash_fun(token, mod_base, self.seed))
 
         # iterate over features
         for feature, weight in features:
             # unlike shingles, computed feature weight should be zero if we
             # set input weight to zero
-            self._ash(bits, v,
-                      math.log1p(weight),
-                      self.hash_fun(feature, mod_base))
+            self._ash(bits, v, log1p(weight),
+                      self.hash_fun(feature, mod_base, self.seed))
 
         return sum(1 << i for i in bits if v[i] > 0)
 
@@ -702,9 +708,11 @@ class SimHashSignature(Signature):
 
 
 class LSHC(object):
-    """Locality sensitive hashing.  Uses a banding approach to hash
-    similar signatures to the same buckets."""
-    def __init__(self, bandwidth, width, scheme="a1"):
+    """Locality-sensitive hashing
+
+    Use a banding approach to hash similar signatures to the same buckets.
+    """
+    def __init__(self, bandwidth, width, scheme="a1", seed=0):
         """
         :param bandwidth: Band size
         :type bandwidth: int
@@ -715,22 +723,30 @@ class LSHC(object):
                 When following number is equal to bandwidth, get all possible combinations
         :type scheme: str
         """
+        self.seed = seed
         self.selectors = create_sig_selectors(width, bandwidth, scheme)
 
     def hash(self, sig):
         """Get combinatorial sketches from a signature
 
-        Note: hash choice here doesn't matter (can use even poorly
-        distributed default hash function), but we use CityHash64
-        for consistency.
-
         :param sig: signature to process
         :type sig: collections.iterable
         :return: 64-bit hash digest
         :rtype: collections.iterable
+
+        Note: we use XOR-ing because it seems to be the fastest way to combine
+        hashes, but we could also use CityHash64 or even the poorly distributed
+        default hash function. For example, we could do this:
+
+        .. code-block:: python
+
+            lsh_sig = CityHash64(repr(band))
+
         """
 
+        seed = self.seed
         list_sig = sig if isinstance(sig, list) else list(sig)
         for prefix, selector in self.selectors:
             band = selector(list_sig)
-            yield '{}:{}'.format(prefix, CityHash64("salt" + repr(band) + "tlas"))
+            lsh_sig = reduce(xor, band, seed)
+            yield '{}:{}'.format(prefix, lsh_sig)
