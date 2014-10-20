@@ -11,6 +11,10 @@ from logging import getLogger
 
 LOG = getLogger(__name__)
 
+OPERATOR_MAP = {
+    'and': operator.__and__,
+    'or': operator.__or__
+}
 
 class Cluster(object):
     """Clusters sets with Jaccard similarity above threshold with high
@@ -200,9 +204,7 @@ class HDClustering(object):
                 int(floor(self.sketch_bits *
                           (1.0 - float(cfg_sketch['resemblance']))))
             self.sketch_dist_fn = hamming
-            self.sketch_operator = operator.__and__ \
-                if cfg_sketch.get('operator', 'and') == 'and' \
-                else operator.__or__
+            self.sketch_operator = OPERATOR_MAP[cfg_sketch.get('operator', 'and')]
         self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
                                        max_dist=self.max_dist,
                                        min_support=self.min_support,
