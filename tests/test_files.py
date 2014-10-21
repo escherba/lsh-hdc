@@ -168,7 +168,7 @@ class TestFiles(unittest.TestCase):
                 recall=recall
             )
         ))
-        self.assertGreaterEqual(recall, 0.661)
+        self.assertGreaterEqual(recall, 0.642)
         self.assertGreaterEqual(precision, 0.251)
 
 
