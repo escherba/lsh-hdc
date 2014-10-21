@@ -6,6 +6,7 @@ Algorithms based on 'Mining of Massive Datasets'
 
 import re
 import sys
+import random
 import collections
 from math import log1p
 from operator import xor, itemgetter
@@ -608,7 +609,10 @@ class MinHashSignature(Signature):
                 fun = lambda x: CityHash64WithSeed(repr(x), seed) % universe_size
             return fun
 
-        return map(hash_factory, [xor(self.seed, i) for i in range(self.width)])
+        # draw a sample of unique random integers from pool of [0, sys.maxint]
+        random.seed(self.seed)
+        seeds = random.sample(xrange(sys.maxint), self.width)
+        return map(hash_factory, seeds)
 
     def _get_minhashes_kmin1p(self, vec):
         """Returns minhash signature from a feature vector
@@ -697,7 +701,7 @@ class MinHashSketchSignature(MinHashSignature):
 def hash_combine(seed, val):
     """Combine seed with hash value
     """
-    return seed ^ val + 0x9e3779b9 + (seed << 6) + (seed >> 2)
+    return seed ^ (val + 0x9e3779b9 + (seed << 6) + (seed >> 2))
 
 
 def create_varlen_hash(scale=sys.maxint):
