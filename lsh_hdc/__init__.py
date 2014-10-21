@@ -189,7 +189,7 @@ def shinglify(iterable, span, skip=0):
     """
     tokens = list(iterable)
     if len(tokens) >= span:
-        return izip(*nskip((tokens[i:] for i in range(span)), skip))
+        return izip(*nskip((tokens[i:] for i in xrange(span)), skip))
     else:
         return [tuple(nskip(tokens, skip))]
 
@@ -227,10 +227,10 @@ def consistent_sampler(pool_length=24, step=3, sample_size=8):
     sample_indices = []
     class_indices = []
     count = 0
-    for i in range(step):
+    for i in xrange(step):
         if count >= sample_size:
             break
-        for j in range(i, pool_length, step):
+        for j in xrange(i, pool_length, step):
             if count >= sample_size:
                 break
             sample_indices.append(j)
@@ -416,10 +416,8 @@ class Shingler(object):
         iterable = text if self.tokenizer is None else self.tokenizer.tokenize(text)
         final_it = iterable if prefix is None else chain((prefix,), iterable)
         shingles = shinglify(final_it, self.span, skip=self.skip)
-        if self.unique:
-            return set(shingles)
-        else:
-            return list(shingles)
+        result = set(shingles) if self.unique else list(shingles)
+        return result
 
 
 def jaccard_sim(set1, set2):
@@ -677,9 +675,9 @@ class MinHashSketchSignature(MinHashSignature):
 
     def __init__(self, width=64, universe_size=None, kmin=1, seed=0):
         MinHashSignature.__init__(self, width, universe_size=universe_size,
-                                  kmin=kmin, sketch_type='minhash', seed=seed,
-                                  sketch_size=width)
+                                  kmin=kmin, seed=seed)
         self._actual_width = width
+        self.configure_sketcher(sketch_type='minhash', sketch_size=width)
 
     def get_signature(self, tokens, *features):
         minhashes = list(self._get_minhashes(tokens))

@@ -3,6 +3,7 @@
 PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
 CUSTOM_PKG_REPO=http://packages.livefyre.com/buildout/packages/
+EXTRAS_REQS := $(wildcard requirements-*.txt)
 
 MAC_LOG = data/2014-01-18.detail.sorted.10000.gz
 MAC_OUT = out/reduce.out
@@ -24,8 +25,11 @@ package: env
 test: dev
 	$(PYTHON) `which nosetests` $(NOSEARGS)
 
-dev: env requirements-tests.txt
-	$(PYENV) pip install -e . -r requirements-tests.txt
+dev: env/make.dev
+env/make.dev: $(EXTRAS_REQS) | env
+	rm -rf env/build
+	$(PYENV) for req in $?; do pip install -r $$req; done
+	touch $@
 
 clean:
 	python setup.py clean
