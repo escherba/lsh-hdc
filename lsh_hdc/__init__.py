@@ -198,6 +198,8 @@ def shinglify(iterable, span, skip=0):
 def mshinglify(iterable, span, skip=0):
     """Same as shingligy except repeatedly mask one word
 
+    After sparse binary polynomial hashing (SBPH)
+
     :param iterable: Iterable
     :type iterable: collections.Iterable
     :param span: shingle span
@@ -205,20 +207,25 @@ def mshinglify(iterable, span, skip=0):
     :returns: sequence of tuples (shingles)
     :rtype : list
 
-    >>> list(mshinglify("abcde", 10, skip=1))
-    [('a', 'e'), ('a', 'c'), ('a', 'c', 'e'), ('c', 'e')]
-    >>> list(mshinglify("a", 10, skip=1))
+    >>> list(mshinglify("abcd", 4, skip=0))
+    [('a', 'c', 'd'), ('a', 'b', 'd'), ('a', 'b', 'c'), ('b', 'c', 'd')]
+    >>> list(mshinglify("abcd", 4, skip=1))
+    [('a', 'c', 'd'), ('a', 'b', 'd')]
+    >>> list(mshinglify("a", 10))
     []
     """
+    if skip > 1:
+        raise NotImplementedError("Cannot use skip > 1 with SBPH")
+
     tokens = list(iterable)
 
     # range of indices where masking is allowed
-    mask = range(1, min(len(tokens) - skip, span // (skip + 1) + 1))
+    mask = range(1, min(len(tokens), span - skip))
     shingle = ()
-    for shingle in shinglify(tokens, span, skip=skip):
+    for shingle in shinglify(tokens, span, skip=0):
         for mask_el in mask:
             yield shingle[:mask_el] + shingle[mask_el + 1:]
-    if mask and len(shingle) > 1:
+    if skip == 0 and mask and len(shingle) > 1:
         yield shingle[1:]
 
 
