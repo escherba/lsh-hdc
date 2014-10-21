@@ -9,7 +9,7 @@ import sys
 import random
 import collections
 from math import log1p
-from operator import xor, itemgetter
+from operator import itemgetter
 from heapq import nsmallest
 from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
@@ -874,5 +874,5 @@ class LSHC(object):
         list_sig = sig if isinstance(sig, list) else list(sig)
         for prefix, selector in self.selectors:
             band = selector(list_sig)
-            lsh_sig = reduce(xor, band, seed)
+            lsh_sig = reduce(hash_combine, band, seed)
             yield '{}:{}'.format(prefix, lsh_sig)
