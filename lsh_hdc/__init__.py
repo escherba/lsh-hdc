@@ -182,7 +182,7 @@ def shinglify(iterable, span, skip=0):
     >>> list(shinglify("abcde", 4, skip=1))
     [('a', 'c'), ('b', 'd'), ('c', 'e')]
 
-    Must skip tokens even when len(tokens) < span
+    Must also skip tokens when span > len(tokens)
     >>> list(shinglify("abc", 4, skip=1))
     [('a', 'c')]
 
@@ -381,7 +381,14 @@ def create_sig_selectors(width, bandwidth, scheme):
 
 
 class Shingler(object):
-    def __init__(self, span=3, skip=0, unique=True, tokenizer=None, normalizer=None):
+
+    _algorithms = {
+        "standard": shinglify,  # standard algorithm
+        "sbph": mshinglify      # after "sparse binary polynomial hashing"
+    }
+
+    def __init__(self, span=3, skip=0, algorithm="standard", unique=True,
+                 tokenizer=None, normalizer=None):
         """
         :param span: How many words should a shingle span
         :type span: int
@@ -394,6 +401,8 @@ class Shingler(object):
         :param normalizer: instance of Normalizer class
         :type normalizer: Normalizer
         """
+        self._algorithm = algorithm
+        self._shinglify = self._algorithms[algorithm]
         self.span = span
         self.skip = skip
         self.unique = unique
@@ -415,7 +424,7 @@ class Shingler(object):
             else self.normalizer.normalize(input_text)
         iterable = text if self.tokenizer is None else self.tokenizer.tokenize(text)
         final_it = iterable if prefix is None else chain((prefix,), iterable)
-        shingles = shinglify(final_it, self.span, skip=self.skip)
+        shingles = self._shinglify(final_it, self.span, skip=self.skip)
         result = set(shingles) if self.unique else list(shingles)
         return result
 
