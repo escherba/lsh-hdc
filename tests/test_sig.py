@@ -155,17 +155,17 @@ class TestSig(unittest.TestCase):
         sig1 = sh.get_signature("abracadabra", ("ca", 4))
         sig2 = sh.get_signature("abracadabra", ("do", 4))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 0)
+        self.assertEqual(dist, 9)
 
         sig1 = sh.get_signature("abracadabra", ("ca", 5))
         sig2 = sh.get_signature("abracadabra", ("do", 5))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 5)
+        self.assertEqual(dist, 9)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 200))
         sig2 = sh.get_signature("abracadabra", ("dogs", 200))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 8)
+        self.assertEqual(dist, 21)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 10))
         sig2 = sh.get_signature("abracadabra", ("cats", 10))
