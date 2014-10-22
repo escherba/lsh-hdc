@@ -6,6 +6,7 @@ Algorithms based on 'Mining of Massive Datasets'
 
 import re
 import sys
+import random
 import collections
 from math import log1p
 from operator import xor, itemgetter
@@ -182,20 +183,22 @@ def shinglify(iterable, span, skip=0):
     >>> list(shinglify("abcde", 4, skip=1))
     [('a', 'c'), ('b', 'd'), ('c', 'e')]
 
-    Must skip tokens even when len(tokens) < span
+    Must also skip tokens when span > len(tokens)
     >>> list(shinglify("abc", 4, skip=1))
     [('a', 'c')]
 
     """
     tokens = list(iterable)
     if len(tokens) >= span:
-        return izip(*nskip((tokens[i:] for i in range(span)), skip))
+        return izip(*nskip((tokens[i:] for i in xrange(span)), skip))
     else:
         return [tuple(nskip(tokens, skip))]
 
 
 def mshinglify(iterable, span, skip=0):
     """Same as shingligy except repeatedly mask one word
+
+    After sparse binary polynomial hashing (SBPH)
 
     :param iterable: Iterable
     :type iterable: collections.Iterable
@@ -204,20 +207,25 @@ def mshinglify(iterable, span, skip=0):
     :returns: sequence of tuples (shingles)
     :rtype : list
 
-    >>> list(mshinglify("abcde", 10, skip=1))
-    [('a', 'e'), ('a', 'c'), ('a', 'c', 'e'), ('c', 'e')]
-    >>> list(mshinglify("a", 10, skip=1))
+    >>> list(mshinglify("abcd", 4, skip=0))
+    [('a', 'c', 'd'), ('a', 'b', 'd'), ('a', 'b', 'c'), ('b', 'c', 'd')]
+    >>> list(mshinglify("abcd", 4, skip=1))
+    [('a', 'c', 'd'), ('a', 'b', 'd')]
+    >>> list(mshinglify("a", 10))
     []
     """
+    if skip > 1:
+        raise NotImplementedError("Cannot use skip > 1 with SBPH")
+
     tokens = list(iterable)
 
     # range of indices where masking is allowed
-    mask = range(1, min(len(tokens) - skip, span // (skip + 1) + 1))
+    mask = range(1, min(len(tokens), span - skip))
     shingle = ()
-    for shingle in shinglify(tokens, span, skip=skip):
+    for shingle in shinglify(tokens, span, skip=0):
         for mask_el in mask:
             yield shingle[:mask_el] + shingle[mask_el + 1:]
-    if mask and len(shingle) > 1:
+    if skip == 0 and mask and len(shingle) > 1:
         yield shingle[1:]
 
 
@@ -227,10 +235,10 @@ def consistent_sampler(pool_length=24, step=3, sample_size=8):
     sample_indices = []
     class_indices = []
     count = 0
-    for i in range(step):
+    for i in xrange(step):
         if count >= sample_size:
             break
-        for j in range(i, pool_length, step):
+        for j in xrange(i, pool_length, step):
             if count >= sample_size:
                 break
             sample_indices.append(j)
@@ -381,7 +389,14 @@ def create_sig_selectors(width, bandwidth, scheme):
 
 
 class Shingler(object):
-    def __init__(self, span=3, skip=0, unique=True, tokenizer=None, normalizer=None):
+
+    _algorithms = {
+        "standard": shinglify,  # standard algorithm
+        "sbph": mshinglify      # after "sparse binary polynomial hashing"
+    }
+
+    def __init__(self, span=3, skip=0, algorithm="standard", unique=True,
+                 tokenizer=None, normalizer=None):
         """
         :param span: How many words should a shingle span
         :type span: int
@@ -394,6 +409,8 @@ class Shingler(object):
         :param normalizer: instance of Normalizer class
         :type normalizer: Normalizer
         """
+        self._algorithm = algorithm
+        self._shinglify = self._algorithms[algorithm]
         self.span = span
         self.skip = skip
         self.unique = unique
@@ -415,11 +432,9 @@ class Shingler(object):
             else self.normalizer.normalize(input_text)
         iterable = text if self.tokenizer is None else self.tokenizer.tokenize(text)
         final_it = iterable if prefix is None else chain((prefix,), iterable)
-        shingles = shinglify(final_it, self.span, skip=self.skip)
-        if self.unique:
-            return set(shingles)
-        else:
-            return list(shingles)
+        shingles = self._shinglify(final_it, self.span, skip=self.skip)
+        result = set(shingles) if self.unique else list(shingles)
+        return result
 
 
 def jaccard_sim(set1, set2):
@@ -601,7 +616,10 @@ class MinHashSignature(Signature):
                 fun = lambda x: CityHash64WithSeed(repr(x), seed) % universe_size
             return fun
 
-        return map(hash_factory, [xor(self.seed, i) for i in range(self.width)])
+        # draw a sample of unique random integers from pool of [0, sys.maxint]
+        random.seed(self.seed)
+        seeds = random.sample(xrange(sys.maxint), self.width)
+        return map(hash_factory, seeds)
 
     def _get_minhashes_kmin1p(self, vec):
         """Returns minhash signature from a feature vector
@@ -677,9 +695,9 @@ class MinHashSketchSignature(MinHashSignature):
 
     def __init__(self, width=64, universe_size=None, kmin=1, seed=0):
         MinHashSignature.__init__(self, width, universe_size=universe_size,
-                                  kmin=kmin, sketch_type='minhash', seed=seed,
-                                  sketch_size=width)
+                                  kmin=kmin, seed=seed)
         self._actual_width = width
+        self.configure_sketcher(sketch_type='minhash', sketch_size=width)
 
     def get_signature(self, tokens, *features):
         minhashes = list(self._get_minhashes(tokens))
@@ -690,7 +708,7 @@ class MinHashSketchSignature(MinHashSignature):
 def hash_combine(seed, val):
     """Combine seed with hash value
     """
-    return seed ^ val + 0x9e3779b9 + (seed << 6) + (seed >> 2)
+    return seed ^ (val + 0x9e3779b9 + (seed << 6) + (seed >> 2))
 
 
 def create_varlen_hash(scale=sys.maxint):
