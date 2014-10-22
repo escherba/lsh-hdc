@@ -10,7 +10,7 @@ from pkg_resources import resource_filename
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster, HDClustering
 from lflearn.preprocess import RegexTokenizer
-from lflearn.metrics import FeatureClusterSummarizer, describe_clusters
+from lflearn.metrics import describe_clusters
 
 get_resource_name = partial(resource_filename, __name__)
 
@@ -26,15 +26,11 @@ class TestFiles(unittest.TestCase):
             data = set(line.rstrip() for line in fhandle)
         cluster = Cluster(width=20, bandwidth=5, seed=SEED)
         shingler = Shingler(3)
-        s = FeatureClusterSummarizer()
         for name in data:
             shingles = shingler.get_shingles(name)
-            s.add_features(name, shingles)
             cluster.add_item(shingles, name)
         clusters = cluster.get_clusters()
-        ti = s.summarize_clusters(clusters)
-        self.assertEqual(len(clusters), 254)
-        self.assertAlmostEqual(ti, 0.97547297672548)
+        self.assertEqual(len(clusters), 209)
 
     def test_names_kmin(self):
         """Should return 252 clusters of names.
@@ -43,17 +39,13 @@ class TestFiles(unittest.TestCase):
             data = set(line.rstrip() for line in fhandle)
         cluster = Cluster(width=20, bandwidth=5, kmin=2, seed=SEED)
         shingler = Shingler(3)
-        s = FeatureClusterSummarizer()
         for name in data:
             shingles = shingler.get_shingles(name)
-            s.add_features(name, shingles)
             cluster.add_item(shingles, name)
         clusters = cluster.get_clusters()
         # for cluster in clusters:
         #     print cluster
-        ti = s.summarize_clusters(clusters)
-        self.assertEqual(len(clusters), 314)
-        self.assertAlmostEqual(ti, 0.9842463414730864)
+        self.assertEqual(len(clusters), 345)
 
     def test_names_kmin_scheme(self):
         """Should return 145 clusters of names.
@@ -63,17 +55,13 @@ class TestFiles(unittest.TestCase):
         cluster = Cluster(width=20, bandwidth=5, kmin=2, lsh_scheme="a1",
                           seed=SEED)
         shingler = Shingler(3)
-        s = FeatureClusterSummarizer()
         for name in data:
             shingles = shingler.get_shingles(name)
-            s.add_features(name, shingles)
             cluster.add_item(shingles, name)
         clusters = cluster.get_clusters()
         # for cluster in clusters:
         #     print cluster
-        ti = s.summarize_clusters(clusters)
-        self.assertEqual(len(clusters), 215)
-        self.assertAlmostEqual(ti, 0.9696647441240106)
+        self.assertEqual(len(clusters), 176)
 
     def test_bills(self):
         """Should return 97 clusters of bills.
@@ -82,15 +70,11 @@ class TestFiles(unittest.TestCase):
             data = [line.rstrip().split('|') for line in fhandle]
         cluster = Cluster(width=20, bandwidth=5, seed=SEED)
         shingler = Shingler(span=3, tokenizer=RegexTokenizer())
-        s = FeatureClusterSummarizer()
         for label, text in data:
             shingles = shingler.get_shingles(text)
-            s.add_features(label, shingles)
             cluster.add_item(shingles, label)
         clusters = cluster.get_clusters()
-        ti = s.summarize_clusters(clusters)
-        self.assertEqual(len(clusters), 96)
-        self.assertAlmostEqual(ti, 0.9999550989193674)
+        self.assertEqual(len(clusters), 97)
 
     @staticmethod
     def run_simulated_manually(filepath, lines_to_read=sys.maxint,
@@ -102,7 +86,6 @@ class TestFiles(unittest.TestCase):
             cluster_args = dict()
         cluster = Cluster(**cluster_args)
         shingler = Shingler(span=3)
-        s = FeatureClusterSummarizer()
         content_dict = dict()
         for pair in data:
             if len(pair) > 1:
@@ -111,13 +94,11 @@ class TestFiles(unittest.TestCase):
                 label, text = pair[0], ''
             content_dict[label] = text
             shingles = shingler.get_shingles(text)
-            s.add_features(label, shingles)
             cluster.add_item(shingles, label)
         clusters = cluster.get_clusters()
 
         is_label_positive = lambda lbl: ':' in lbl
-        return dict(stats=describe_clusters(clusters, is_label_positive),
-                    uindex=s.summarize_clusters(clusters))
+        return dict(stats=describe_clusters(clusters, is_label_positive))
 
     def test_simulated(self):
         results = TestFiles.run_simulated_manually(
@@ -125,7 +106,6 @@ class TestFiles(unittest.TestCase):
             cluster_args=dict(width=30, bandwidth=3, lsh_scheme="a0",
                               seed=SEED))
         c = results['stats']
-        ti = results['uindex']
         recall = c.get_recall()
         precision = c.get_precision()
         self.assertGreaterEqual(recall, 0.499)
@@ -135,8 +115,7 @@ class TestFiles(unittest.TestCase):
             ratios=dict(
                 precision=precision,
                 recall=recall
-            ),
-            ti=ti
+            )
         ))
 
     def test_simulated_b(self):
@@ -145,7 +124,6 @@ class TestFiles(unittest.TestCase):
             cluster_args=dict(width=15, bandwidth=3, lsh_scheme="b3",
                               kmin=3, seed=SEED))
         c = results['stats']
-        ti = results['uindex']
         recall = c.get_recall()
         precision = c.get_precision()
         self.assertGreaterEqual(recall, 0.465)
@@ -155,8 +133,7 @@ class TestFiles(unittest.TestCase):
             ratios=dict(
                 precision=precision,
                 recall=recall
-            ),
-            ti=ti
+            )
         ))
 
     def test_simulated_hd(self):
@@ -191,8 +168,8 @@ class TestFiles(unittest.TestCase):
                 recall=recall
             )
         ))
-        self.assertGreaterEqual(recall, 0.661)
-        self.assertGreaterEqual(precision, 0.252)
+        self.assertGreaterEqual(recall, 0.642)
+        self.assertGreaterEqual(precision, 0.251)
 
 
 if __name__ == '__main__':

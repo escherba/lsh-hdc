@@ -129,7 +129,7 @@ class TestSig(unittest.TestCase):
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 24)
+        self.assertEqual(dist, 26)
 
     def test_simhash_feature_weights(self):
         """Features should be weighted and should contribute to

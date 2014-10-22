@@ -3,19 +3,9 @@
 PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
 CUSTOM_PKG_REPO=http://packages.livefyre.com/buildout/packages/
+EXTRAS_REQS := $(wildcard requirements-*.txt)
 
-MAC_LOG = data/2014-01-18.detail.sorted.10000.gz
-MAC_OUT = out/reduce.out
-
-test_mrdomino: dev
-	$(PYTHON_TIMED) scripts/mrdomino_cluster.py \
-		--use_domino \
-		--n_concurrent_machines 4 \
-		--out $(MAC_OUT) \
-		$(MAC_LOG)
-	$(PYTHON) -m lflearn.cluster.eval_clusters \
-		--ground $(MAC_LOG) \
-		--clusters $(MAC_OUT)
+include domino.mk
 
 package: env
 	$(PYTHON) setup.py bdist_wheel
@@ -24,8 +14,11 @@ package: env
 test: dev
 	$(PYTHON) `which nosetests` $(NOSEARGS)
 
-dev: env requirements-tests.txt
-	$(PYENV) pip install -e . -r requirements-tests.txt
+dev: env/make.dev
+env/make.dev: $(EXTRAS_REQS) | env
+	rm -rf env/build
+	$(PYENV) for req in $?; do pip install -r $$req; done
+	touch $@
 
 clean:
 	python setup.py clean
