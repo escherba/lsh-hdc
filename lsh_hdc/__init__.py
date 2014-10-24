@@ -453,28 +453,28 @@ def jaccard_sim(set1, set2):
     return float(len(set_x & set_y)) / float(len(set_x | set_y))
 
 
-def get_bandwidth(n, threshold):
+def get_bandwidth(width, threshold):
     """Approximates the bandwidth needed to achieve a threshold.
 
     Threshold t = (1/bands) ** (1/rows) where
     bands = #bands
     rows = #rows per band
-    n = bands * rows = #elements in signature
+    width = bands * rows = #elements in signature
 
     :returns: number of rows per band
     :rtype: int
     """
 
-    best = n
+    best = width
     min_err = float("inf")
-    for rows in range(1, n + 1):
+    for rows_per_band in range(1, width + 1):
         try:
-            bands = 1. / (threshold ** rows)
+            num_bands = 1. / (threshold ** rows_per_band)
         except ZeroDivisionError:
             return best
-        err = abs(n - bands * rows)
+        err = abs(width - num_bands * rows_per_band)
         if err < min_err:
-            best = rows
+            best = rows_per_band
             min_err = err
     return best
 
@@ -515,6 +515,10 @@ def extend(lst, k):
     >>> extend([1, 2, 3], 5)
     [1, 2, 3, 3, 3]
     """
+
+    # TODO: instead of extending the signature, consider padding the token
+    # vector circularly from the beginning to the length necessary to produce
+    # signature of specific length
     len_l = len(lst)
     if len_l < k:
         lst.extend([lst[-1]] * (k - len_l))
@@ -733,10 +737,9 @@ def create_varlen_hash(scale=sys.maxint):
         length_of_v = len(value)
         if length_of_v > 0:
             item = ord(value[0]) << 7
-            m = 1000003
             mask = scale - 1
             for char in value:
-                item = ((item * m) ^ ord(char)) & mask
+                item = ((item * 1000003) ^ ord(char)) & mask
             item ^= length_of_v
             if item == -1:
                 item = -2
