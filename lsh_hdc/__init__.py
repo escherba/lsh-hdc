@@ -1,4 +1,4 @@
-__version__ = "0.0.28"
+__version__ = "0.1.0"
 
 """
 Algorithms based on 'Mining of Massive Datasets'
@@ -14,7 +14,7 @@ from heapq import nsmallest
 from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from abc import abstractmethod
-
+from pymaptools.iter import cycle, take, nskip
 from cityhash import CityHash64, CityHash64WithSeed, CityHash128WithSeed
 from lsh_hdc.utils import totuple, tsorted
 
@@ -44,113 +44,6 @@ def chash(obj):
     :rtype: int
     """
     return long2int(CityHash64(obj))
-
-
-def bitlist(num):
-    """Unpack number into a list, size-independent
-
-    :param num: Some number
-    :type num: int
-    :returns: list of bits
-    :rtype: list
-    """
-    if num == 0:
-        return [0]
-    vec = []
-    if num < 0:
-        num = -num
-    while num > 0:
-        vec.append(1 if num & 1 else 0)
-        num >>= 1
-    return vec
-
-
-def bitstring(num):
-    """Unpack number into a string, size-independent
-
-    :param num: Some number
-    :type num: int
-    :returns: string of bits
-    :rtype: str
-    """
-    return '{0:b}'.format(num)[::-1]
-
-
-def bitstring_padded(size, num):
-    """Unpack number into a string, size-independent
-
-    :param num: Some number
-    :type num: int
-    :returns: string of bits
-    :rtype: str
-    """
-    res = '{0:b}'.format(num)[::-1]
-    return res.ljust(size, '0')
-
-
-def from_bitlist(iterable):
-    """Undo bitlist"""
-    return sum(1 << i for i, b in enumerate(iterable) if b)
-
-
-def from_bitstring(iterable):
-    """Undo bitstring"""
-    return sum(1 << i for i, b in enumerate(iterable) if int(b))
-
-
-def hamming_idist(vec1, vec2):
-    """Return the Hamming distance between two lists of bits
-
-    :param vec1: sequence 1
-    :type vec1: list
-    :param vec2: sequence 2
-    :type vec2: list
-    :returns: hamming distance between two lists of bits
-    :rtype: int
-    """
-
-    # TODO: move this into utils
-    len_delta = len(vec1) - len(vec2)
-    if len_delta > 0:
-        vec2 += [0] * len_delta
-    else:
-        vec1 += [0] * (-len_delta)
-    return sum(ch1 != ch2 for ch1, ch2 in izip(vec1, vec2))
-
-
-def hamming(num1, num2):
-    """Return the Hamming distance between bits of two numbers
-
-    :param num1: some number
-    :type num1: long, int
-    :param num2: some number
-    :type num2: long, int
-    :returns: hamming distance between two numbers
-    :rtype: int
-    """
-
-    # TODO: move this into utils
-    return bitlist(num1 ^ num2).count(1)
-
-
-def nskip(iterable, skip):
-    """Skip some elements form a list
-
-    :param iterable: Iterable
-    :type iterable: collections.Iterable
-    :param skip: How many words to skip
-    :type skip: int
-    :returns: sequence with skipped words
-    :rtype: collections.Iterable
-
-    >>> list(nskip("abcdefg", 2))
-    ['a', 'd', 'g']
-    >>> list(nskip("abc", 5))
-    ['a']
-
-    """
-    skip1 = skip + 1
-    return (v for i, v in enumerate(iterable) if not i % skip1)
 
 
 def shinglify(iterable, span, skip=0):
@@ -190,9 +83,9 @@ def shinglify(iterable, span, skip=0):
     """
     tokens = list(iterable)
     if len(tokens) >= span:
-        return izip(*nskip((tokens[i:] for i in xrange(span)), skip))
+        return izip(*nskip(skip, (tokens[i:] for i in xrange(span))))
     else:
-        return [tuple(nskip(tokens, skip))]
+        return [tuple(nskip(skip, tokens))]
 
 
 def mshinglify(iterable, span, skip=0):
@@ -395,13 +288,15 @@ class Shingler(object):
         "sbph": mshinglify      # after "sparse binary polynomial hashing"
     }
 
-    def __init__(self, span=3, skip=0, algorithm="standard", unique=True,
+    def __init__(self, span=3, skip=0, kmin=0, algorithm="standard", unique=True,
                  tokenizer=None, normalizer=None):
         """
         :param span: How many words should a shingle span
         :type span: int
         :param skip: How many words should a shingle skip
         :type skip: int
+        :param kmin: minimum expected number of shingles (not set if 0 or unique=True)
+        :type kmin: int
         :param unique: whether to de-dupe shingles (de-dupe if False)
         :type unique: bool
         :param tokenizer: instance of Tokenizer class
@@ -411,11 +306,12 @@ class Shingler(object):
         """
         self._algorithm = algorithm
         self._shinglify = self._algorithms[algorithm]
-        self.span = span
-        self.skip = skip
-        self.unique = unique
-        self.tokenizer = tokenizer
-        self.normalizer = normalizer
+        self._span = span
+        self._skip = skip
+        self._kmin = kmin
+        self._unique = unique
+        self._tokenizer = tokenizer
+        self._normalizer = normalizer
 
     def get_shingles(self, input_text, prefix=None):
         """Return a vector of shingles from a source text
@@ -427,13 +323,28 @@ class Shingler(object):
         :return: A set of shingles (tuples)
         :rtype: set, list
         """
+        normalizer = self._normalizer
         text = input_text \
-            if self.normalizer is None \
-            else self.normalizer.normalize(input_text)
-        iterable = text if self.tokenizer is None else self.tokenizer.tokenize(text)
-        final_it = iterable if prefix is None else chain((prefix,), iterable)
-        shingles = self._shinglify(final_it, self.span, skip=self.skip)
-        result = set(shingles) if self.unique else list(shingles)
+            if normalizer is None \
+            else normalizer.normalize(input_text)
+        tokenizer = self._tokenizer
+        tokens = list(text) \
+            if tokenizer is None \
+            else list(tokenizer.tokenize(text))
+        span = self._span
+        unique = self._unique
+        kmin = self._kmin
+        if not unique and kmin > 0:
+            # cycle tokens until we can take kmin shingles
+            token_count = len(tokens)
+            prefix_token_count = 0 if prefix is None else 1
+            num_shingles = token_count - span + prefix_token_count + 1
+            append_num = kmin - num_shingles
+            if append_num > 0:
+                tokens = take(token_count + append_num, cycle(tokens))
+        final_it = tokens if prefix is None else chain([prefix], tokens)
+        shingles = self._shinglify(final_it, span, skip=self._skip)
+        result = set(shingles) if unique else list(shingles)
         return result
 
 
@@ -515,10 +426,6 @@ def extend(lst, k):
     >>> extend([1, 2, 3], 5)
     [1, 2, 3, 3, 3]
     """
-
-    # TODO: instead of extending the signature, consider padding the token
-    # vector circularly from the beginning to the length necessary to produce
-    # signature of specific length
     len_l = len(lst)
     if len_l < k:
         lst.extend([lst[-1]] * (k - len_l))

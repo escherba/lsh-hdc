@@ -2,12 +2,11 @@
 import unittest
 import random
 from cityhash import CityHash128
-from lsh_hdc.cluster import MinHashCluster as Cluster
+from pymaptools.bitwise import hamming, bitstring_padded, from_bitstring
 from lsh_hdc.utils import randset, sigsim, randstr
 from lsh_hdc import MinHashSignature, SimHashSignature, MinHashSketchSignature, \
-    jaccard_sim, hamming, Shingler, from_bitstring, bitstring_padded
+    jaccard_sim, Shingler
 from lflearn.preprocess import RegexTokenizer
-from lflearn.metrics import FeatureClusterSummarizer
 
 
 class TestSig(unittest.TestCase):
@@ -86,7 +85,7 @@ class TestSig(unittest.TestCase):
     def test_simhash128_addition(self):
         """Test that our technique of combining two numbers works
         """
-        for _ in range(100):
+        for _ in xrange(100):
             rstr = randstr(random.randint(0, 10))
             a, b = CityHash128(rstr)
             num1 = from_bitstring(bitstring_padded(64, b) + bitstring_padded(64, a))
@@ -181,7 +180,7 @@ class TestSig(unittest.TestCase):
         mh = MinHashSignature(10 * 10)
         err = 0.0
 
-        for test in range(n_tests):
+        for _ in xrange(n_tests):
             # Create random sets and their signatures
             sets = (randset(), randset())
             sigs = map(mh.get_signature, sets)
