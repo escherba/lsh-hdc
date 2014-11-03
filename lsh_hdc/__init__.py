@@ -91,7 +91,9 @@ def shinglify(iterable, span, skip=0):
 def mshinglify(iterable, span, skip=0):
     """Same as shingligy except repeatedly mask one word
 
-    After sparse binary polynomial hashing (SBPH)
+    After sparse binary polynomial hashing (SBPH).
+    Note: mshinglify with span=4 and skip=0 produces as many shingles as
+    shinglify with span=3 and skip=0 plus mshinglify with span=4 and skip=1.
 
     :param iterable: Iterable
     :type iterable: collections.Iterable
