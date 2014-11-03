@@ -17,7 +17,7 @@ test: dev
 dev: env/make.dev
 env/make.dev: $(EXTRAS_REQS) | env
 	rm -rf env/build
-	$(PYENV) for req in $?; do pip install -r $$req; done
+	$(PYENV) for req in $?; do pip install --find-links http://packages.livefyre.com/buildout/packages -r $$req; done
 	touch $@
 
 clean:
