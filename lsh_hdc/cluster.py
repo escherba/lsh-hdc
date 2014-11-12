@@ -6,6 +6,7 @@ from itertools import imap
 from collections import defaultdict, Counter
 from math import floor
 
+from lflearn.preprocess import HTMLNormalizer, RegexTokenizer
 from lsh_hdc import Shingler, SimHashSignature, \
     MinHashSketchSignature, MinHashSignature, LSHC
 from logging import getLogger
@@ -162,6 +163,10 @@ class HDClustering(object):
         self.content_filter = content_filter
         self.min_support = cfg['min_support']
 
+        normalizer_opts = cfg.get('preprocessor', {}).get('normalizer', {})
+        self.normalizer = HTMLNormalizer(**normalizer_opts)
+        self.tokenizer = RegexTokenizer()
+
         # Configure minhash signer
         sig_width = cfg['sig_width']
         lsh_hasher = LSHC(width=sig_width, **cfg['lsh_options'])
@@ -173,6 +178,8 @@ class HDClustering(object):
         cfg_key_shingle = cfg['shingler']
         cfg_key_shingle.update(opts)
         self.shingler = Shingler(**cfg_key_shingle)
+        self.shingler._normalizer = None
+        self.shingler._tokenizer = None
 
         # Configure sketch comparison algorithm
         cfg_sketch = cfg['sketch']
@@ -202,6 +209,8 @@ class HDClustering(object):
                 del cfg_sketch_shingler['enabled']
                 self.sketch_shingler = Shingler(**cfg_sketch_shingler)
                 self.sketch_signer = MinHashSketchSignature(self.sketch_bits, seed=seed)
+            self.sketch_shingler._tokenizer = None
+            self.sketch_shingler._normalizer = None
             self.max_dist = \
                 int(floor(self.sketch_bits *
                           (1.0 - float(cfg_sketch['resemblance']))))
@@ -230,14 +239,18 @@ class HDClustering(object):
     def _map_item(self, obj, body, label, prefix=None):
 
         # Extract features
+        obj_content = obj['content']
+        normalized_content, meta = self.normalizer.normalize(obj_content)
+        content_tokens = self.tokenizer.tokenize(normalized_content)
+
         if self.content_filter is None or \
-                not self.content_filter.accept(obj):
-            features = self.shingler.get_shingles(body, prefix=prefix)
+                not self.content_filter.accept(obj, content_tokens=content_tokens, urls=meta['urls']):
+            features = self.shingler.get_shingles(content_tokens, prefix=prefix)
             if self.sketch_enabled and (self.sketch_shingler is None or self.sketch_signer is None):
                 keys, sketch = self.signer.get_signature(features, with_sketch=True)
             elif self.sketch_enabled and (self.sketch_shingler is not None and self.sketch_signer is not None):
                 keys = self.signer.get_signature(features)
-                sketch_features = self.sketch_shingler.get_shingles(body)
+                sketch_features = self.sketch_shingler.get_shingles(content_tokens)
                 sketch = self.sketch_signer.get_signature(sketch_features)
             else:
                 keys = self.signer.get_signature(features)

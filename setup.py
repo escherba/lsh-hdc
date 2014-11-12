@@ -40,7 +40,7 @@ TESTS_REQUIRE = process_reqs(
 
 setup(
     name="lsh-hdc",
-    version="0.1.0",
+    version="0.1.1",
     author="Eugene Scherba",
     license="MIT",
     author_email="escherba@livefyre.com",
