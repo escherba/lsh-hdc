@@ -1,4 +1,4 @@
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 """
 Algorithms based on 'Mining of Massive Datasets'
@@ -9,7 +9,7 @@ import sys
 import random
 import collections
 from math import log1p
-from operator import xor, itemgetter
+from operator import itemgetter
 from heapq import nsmallest
 from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
@@ -743,13 +743,25 @@ class SimHashSignature(Signature):
         for feature, weight in izip(hashed_features, feature_weights):
             scaled_weight = log1p(weight)
             mod_feature = feature % mod_base
-            # TODO: rewrite in Cython
             for i in bits:
                 if mod_feature & (1 << i):
                     vec[i] += scaled_weight
                 else:
                     vec[i] -= scaled_weight
         return sum(1 << i for i in bits if vec[i] > 0)
+
+
+class HashCombiner(object):
+
+    """use polynomial hashing to reduce a vector of hashes
+    """
+    def __init__(self, size, prime=31, mod=18446744073709551615L):
+        self._coeffs = [prime ** i for i in xrange(size)]
+        self._mod = mod
+
+    def combine(self, hashes):
+        return sum(hsh * coeff for hsh, coeff in izip(hashes, self._coeffs)) \
+            % self._mod
 
 
 class LSHC(object):
@@ -768,8 +780,8 @@ class LSHC(object):
                 When following number is equal to bandwidth, get all possible combinations
         :type scheme: str
         """
-        self.seed = seed
         self.selectors = create_sig_selectors(width, bandwidth, scheme)
+        self.combiner = HashCombiner(bandwidth)
 
     def hash(self, sig):
         """Get combinatorial sketches from a signature
@@ -788,10 +800,9 @@ class LSHC(object):
             lsh_sig = CityHash64(repr(band))
 
         """
-
-        seed = self.seed
         list_sig = sig if isinstance(sig, list) else list(sig)
+        hash_combiner = self.combiner
         for prefix, selector in self.selectors:
             band = selector(list_sig)
-            lsh_sig = reduce(xor, band, seed)
+            lsh_sig = hash_combiner.combine(band)
             yield '{}:{}'.format(prefix, lsh_sig)
