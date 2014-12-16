@@ -6,12 +6,13 @@ Algorithms based on 'Mining of Massive Datasets'
 
 import re
 import sys
+import random
+import collections
 from math import log1p
 from operator import xor, itemgetter
 from heapq import nsmallest
 from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
-from collections import defaultdict
 from abc import abstractmethod
 
 from cityhash import CityHash64, CityHash64WithSeed, CityHash128WithSeed
@@ -21,126 +22,126 @@ from lsh_hdc.utils import totuple, tsorted
 LOG = getLogger(__name__)
 
 
-def long2int(x):
+def long2int(num):
     """Lossily map a long type to the range of int
 
-    :param x: input long variable
-    :type x: long
+    :param num: input long variable
+    :type num: long
     :return: input mapped to int range
     :rtype : int
     """
 
     smi1 = sys.maxint + 1
-    return int(x % (smi1 + smi1) - smi1)
+    return int(num % (smi1 + smi1) - smi1)
 
 
-def chash(x):
+def chash(obj):
     """Convenience function for calling CityHash64
 
-    :param x: input string/hashable object
-    :type x: object
+    :param obj: input string/hashable object
+    :type obj: object
     :return: integer
     :rtype: int
     """
-    return long2int(CityHash64(x))
+    return long2int(CityHash64(obj))
 
 
-def bitlist(n):
+def bitlist(num):
     """Unpack number into a list, size-independent
 
-    :param n: Some number
-    :type n: int
+    :param num: Some number
+    :type num: int
     :returns: list of bits
     :rtype: list
     """
-    if n == 0:
+    if num == 0:
         return [0]
-    s = []
-    if n < 0:
-        n = -n
-    while n > 0:
-        s.append(1 if n & 1 else 0)
-        n >>= 1
-    return s
+    vec = []
+    if num < 0:
+        num = -num
+    while num > 0:
+        vec.append(1 if num & 1 else 0)
+        num >>= 1
+    return vec
 
 
-def bitstring(n):
+def bitstring(num):
     """Unpack number into a string, size-independent
 
-    :param n: Some number
-    :type n: int
+    :param num: Some number
+    :type num: int
     :returns: string of bits
     :rtype: str
     """
-    return '{0:b}'.format(n)[::-1]
+    return '{0:b}'.format(num)[::-1]
 
 
-def bitstring_padded(size, n):
+def bitstring_padded(size, num):
     """Unpack number into a string, size-independent
 
-    :param n: Some number
-    :type n: int
+    :param num: Some number
+    :type num: int
     :returns: string of bits
     :rtype: str
     """
-    res = '{0:b}'.format(n)[::-1]
+    res = '{0:b}'.format(num)[::-1]
     return res.ljust(size, '0')
 
 
-def from_bitlist(l):
+def from_bitlist(iterable):
     """Undo bitlist"""
-    return sum(1 << i for i, b in enumerate(l) if b)
+    return sum(1 << i for i, b in enumerate(iterable) if b)
 
 
-def from_bitstring(l):
+def from_bitstring(iterable):
     """Undo bitstring"""
-    return sum(1 << i for i, b in enumerate(l) if int(b))
+    return sum(1 << i for i, b in enumerate(iterable) if int(b))
 
 
-def hamming_idist(s, t):
+def hamming_idist(vec1, vec2):
     """Return the Hamming distance between two lists of bits
 
-    :param s: sequence 1
-    :type s: list
-    :param t: sequence 2
-    :type t: list
+    :param vec1: sequence 1
+    :type vec1: list
+    :param vec2: sequence 2
+    :type vec2: list
     :returns: hamming distance between two lists of bits
     :rtype: int
     """
 
     # TODO: move this into utils
-    d = len(s) - len(t)
-    if d > 0:
-        t += [0] * d
+    len_delta = len(vec1) - len(vec2)
+    if len_delta > 0:
+        vec2 += [0] * len_delta
     else:
-        s += [0] * (-d)
-    return sum(ch1 != ch2 for ch1, ch2 in izip(s, t))
+        vec1 += [0] * (-len_delta)
+    return sum(ch1 != ch2 for ch1, ch2 in izip(vec1, vec2))
 
 
-def hamming(a, b):
+def hamming(num1, num2):
     """Return the Hamming distance between bits of two numbers
 
-    :param a: some number
-    :type a: long, int
-    :param b: some number
-    :type b: long, int
+    :param num1: some number
+    :type num1: long, int
+    :param num2: some number
+    :type num2: long, int
     :returns: hamming distance between two numbers
     :rtype: int
     """
 
     # TODO: move this into utils
-    return bitlist(a ^ b).count(1)
+    return bitlist(num1 ^ num2).count(1)
 
 
-def nskip(l, skip):
+def nskip(iterable, skip):
     """Skip some elements form a list
 
-    :param l: Iterable
-    :type l: collections.iterable
+    :param iterable: Iterable
+    :type iterable: collections.Iterable
     :param skip: How many words to skip
     :type skip: int
     :returns: sequence with skipped words
-    :rtype: collections.iterable
+    :rtype: collections.Iterable
 
     >>> list(nskip("abcdefg", 2))
     ['a', 'd', 'g']
@@ -148,15 +149,15 @@ def nskip(l, skip):
     ['a']
 
     """
-    n = skip + 1
-    return (v for i, v in enumerate(l) if not i % n)
+    skip1 = skip + 1
+    return (v for i, v in enumerate(iterable) if not i % skip1)
 
 
-def shinglify(it, span, skip=0):
+def shinglify(iterable, span, skip=0):
     """Extract shingles from an iterable
 
-    :param it: Iterable
-    :type it: collections.iterable
+    :param iterable: Iterable
+    :type iterable: collections.Iterable
     :param span: shingle span
     :type span: int
     :param skip: How many words to skip
@@ -182,43 +183,68 @@ def shinglify(it, span, skip=0):
     >>> list(shinglify("abcde", 4, skip=1))
     [('a', 'c'), ('b', 'd'), ('c', 'e')]
 
-    Must skip tokens even when len(tokens) < span
+    Must also skip tokens when span > len(tokens)
     >>> list(shinglify("abc", 4, skip=1))
     [('a', 'c')]
 
     """
-    tokens = list(it)
+    tokens = list(iterable)
     if len(tokens) >= span:
-        return izip(*nskip((tokens[i:] for i in range(span)), skip))
+        return izip(*nskip((tokens[i:] for i in xrange(span)), skip))
     else:
         return [tuple(nskip(tokens, skip))]
 
 
-def mshinglify(it, span, skip=0):
+def mshinglify(iterable, span, skip=0):
     """Same as shingligy except repeatedly mask one word
 
-    :param it: Iterable
-    :type it: collections.iterable
+    After sparse binary polynomial hashing (SBPH)
+
+    :param iterable: Iterable
+    :type iterable: collections.Iterable
     :param span: shingle span
     :type span: int
     :returns: sequence of tuples (shingles)
     :rtype : list
 
-    >>> list(mshinglify("abcde", 10, skip=1))
-    [('a', 'e'), ('a', 'c'), ('a', 'c', 'e'), ('c', 'e')]
-    >>> list(mshinglify("a", 10, skip=1))
+    >>> list(mshinglify("abcd", 4, skip=0))
+    [('a', 'c', 'd'), ('a', 'b', 'd'), ('a', 'b', 'c'), ('b', 'c', 'd')]
+    >>> list(mshinglify("abcd", 4, skip=1))
+    [('a', 'c', 'd'), ('a', 'b', 'd')]
+    >>> list(mshinglify("a", 10))
     []
     """
-    tokens = list(it)
+    if skip > 1:
+        raise NotImplementedError("Cannot use skip > 1 with SBPH")
+
+    tokens = list(iterable)
 
     # range of indices where masking is allowed
-    mask = range(1, min(len(tokens) - skip, span // (skip + 1) + 1))
-    s = None
-    for s in shinglify(tokens, span, skip=skip):
-        for m in mask:
-            yield s[:m] + s[m + 1:]
-    if mask and (s is not None) and (len(s) > 1):
-        yield s[1:]
+    mask = range(1, min(len(tokens), span - skip))
+    shingle = ()
+    for shingle in shinglify(tokens, span, skip=0):
+        for mask_el in mask:
+            yield shingle[:mask_el] + shingle[mask_el + 1:]
+    if skip == 0 and mask and len(shingle) > 1:
+        yield shingle[1:]
+
+
+def consistent_sampler(pool_length=24, step=3, sample_size=8):
+    """Return samples from a list of runs starting from run heads
+    """
+    sample_indices = []
+    class_indices = []
+    count = 0
+    for i in xrange(step):
+        if count >= sample_size:
+            break
+        for j in xrange(i, pool_length, step):
+            if count >= sample_size:
+                break
+            sample_indices.append(j)
+            class_indices.append(i)
+            count += 1
+    return sample_indices, class_indices
 
 
 def create_getters(lot):
@@ -245,8 +271,8 @@ def cntuples(m, n):
     :rtype : list
     """
     vec = range(m)
-    it = izip(*[chain(islice(vec, i, None), islice(vec, None, i)) for i in xrange(n)])
-    return sorted(imap(tsorted, it))
+    iterable = izip(*[chain(islice(vec, i, None), islice(vec, None, i)) for i in xrange(n)])
+    return sorted(imap(tsorted, iterable))
 
 
 def cntuplesx(m, n, kmin=1):
@@ -263,12 +289,12 @@ def cntuplesx(m, n, kmin=1):
     """
     vec = range(m)
     nvec = (i * kmin for i in xrange(n))
-    it = izip(*[chain(islice(vec, i, None), islice(vec, None, i)) for i in nvec])
-    return map(tsorted, it)
+    iterable = izip(*[chain(islice(vec, i, None), islice(vec, None, i)) for i in nvec])
+    return map(tsorted, iterable)
 
 
 def lsh_combinations(width, bandwidth, ramp):
-    """Generate indexes for overlapping LSH band selectors
+    """Generate indices for overlapping LSH band selectors
 
     :param width: expected signature length
     :type width: int
@@ -279,7 +305,7 @@ def lsh_combinations(width, bandwidth, ramp):
                  such that their number corresponds to (width choose ramp)
                  combinations
     :type ramp: int
-    :return: a sequence of tuples with elements representing indexes
+    :return: a sequence of tuples with elements representing indices
     :rtype: list
     """
     master = list(combinations(range(width), bandwidth))
@@ -288,21 +314,22 @@ def lsh_combinations(width, bandwidth, ramp):
     right_cols = [tsorted(cols - s) for s in imap(set, left_cols)]
     left_getters = create_getters(left_cols)
     right_getters = create_getters(right_cols)
-    d = defaultdict(list)
+    mapping = collections.defaultdict(list)
     for get_left, get_right in izip(left_getters, right_getters):
-        for x in master:
-            d[tsorted(totuple(get_left(x)))].append(tsorted(totuple(get_right(x))))
-    return sorted(set(tsorted(k + v[0]) for k, v in d.iteritems()))
+        for element in master:
+            mapping[tsorted(totuple(get_left(element)))].append(
+                tsorted(totuple(get_right(element))))
+    return sorted(set(tsorted(k + v[0]) for k, v in mapping.iteritems()))
 
 
 def lsh_bands(width, bandwidth):
-    """Generate indexes for non-overlapping LSH band selectors
+    """Generate indices for non-overlapping LSH band selectors
 
     :param width: expected signature length
     :type width: int
     :param bandwidth: band size
     :type bandwidth: int
-    :return: a sequence of tuples with elements representing indexes in
+    :return: a sequence of tuples with elements representing indices in
              signature vector
     :rtype: list
 
@@ -316,7 +343,7 @@ def lsh_bands(width, bandwidth):
 
 
 def create_sig_selectors(width, bandwidth, scheme):
-    """Generate indexes for LSH band selectors
+    """Generate indices for LSH band selectors
 
     :param width:
     :type width: int
@@ -347,22 +374,29 @@ def create_sig_selectors(width, bandwidth, scheme):
             bands = lsh_combinations(width, bandwidth, ramp)
         else:
             raise ValueError("ramp parameter cannot be negative")
-        indexes = range(len(bands))
+        indices = range(len(bands))
     elif scheme_code == "b":
         if ramp < 1:
             raise ValueError("for b-schemes, ramp value must be >= 1")
         bands = cntuplesx(width, bandwidth, ramp)
-        # indexes = list(chain(*[[x] * ramp for x in range(width / ramp)]))
-        indexes = range(len(bands))
+        # indices = list(chain(*[[x] * ramp for x in range(width / ramp)]))
+        indices = range(len(bands))
     else:
         raise ValueError("Invalid scheme")
-    LOG.info("Choosing LSH bands: " + ", ".join("{}: {}".format(index, band)
-                                                for index, band in izip(indexes, bands)))
-    return zip(indexes, create_getters(bands))
+    LOG.info("Choosing LSH bands: " + ", ".join("{}: {}".format(idx, band)
+                                                for idx, band in izip(indices, bands)))
+    return zip(indices, create_getters(bands))
 
 
 class Shingler(object):
-    def __init__(self, span=3, skip=0, unique=True, tokenizer=None, normalizer=None):
+
+    _algorithms = {
+        "standard": shinglify,  # standard algorithm
+        "sbph": mshinglify      # after "sparse binary polynomial hashing"
+    }
+
+    def __init__(self, span=3, skip=0, algorithm="standard", unique=True,
+                 tokenizer=None, normalizer=None):
         """
         :param span: How many words should a shingle span
         :type span: int
@@ -375,6 +409,8 @@ class Shingler(object):
         :param normalizer: instance of Normalizer class
         :type normalizer: Normalizer
         """
+        self._algorithm = algorithm
+        self._shinglify = self._algorithms[algorithm]
         self.span = span
         self.skip = skip
         self.unique = unique
@@ -385,7 +421,7 @@ class Shingler(object):
         """Return a vector of shingles from a source text
 
         :param input_text: Input sequence
-        :type input_text: collections.iterable
+        :type input_text: collections.Iterable
         :param prefix: an object to prepend to token sequence
         :type prefix: object
         :return: A set of shingles (tuples)
@@ -394,38 +430,36 @@ class Shingler(object):
         text = input_text \
             if self.normalizer is None \
             else self.normalizer.normalize(input_text)
-        it = text if self.tokenizer is None else self.tokenizer.tokenize(text)
-        final_it = it if prefix is None else chain((prefix,), it)
-        shingles = shinglify(final_it, self.span, skip=self.skip)
-        if self.unique:
-            return set(shingles)
-        else:
-            return list(shingles)
+        iterable = text if self.tokenizer is None else self.tokenizer.tokenize(text)
+        final_it = iterable if prefix is None else chain((prefix,), iterable)
+        shingles = self._shinglify(final_it, self.span, skip=self.skip)
+        result = set(shingles) if self.unique else list(shingles)
+        return result
 
 
-def jaccard_sim(x, y):
+def jaccard_sim(set1, set2):
     """Return Jaccard similarity between two sets
 
-    :param x: set 1
-    :type x: collections.iterable
-    :param y: set 2
-    :type y: collections.iterable
+    :param set1: set 1
+    :type set1: collections.Iterable
+    :param set2: set 2
+    :type set2: collections.Iterable
     :returns: Jaccard similarity of two sets
     :rtype: float
     :raises ZeroDivisionError:
     """
-    set_x = set(x) if type(x) != set else x
-    set_y = set(y) if type(y) != set else y
+    set_x = set(set1) if type(set1) != set else set1
+    set_y = set(set2) if type(set2) != set else set2
     return float(len(set_x & set_y)) / float(len(set_x | set_y))
 
 
 def get_bandwidth(n, threshold):
     """Approximates the bandwidth needed to achieve a threshold.
 
-    Threshold t = (1/b) ** (1/r) where
-    b = #bands
-    r = #rows per band
-    n = b * r = #elements in signature
+    Threshold t = (1/bands) ** (1/rows) where
+    bands = #bands
+    rows = #rows per band
+    n = bands * rows = #elements in signature
 
     :returns: number of rows per band
     :rtype: int
@@ -433,27 +467,27 @@ def get_bandwidth(n, threshold):
 
     best = n
     min_err = float("inf")
-    for r in range(1, n + 1):
+    for rows in range(1, n + 1):
         try:
-            b = 1. / (threshold ** r)
+            bands = 1. / (threshold ** rows)
         except ZeroDivisionError:
             return best
-        err = abs(n - b * r)
+        err = abs(n - bands * rows)
         if err < min_err:
-            best = r
+            best = rows
             min_err = err
     return best
 
 
-def get_threshold(r, b):
+def get_threshold(rows, bands):
     """Approximate threshold from bandwidth and number of rows
 
-    :param r: rows per band
-    :param b: number of bands
+    :param rows: rows per band
+    :param bands: number of bands
     :return: threshold value
     :rtype: float
     """
-    return (1. / b) ** (1. / r)
+    return (1. / bands) ** (1. / rows)
 
 
 class Signature(object):
@@ -466,10 +500,10 @@ class Signature(object):
         """
 
     @abstractmethod
-    def get_signature(self, obj):
-        """Return the signature for object
-        :param obj: object for which to return signature
-        :type obj: object
+    def get_signature(self, vec, with_sketch=False):
+        """Return the signature for vector
+        :param vec: vector for which to return signature
+        :type vec: collections.Iterable
         :rtype : list
         """
 
@@ -488,25 +522,79 @@ def extend(lst, k):
 
 
 class MinHashSignature(Signature):
-    """Creates signatures for sets/tuples using minhash."""
+    """Obtain minhash signature"""
 
     def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1, seed=0):
-        self.universe_size = universe_size
-        if type(kmin) != int:
-            raise TypeError("kmin must be an integer")
-        if kmin < 1:
-            raise ValueError("kmin must be >= 1")
         if width % kmin != 0:
             raise ValueError("width must be a multiple of kmin")
+        if type(kmin) != int:
+            raise TypeError("kmin must be an integer")
+        elif kmin > 1:
+            self._get_minhashes = self._get_minhashes_kmin1p
+        elif kmin == 1:
+            self._get_minhashes = self._get_minhashes_kmin1
+        else:
+            raise ValueError("kmin must be >= 1")
         self.width = width / kmin
-        self.lsh_hasher = lsh_hasher
         self.kmin = kmin
+
+        self.lsh_hasher = lsh_hasher
         self.seed = seed
+        self.universe_size = universe_size
+
+        self._sketch_getter = None
+        self._simhash_sketcher = None
+        self._sketch_weights = None
+
         self.hashes = self.create_hash_functions()
 
+    def configure_sketcher(self, sketch_type='minhash', sketch_size=None,
+                           sketch_base=1.414):
+
+        sketch_indices, sketch_classes = \
+            self.create_sketch_getter(sketch_size)
+        self._sketch_getter = itemgetter(*sketch_indices)
+        self._sketch_weights = \
+            self.sketch_weight_builder(sketch_base, sketch_classes)
+        if sketch_type == 'simhash':
+            self._simhash_sketcher = SimHashSignature(sketch_size)
+        elif sketch_type == 'minhash':
+            self._simhash_sketcher = None
+        else:
+            raise ValueError("Sketch type %s not supported" % sketch_type)
+
+    @staticmethod
+    def sketch_weight_builder(base, class_indices):
+        total = 0.0
+        base = float(base)
+        weight_map = dict()
+        unique_classes = sorted(set(class_indices))
+        for class_idx in unique_classes:
+            try:
+                weight = base ** -float(class_idx)
+            except ZeroDivisionError:
+                weight = 0.0
+            total += weight
+            weight_map[class_idx] = weight
+        normalized_weight_map = {class_idx: weight / total
+                                 for class_idx, weight
+                                 in weight_map.iteritems()}
+        normalized_weights = []
+        for class_idx in class_indices:
+            normalized_weights.append(normalized_weight_map[class_idx])
+        return normalized_weights
+
+    def create_sketch_getter(self, sketch_size):
+        """Wrapper around consistent_sampler to return itemgetter instance"""
+        if sketch_size is None:
+            sketch_size = self.width
+        pool_len = self.width * self.kmin
+        assert sketch_size <= pool_len
+        indices, classes = consistent_sampler(pool_len, self.kmin, sketch_size)
+        return indices, classes
+
     def create_hash_functions(self):
-        """Returns an array of length self.width consisting of
-        different hash functions
+        """Return a list of length self.width of different hash functions
 
         Note: hash() is not as uniform as haslib.md5. For more examples see
         See http://michaelnielsen.org/blog/consistent-hashing/
@@ -519,55 +607,79 @@ class MinHashSignature(Signature):
             lambda x: hash(repr(x))
 
         """
-
-        universe_size_ = self.universe_size
+        universe_size = self.universe_size
 
         def hash_factory(seed):
-            if universe_size_ is None:
+            if universe_size is None:
                 fun = lambda x: CityHash64WithSeed(repr(x), seed)
             else:
-                fun = lambda x: CityHash64WithSeed(repr(x), seed) % universe_size_
+                fun = lambda x: CityHash64WithSeed(repr(x), seed) % universe_size
             return fun
 
-        return map(hash_factory, [xor(self.seed, i) for i in range(self.width)])
+        # draw a sample of unique random integers from pool of [0, sys.maxint]
+        random.seed(self.seed)
+        seeds = random.sample(xrange(sys.maxint), self.width)
+        return map(hash_factory, seeds)
 
-    def _get_minhashes(self, s):
+    def _get_minhashes_kmin1p(self, vec):
         """Returns minhash signature from a feature vector
-
         :returns: a signature vector
         :rtype : list
         """
         kmin = self.kmin
-        if kmin > 1:
-            # Choose k smallest hashes
-            if len(s) > 0:
-                sig_fun = lambda f: extend(nsmallest(kmin, imap(f, s)), kmin)
-            else:
-                # support empty sets by treating them as empty strings
-                sig_fun = lambda f: extend([f("")], kmin)
-            result = sum(imap(sig_fun, self.hashes), [])
+        # Choose k smallest hashes
+        if len(vec) > 0:
+            sig_fun = lambda f: extend(nsmallest(kmin, imap(f, vec)), kmin)
         else:
-            # Choose one minimal hash
-            if len(s) > 0:
-                sig_fun = lambda f: min(imap(f, s))
-            else:
-                # support empty sets by treating them as empty strings
-                sig_fun = lambda f: f("")
-            result = map(sig_fun, self.hashes)
-        return result
+            # support empty sets by treating them as empty strings
+            sig_fun = lambda f: extend([f("")], kmin)
 
-    def get_signature(self, s):
+        # flatten list of lists
+        return sum(imap(sig_fun, self.hashes), [])
+
+    def _get_minhashes_kmin1(self, vec):
+        """Returns minhash signature from a feature vector
+        :returns: a signature vector
+        :rtype : list
+        """
+        # Choose one minimal hash
+        if len(vec) > 0:
+            sig_fun = lambda f: min(imap(f, vec))
+        else:
+            # support empty sets by treating them as empty strings
+            sig_fun = lambda f: f("")
+        return map(sig_fun, self.hashes)
+
+    @staticmethod
+    def _minhash_sketch(minhash_sample):
+        bits = (1 & minhash for minhash in minhash_sample)
+        sketch = sum(1 << idx for idx, bit in enumerate(bits) if bit > 0)
+        return sketch
+
+    def get_signature(self, vec, with_sketch=False):
         """Returns minhash signature from a feature vector (with optional LSH)
 
         :returns: a signature vector
         :rtype : list
         """
-        gen = self._get_minhashes(s)
+        minhashes = list(self._get_minhashes(vec))
         lsh = self.lsh_hasher
         if lsh is None:
-            return ["{}:{}".format(i, num) for i, num in enumerate(gen)]
+            sig_vector = ["{}:{}".format(idx, minhash)
+                          for idx, minhash in enumerate(minhashes)]
         else:
-            return list(lsh.hash(gen))
+            sig_vector = list(lsh.hash(minhashes))
+
+        if with_sketch:
+            minhash_sample = self._sketch_getter(minhashes)
+            if self._simhash_sketcher is not None:
+                sketch = self._simhash_sketcher._sig_with_weights(
+                    minhash_sample, self._sketch_weights)
+            else:
+                sketch = self._minhash_sketch(minhash_sample)
+            return sig_vector, sketch
+        else:
+            return sig_vector
 
     def get_threshold(self):
         """
@@ -582,16 +694,56 @@ class MinHashSignature(Signature):
 class MinHashSketchSignature(MinHashSignature):
 
     def __init__(self, width=64, universe_size=None, kmin=1, seed=0):
-        MinHashSignature.__init__(self, width,
-                                  universe_size=universe_size,
-                                  kmin=kmin)
+        MinHashSignature.__init__(self, width, universe_size=universe_size,
+                                  kmin=kmin, seed=seed)
         self._actual_width = width
-        self.seed = seed
+        self.configure_sketcher(sketch_type='minhash', sketch_size=width)
 
     def get_signature(self, tokens, *features):
-        result = self._get_minhashes(tokens, *features)
-        bits = [1 & i for i in result]
-        return sum(1 << i for i in xrange(self._actual_width) if bits[i] > 0)
+        minhashes = list(self._get_minhashes(tokens))
+        minhash_sample = self._sketch_getter(minhashes)
+        return self._minhash_sketch(minhash_sample)
+
+
+def hash_combine(seed, val):
+    """Combine seed with hash value
+    """
+    return seed ^ (val + 0x9e3779b9 + (seed << 6) + (seed >> 2))
+
+
+def create_varlen_hash(scale=sys.maxint):
+    """Create a hash function of arbitrary output length
+    :param scale: integer or long indicating roughly how large should the
+                  hashe values be
+    :type scale: int,long
+
+    Note: the return value of this function increases as the length of the
+    text to be hashed increases. So the fuction has terrible distribution
+    properties.
+    """
+    def _hash_fun_long(item, seed=0):
+        """A variable-length version of Python's builtin hash"""
+        type_of_x = type(item)
+        if type_of_x == str:
+            value = item
+        elif type_of_x == unicode:
+            value = item.encode("utf-8")
+        else:
+            value = repr(item)
+        length_of_v = len(value)
+        if length_of_v > 0:
+            item = ord(value[0]) << 7
+            m = 1000003
+            mask = scale - 1
+            for char in value:
+                item = ((item * m) ^ ord(char)) & mask
+            item ^= length_of_v
+            if item == -1:
+                item = -2
+            return hash_combine(item, seed)
+        else:
+            return 0
+    return _hash_fun_long
 
 
 class SimHashSignature(Signature):
@@ -608,103 +760,84 @@ class SimHashSignature(Signature):
         elif bit_depth <= 128:
             self.hash_fun = self._hash_fun_128
         else:
-            self.hash_fun = self._hash_fun_long
+            self.hash_fun = create_varlen_hash(bit_depth)
 
     def create_hash_functions(self):
         raise NotImplementedError
 
     @staticmethod
-    def _hash_fun_64(x, mod_base, seed=0):
-        type_of_x = type(x)
+    def _hash_fun_64(item, seed=0):
+        type_of_x = type(item)
         if type_of_x == str:
-            v = x
+            value = item
         elif type_of_x == unicode:
-            v = x.encode("utf-8")
+            value = item.encode("utf-8")
         else:
-            v = repr(x)
-        return CityHash64WithSeed(v, seed) % mod_base
+            value = repr(item)
+        return CityHash64WithSeed(value, seed)
 
     @staticmethod
-    def _hash_fun_128(x, mod_base, seed=0):
-        type_of_x = type(x)
+    def _hash_fun_128(item, seed=0):
+        type_of_x = type(item)
         if type_of_x == str:
-            v = x
+            value = item
         elif type_of_x == unicode:
-            v = x.encode("utf-8")
+            value = item.encode("utf-8")
         else:
-            v = repr(x)
-        a, b = CityHash128WithSeed(v, (seed, seed))
-        return ((1 << 64) * a + b) % mod_base
-
-    @staticmethod
-    def _hash_fun_long(x, mod_base, seed=0):
-        """A variable-length version of Python's builtin hash"""
-        type_of_x = type(x)
-        v = x if type_of_x == str or type_of_x == unicode else repr(x)
-        length_of_v = len(v)
-        if length_of_v > 0:
-            x = ord(v[0]) << 7
-            m = 1000003
-            mask = mod_base - 1
-            for c in v:
-                x = ((x * m) ^ ord(c)) & mask
-            x ^= length_of_v
-            if x == -1:
-                x = -2
-            return x
-        else:
-            return 0
+            value = repr(item)
+        part_a, part_b = CityHash128WithSeed(value, (seed, seed))
+        return (1 << 64) * part_a + part_b
 
     def get_signature(self, tokens, *features):
         """Returns weighted SimHash signature of a word vector
         and of (optional) feature vectors
 
         :param tokens: vector of length-weighted tokens
-        :type tokens: collections.iterable
-        :param features: custom-weighted tokens -- a collection of tuples
-            where each tuple consists of a) a feature and b) its raw
-            weight with range (-1, +inf)
-        :type features: collections.iterable
+        :type tokens: collections.Iterable
+        :param features: custom-weighted tokens -- a collection of tuples where
+                         each tuple consists of a) a feature and b) its raw
+                         weight with range (-1, +inf)
+        :type features: collections.Iterable
         :return: SimHash signature
         :rtype: long
         :raises: OverflowError
         """
+        hash_fun = self.hash_fun
+        seed = self.seed
+        token_weights = (log1p(sum(imap(len, token))) for token in tokens)
+        if features:
+            features, feature_weights = izip(*features)
+            fin_features = (hash_fun(feature, seed)
+                            for feature in chain(tokens, features))
+            fin_weights = chain(token_weights, feature_weights)
+        else:
+            fin_features = (hash_fun(feature, seed) for feature in tokens)
+            fin_weights = token_weights
+        return self._sig_with_weights(fin_features, fin_weights)
+
+    def _sig_with_weights(self, hashed_features, feature_weights):
+        """SimHash signature from a list of hashes and corresponding weights
+        :param hashed_features: an iterable of hashed features
+        :type hashed_features: collections.Iterable
+        :param feature_weights: an iterable of weights (a weight can have
+                                weight in range of (-1.0, +inf), with zero
+                                meaning feature not considered)
+        :type feature_weights: collections.Iterable
+        """
         bits = self.bits
         bit_depth = len(bits)
         mod_base = 1 << bit_depth
-        v = [0] * bit_depth
-
-        # iterate over word n-grams
-        for token in tokens:
-            # this assigns weight of >= 1.0 to zero-length tokens:
-            self._ash(bits, v, 1.0 + log1p(sum(imap(len, token))),
-                      self.hash_fun(token, mod_base, self.seed))
-
-        # iterate over features
-        for feature, weight in features:
-            # unlike shingles, computed feature weight should be zero if we
-            # set input weight to zero
-            self._ash(bits, v, log1p(weight),
-                      self.hash_fun(feature, mod_base, self.seed))
-
-        return sum(1 << i for i in bits if v[i] > 0)
-
-    @staticmethod
-    def _ash(bits, v, nw, h):
-        for i in bits:
-            if h & (1 << i):
-                v[i] += nw
-            else:
-                v[i] -= nw
-
-    def average(self, hashes):
-        """Find unweighted average of multiple signatures"""
-        bits = self.bits
-        bit_depth = len(bits)
-        v = [0] * bit_depth
-        for h in hashes:
-            self._ash(bits, v, 1, h)
-        return sum(1 << i for i in bits if v[i] > 0)
+        vec = [0] * bit_depth
+        for feature, weight in izip(hashed_features, feature_weights):
+            scaled_weight = log1p(weight)
+            mod_feature = feature % mod_base
+            # TODO: rewrite in Cython
+            for i in bits:
+                if mod_feature & (1 << i):
+                    vec[i] += scaled_weight
+                else:
+                    vec[i] -= scaled_weight
+        return sum(1 << i for i in bits if vec[i] > 0)
 
 
 class LSHC(object):
@@ -730,9 +863,9 @@ class LSHC(object):
         """Get combinatorial sketches from a signature
 
         :param sig: signature to process
-        :type sig: collections.iterable
+        :type sig: collections.Iterable
         :return: 64-bit hash digest
-        :rtype: collections.iterable
+        :rtype: collections.Iterable
 
         Note: we use XOR-ing because it seems to be the fastest way to combine
         hashes, but we could also use CityHash64 or even the poorly distributed

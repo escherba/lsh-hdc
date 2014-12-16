@@ -11,6 +11,10 @@ from logging import getLogger
 
 LOG = getLogger(__name__)
 
+OPERATOR_MAP = {
+    'and': operator.__and__,
+    'or': operator.__or__
+}
 
 class Cluster(object):
     """Clusters sets with Jaccard similarity above threshold with high
@@ -180,23 +184,27 @@ class HDClustering(object):
             except AttributeError:
                 raise RuntimeError("Unknown sketch model specified: '%s'"
                                    % algorithm_name)
-            self.sketch_bits = cfg_sketch['size'] * 8
-            cfg_sketch_shingle = cfg_sketch['shingler']
-            cfg_sketch_shingle.update(opts)
-            self.sketch_shingler = Shingler(**cfg_sketch_shingle)
-            if sketch_algorithm == SketchModel.simhash:
-                self.sketch_signer = \
-                    SimHashSignature(bit_depth=self.sketch_bits, seed=seed)
+            self.sketch_bits = cfg_sketch['size']
+            cfg_sketch_shingler = cfg_sketch['shingler']
+            cfg_sketch_shingler.update(opts)
+            if not cfg_sketch_shingler['enabled']:
+                # if sketch shingler is disabled, we also disable signer
+                # as we will use default signer
+                self.sketch_shingler = None
+                self.sketch_signer = None
+            elif sketch_algorithm == SketchModel.simhash:
+                del cfg_sketch_shingler['enabled']
+                self.sketch_shingler = Shingler(**cfg_sketch_shingler)
+                self.sketch_signer = SimHashSignature(self.sketch_bits, seed=seed)
             elif sketch_algorithm == SketchModel.minhash:
-                self.sketch_signer = MinHashSketchSignature(self.sketch_bits,
-                                                            seed=seed)
+                del cfg_sketch_shingler['enabled']
+                self.sketch_shingler = Shingler(**cfg_sketch_shingler)
+                self.sketch_signer = MinHashSketchSignature(self.sketch_bits, seed=seed)
             self.max_dist = \
                 int(floor(self.sketch_bits *
                           (1.0 - float(cfg_sketch['resemblance']))))
             self.sketch_dist_fn = hamming
-            self.sketch_operator = operator.__and__ \
-                if cfg_sketch.get('operator', 'and') == 'and' \
-                else operator.__or__
+            self.sketch_operator = OPERATOR_MAP[cfg_sketch.get('operator', 'and')]
         self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
                                        max_dist=self.max_dist,
                                        min_support=self.min_support,
@@ -223,11 +231,14 @@ class HDClustering(object):
         if self.content_filter is None or \
                 not self.content_filter.accept(obj):
             features = self.shingler.get_shingles(body, prefix=prefix)
-            keys = self.signer.get_signature(features)
-            if self.sketch_enabled:
+            if self.sketch_enabled and (self.sketch_shingler is None or self.sketch_signer is None):
+                keys, sketch = self.signer.get_signature(features, with_sketch=True)
+            elif self.sketch_enabled and (self.sketch_shingler is not None and self.sketch_signer is not None):
+                keys = self.signer.get_signature(features)
                 sketch_features = self.sketch_shingler.get_shingles(body)
                 sketch = self.sketch_signer.get_signature(sketch_features)
             else:
+                keys = self.signer.get_signature(features)
                 sketch = None
             yield (keys, (label, sketch))
 
