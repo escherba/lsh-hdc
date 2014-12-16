@@ -32,9 +32,7 @@ class TestFiles(unittest.TestCase):
             s.add_features(name, shingles)
             cluster.add_item(shingles, name)
         clusters = cluster.get_clusters()
-        ti = s.summarize_clusters(clusters)
-        self.assertEqual(len(clusters), 254)
-        self.assertAlmostEqual(ti, 0.97547297672548)
+        self.assertEqual(len(clusters), 209)
 
     def test_names_kmin(self):
         """Should return 252 clusters of names.
@@ -51,9 +49,7 @@ class TestFiles(unittest.TestCase):
         clusters = cluster.get_clusters()
         # for cluster in clusters:
         #     print cluster
-        ti = s.summarize_clusters(clusters)
-        self.assertEqual(len(clusters), 314)
-        self.assertAlmostEqual(ti, 0.9842463414730864)
+        self.assertEqual(len(clusters), 345)
 
     def test_names_kmin_scheme(self):
         """Should return 145 clusters of names.
@@ -71,9 +67,7 @@ class TestFiles(unittest.TestCase):
         clusters = cluster.get_clusters()
         # for cluster in clusters:
         #     print cluster
-        ti = s.summarize_clusters(clusters)
-        self.assertEqual(len(clusters), 215)
-        self.assertAlmostEqual(ti, 0.9696647441240106)
+        self.assertEqual(len(clusters), 176)
 
     def test_bills(self):
         """Should return 97 clusters of bills.
@@ -88,9 +82,7 @@ class TestFiles(unittest.TestCase):
             s.add_features(label, shingles)
             cluster.add_item(shingles, label)
         clusters = cluster.get_clusters()
-        ti = s.summarize_clusters(clusters)
-        self.assertEqual(len(clusters), 96)
-        self.assertAlmostEqual(ti, 0.9999550989193674)
+        self.assertEqual(len(clusters), 97)
 
     @staticmethod
     def run_simulated_manually(filepath, lines_to_read=sys.maxint,
@@ -125,7 +117,6 @@ class TestFiles(unittest.TestCase):
             cluster_args=dict(width=30, bandwidth=3, lsh_scheme="a0",
                               seed=SEED))
         c = results['stats']
-        ti = results['uindex']
         recall = c.get_recall()
         precision = c.get_precision()
         self.assertGreaterEqual(recall, 0.499)
@@ -136,7 +127,6 @@ class TestFiles(unittest.TestCase):
                 precision=precision,
                 recall=recall
             ),
-            ti=ti
         ))
 
     def test_simulated_b(self):
@@ -145,7 +135,6 @@ class TestFiles(unittest.TestCase):
             cluster_args=dict(width=15, bandwidth=3, lsh_scheme="b3",
                               kmin=3, seed=SEED))
         c = results['stats']
-        ti = results['uindex']
         recall = c.get_recall()
         precision = c.get_precision()
         self.assertGreaterEqual(recall, 0.465)
@@ -156,7 +145,6 @@ class TestFiles(unittest.TestCase):
                 precision=precision,
                 recall=recall
             ),
-            ti=ti
         ))
 
     def test_simulated_hd(self):

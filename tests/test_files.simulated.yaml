@@ -17,6 +17,7 @@ model:
     size: 2  # Length of sketch vector, in bytes
     resemblance: 0.50  # Minimum Hamming similarity of bit vectors (set to zero to remove this constraint)
     shingler:
+      enabled: true
       span: 2       # Length of shingles (in words)
       skip: 0       # How many words to skip
       unique: true  # Discard duplicates
