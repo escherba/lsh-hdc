@@ -81,7 +81,7 @@ def shinglify(iterable, span, skip=0):
     [('a', 'c')]
 
     """
-    tokens = list(iterable)
+    tokens = iterable if isinstance(iterable, list) else list(iterable)
     if len(tokens) >= span:
         return izip(*nskip(skip, (tokens[i:] for i in xrange(span))))
     else:
@@ -112,7 +112,7 @@ def mshinglify(iterable, span, skip=0):
     if skip > 1:
         raise NotImplementedError("Cannot use skip > 1 with SBPH")
 
-    tokens = list(iterable)
+    tokens = iterable if isinstance(iterable, list) else list(iterable)
 
     # range of indices where masking is allowed
     mask = range(1, min(len(tokens), span - skip))
@@ -312,7 +312,7 @@ class Shingler(object):
         self._skip = skip
         self._kmin = kmin
         self._unique = unique
-        self._tokenizer = tokenizer
+        self._tokenize = list if tokenizer is None else tokenizer.tokenize
         self._normalizer = normalizer
 
     def get_shingles(self, input_text, prefix=None):
@@ -329,10 +329,7 @@ class Shingler(object):
         text = input_text \
             if normalizer is None \
             else normalizer.normalize(input_text)
-        tokenizer = self._tokenizer
-        tokens = list(text) \
-            if tokenizer is None \
-            else list(tokenizer.tokenize(text))
+        tokens = self._tokenize(text)
         span = self._span
         unique = self._unique
         kmin = self._kmin
@@ -575,7 +572,7 @@ class MinHashSignature(Signature):
         :returns: a signature vector
         :rtype : list
         """
-        minhashes = list(self._get_minhashes(vec))
+        minhashes = self._get_minhashes(vec)
         lsh = self.lsh_hasher
         if lsh is None:
             sig_vector = ["{}:{}".format(idx, minhash)
@@ -613,7 +610,7 @@ class MinHashSketchSignature(MinHashSignature):
         self.configure_sketcher(sketch_type='minhash', sketch_size=width)
 
     def get_signature(self, tokens, *features):
-        minhashes = list(self._get_minhashes(tokens))
+        minhashes = self._get_minhashes(tokens)
         minhash_sample = self._sketch_getter(minhashes)
         return self._minhash_sketch(minhash_sample)
 
