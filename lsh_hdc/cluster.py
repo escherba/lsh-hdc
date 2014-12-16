@@ -209,8 +209,10 @@ class HDClustering(object):
                 del cfg_sketch_shingler['enabled']
                 self.sketch_shingler = Shingler(**cfg_sketch_shingler)
                 self.sketch_signer = MinHashSketchSignature(self.sketch_bits, seed=seed)
+
             self.sketch_shingler._tokenizer = None
             self.sketch_shingler._normalizer = None
+
             self.max_dist = \
                 int(floor(self.sketch_bits *
                           (1.0 - float(cfg_sketch['resemblance']))))
