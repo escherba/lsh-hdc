@@ -8,7 +8,7 @@ EXTRAS_REQS := $(wildcard requirements-*.txt)
 include domino.mk
 
 package: env
-	$(PYTHON) setup.py bdist_wheel
+	$(PYTHON) setup.py bdist_egg
 	$(PYTHON) setup.py sdist
 
 test: dev
@@ -32,7 +32,6 @@ nuke: clean
 env virtualenv: env/bin/activate
 env/bin/activate: requirements.txt setup.py
 	test -f env/bin/activate || virtualenv --no-site-packages env
-	$(PYENV) pip install -U wheel
 	$(PYENV) pip install -U setuptools
 	$(PYENV) pip install -e . -r requirements.txt
 	touch env/bin/activate
