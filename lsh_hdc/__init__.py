@@ -757,6 +757,7 @@ class HashCombiner(object):
         self._mod = mod
 
     def combine(self, hashes):
+        # TODO: Cythonize this?
         return sum(hsh * coeff for hsh, coeff in izip(hashes, self._coeffs)) \
             % self._mod
 
