@@ -757,6 +757,7 @@ class HashCombiner(object):
         self._mod = mod
 
     def combine(self, hashes):
+        # TODO: Cythonize this?
         return sum(hsh * coeff for hsh, coeff in izip(hashes, self._coeffs)) \
             % self._mod
 
@@ -798,8 +799,6 @@ class LSHC(object):
 
         """
         list_sig = sig if isinstance(sig, list) else list(sig)
-        hash_combiner = self.combiner
+        hash_combine = self.combiner.combine
         for prefix, selector in self.selectors:
-            band = selector(list_sig)
-            lsh_sig = hash_combiner.combine(band)
-            yield '{}:{}'.format(prefix, lsh_sig)
+            yield '{}:{}'.format(prefix, hash_combine(selector(list_sig)))
