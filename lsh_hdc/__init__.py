@@ -15,6 +15,7 @@ from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from abc import abstractmethod
 from pymaptools.iter import cycle, take, nskip
+from pymaptools.utils import isiterable
 from cityhash import CityHash64, CityHash64WithSeed, CityHash128WithSeed
 from lsh_hdc.utils import totuple, tsorted
 
@@ -329,7 +330,7 @@ class Shingler(object):
         text = input_text \
             if normalizer is None \
             else normalizer.normalize(input_text)
-        tokens = self._tokenize(text)
+        tokens = text if isiterable(text) else self._tokenize(text)
         span = self._span
         unique = self._unique
         kmin = self._kmin

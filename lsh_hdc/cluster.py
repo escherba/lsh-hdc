@@ -5,7 +5,7 @@ from pymaptools.bitwise import hamming
 from itertools import imap
 from collections import defaultdict, Counter
 from math import floor
-
+from lflearn.content import MessageSource
 from lflearn.preprocess import HTMLNormalizer, RegexTokenizer
 from lsh_hdc import Shingler, SimHashSignature, \
     MinHashSketchSignature, MinHashSignature, LSHC
@@ -241,12 +241,13 @@ class HDClustering(object):
     def _map_item(self, obj, body, label, prefix=None):
 
         # Extract features
+        src = MessageSource.source(obj)
         obj_content = obj['content']
         normalized_content, meta = self.normalizer.normalize(obj_content)
         content_tokens = self.tokenizer.tokenize(normalized_content)
 
         if self.content_filter is None or \
-                not self.content_filter.accept(obj, content_tokens=content_tokens, urls=meta['urls']):
+                not self.content_filter.accept(obj, content_tokens=content_tokens, urls=meta.get('urls', []), src=src):
             features = self.shingler.get_shingles(content_tokens, prefix=prefix)
             if self.sketch_enabled and (self.sketch_shingler is None or self.sketch_signer is None):
                 keys, sketch = self.signer.get_signature(features, with_sketch=True)
