@@ -1,8 +1,9 @@
 *.py[cod]
 *.sw[op]
 
-# C extensions
+# C extensions and Cython
 *.so
+cythonize.dat
 
 # Packages
 *.egg

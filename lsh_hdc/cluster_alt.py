@@ -1,14 +1,10 @@
 import operator
-from functools import partial
 from pymaptools import UnionFind
-from pymaptools.bitwise import hamming
 from itertools import imap
 from collections import defaultdict, Counter
-from math import floor
 from lflearn.content import MessageSource
 from lflearn.preprocess import HTMLNormalizer, RegexTokenizer, URLNormalizer
-from lsh_hdc import Shingler, SimHashSignature, MinHashSketchSignature, \
-    MinHashSignature, LSHC
+from lsh_hdc import Shingler, MinHashSignature, LSHC
 from logging import getLogger
 
 LOG = getLogger(__name__)
@@ -28,30 +24,15 @@ class Cluster(object):
     2. Use LSH to map similar signatures to same buckets
     3. Use UnionFind to merge buckets containing same values
     """
-    def __init__(self, signer=None, sketch_dist_fn=None, max_dist=0,
-                 min_support=1, sketch_operator=operator.__and__,
-                 sketch_bits=0):
+    def __init__(self, signer=None, min_support=2):
         self.union_find = UnionFind()
         self.signer = signer
         self.buckets = defaultdict(dict)
-        self.sketch_dist_fn = sketch_dist_fn
-        self.sketch_bits = sketch_bits
-        self.max_dist = max_dist
         self.min_support = min_support
-        self.sketch_operator = sketch_operator
 
-    def _closeness_measure(self, sketch):
+    def _closeness_measure(self, sketch=None):
         min_support = self.min_support
-        if sketch is None:
-            return lambda support, sketch: \
-                support >= min_support
-        else:
-            logical_op = self.sketch_operator
-            max_dist = self.max_dist
-            distance_from = partial(self.sketch_dist_fn, sketch)
-            return lambda support, matched_sketch: \
-                logical_op(support >= min_support,
-                           distance_from(matched_sketch) <= max_dist)
+        return lambda support, sketch: support >= min_support
 
     def add_item(self, item, label=None, sketch=None):
         # Set default label for this set
@@ -75,7 +56,7 @@ class Cluster(object):
             counter.update(bucket.keys())
             sketches.update(bucket)
 
-        is_close = self._closeness_measure(sketch)
+        is_close = self._closeness_measure()
         for matched_label, support in counter.iteritems():
             if matched_label != label and \
                     is_close(support, sketches[matched_label]):
@@ -97,7 +78,7 @@ class Cluster(object):
         bucket = self.buckets[key]
         bucket[label] = sketch
 
-        is_close = self._closeness_measure(sketch)
+        is_close = self._closeness_measure()
         for matched_label in bucket.keys():
             if matched_label != label:
                 matched_sketch = bucket[matched_label]
@@ -140,12 +121,6 @@ class MinHashCluster(Cluster):
         super(MinHashCluster, self).__init__(signer=signer)
 
 
-class SketchModel(object):
-    """A pseudo-enum of supported models"""
-    simhash = 0
-    minhash = 1
-
-
 def get_default_normalizer(**opts):
     normalizer = HTMLNormalizer(**opts)
     normalizer.url_normalizer = URLNormalizer()
@@ -166,8 +141,8 @@ def get_default_shingler(**opts):
 class HDClustering(object):
 
     def __init__(self, cfg, content_filter=None, trace_every=0,
-                 get_body=None, get_label=None, get_prefix=None, min_support=None,
-                 seed=0, normalizer=None, tokenizer=None):
+                 get_body=None, get_label=None, get_prefix=None, seed=None,
+                 min_support=None, normalizer=None, tokenizer=None):
 
         """Read configuration"""
         self.cfg = cfg
@@ -179,7 +154,9 @@ class HDClustering(object):
 
         # Set options
         self.content_filter = content_filter
-        self.min_support = cfg['min_support'] if min_support is None else min_support
+        self.random_state = cfg['random_state'] if seed is None else seed
+        cfg_signer = cfg['signer']
+        self.min_support = cfg_signer['min_support'] if min_support is None else min_support
 
         # normalizer and tokenizer
         self.normalizer = get_default_normalizer(
@@ -188,56 +165,21 @@ class HDClustering(object):
         self.tokenizer = get_default_tokenizer() if tokenizer is None else tokenizer
 
         # Configure minhash signer
-        sig_width = cfg['sig_width']
-        lsh_hasher = LSHC(width=sig_width, **cfg['lsh_options'])
+        sig_width = cfg_signer['width']
+        lsh_hasher = LSHC(width=sig_width, seed=self.random_state, **cfg_signer['lsh'])
         self.signer = MinHashSignature(sig_width,
                                        lsh_hasher=lsh_hasher,
-                                       kmin=cfg['kmin'])
+                                       universe_size=cfg_signer['universe_size'],
+                                       kmin=cfg_signer['kmin'],
+                                       seed=self.random_state)
 
         # Configure shingler
         cfg_key_shingle = cfg['shingler']
         self.shingler = get_default_shingler(**cfg_key_shingle)
 
         # Configure sketch comparison algorithm
-        cfg_sketch = cfg['sketch']
-        self.sketch_enabled = cfg_sketch['enabled']
-        self.sketch_dist_fn = None
-        self.max_dist = None
-        if self.sketch_enabled:
-            algorithm_name = cfg_sketch['algorithm']
-            try:
-                sketch_algorithm = getattr(SketchModel, algorithm_name)
-            except AttributeError:
-                raise RuntimeError("Unknown sketch model specified: '%s'"
-                                   % algorithm_name)
-            self.sketch_bits = cfg_sketch['size']
-            cfg_sketch_shingler = cfg_sketch['shingler']
-            if not cfg_sketch_shingler['enabled']:
-                # if sketch shingler is disabled, we also disable signer
-                # as we will use default signer
-                self.sketch_shingler = None
-                self.sketch_signer = None
-            elif sketch_algorithm == SketchModel.simhash:
-                del cfg_sketch_shingler['enabled']
-                self.sketch_shingler = Shingler(**cfg_sketch_shingler)
-                self.sketch_signer = SimHashSignature(self.sketch_bits, seed=seed)
-            elif sketch_algorithm == SketchModel.minhash:
-                del cfg_sketch_shingler['enabled']
-                self.sketch_shingler = Shingler(**cfg_sketch_shingler)
-                self.sketch_signer = MinHashSketchSignature(self.sketch_bits, seed=seed)
-
-            self.sketch_shingler._tokenizer = None
-            self.sketch_shingler._normalizer = None
-
-            self.max_dist = \
-                int(floor(self.sketch_bits *
-                          (1.0 - float(cfg_sketch['resemblance']))))
-            self.sketch_dist_fn = hamming
-            self.sketch_operator = OPERATOR_MAP[cfg_sketch.get('operator', 'and')]
-        self.cluster_builder = Cluster(sketch_dist_fn=self.sketch_dist_fn,
-                                       max_dist=self.max_dist,
-                                       min_support=self.min_support,
-                                       sketch_operator=self.sketch_operator)
+        self.sketch_enabled = False
+        self.cluster_builder = Cluster(min_support=self.min_support)
 
     def _map_iter(self, data):
         """Find clusters in an iterable"""
@@ -269,15 +211,8 @@ class HDClustering(object):
             rule_accept = False
         if not rule_accept:
             features = self.shingler.get_shingles(content_tokens, prefix=prefix)
-            if self.sketch_enabled and (self.sketch_shingler is None or self.sketch_signer is None):
-                keys, sketch = self.signer.get_signature(features, with_sketch=True)
-            elif self.sketch_enabled and (self.sketch_shingler is not None and self.sketch_signer is not None):
-                keys = self.signer.get_signature(features)
-                sketch_features = self.sketch_shingler.get_shingles(content_tokens)
-                sketch = self.sketch_signer.get_signature(sketch_features)
-            else:
-                keys = self.signer.get_signature(features)
-                sketch = None
+            keys = self.signer.get_signature(features)
+            sketch = None
             yield (keys, (label, sketch))
 
     def clusters_from_iter(self, data):
@@ -321,8 +256,4 @@ class HDClustering(object):
         """
 
         # If not using sketches, we are done
-        if self.sketch_dist_fn is None:
-            return key, list(set(tuple_gen))
-
-        # create a dict mappipng a label to a sketch
-        return key, dict(tuple_gen).items()
+        return key, list(set(tuple_gen))

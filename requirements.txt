@@ -1,3 +1,2 @@
---find-links http://packages.livefyre.com/buildout/packages/
 cityhash==0.0.3
-pymaptools>=0.0.12
+pymaptools>=0.1.6
