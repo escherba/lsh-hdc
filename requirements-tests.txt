@@ -1,10 +1,8 @@
---find-links http://packages.livefyre.com/buildout/packages/
 nose
 coverage
 nosexcover
 mock
 PyYAML>=3.10
-mrdomino>=0.1.1
 lflearn>=0.0.14
 ipdb>=0.8
 ipython>=2.2.0

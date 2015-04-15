@@ -1,37 +1,49 @@
-.PHONY: clean virtualenv upgrade test package dev
+.PHONY: clean coverage develop env extras package release test virtualenv
 
 PYENV = . env/bin/activate;
 PYTHON = $(PYENV) python
-CUSTOM_PKG_REPO=http://packages.livefyre.com/buildout/packages/
 EXTRAS_REQS := $(wildcard requirements-*.txt)
-
-include domino.mk
+DISTRIBUTE = sdist bdist_wheel
 
 package: env
-	$(PYTHON) setup.py bdist_egg
-	$(PYTHON) setup.py sdist
+	$(PYTHON) setup.py $(DISTRIBUTE)
 
-test: dev
-	$(PYTHON) `which nosetests` $(NOSEARGS)
+release: env
+	$(PYTHON) setup.py $(DISTRIBUTE) upload -r livefyre
 
-dev: env/make.dev
-env/make.dev: $(EXTRAS_REQS) | env
+# if in local dev on Mac, `make coverage` will run tests and open
+# coverage report in the browser
+ifeq ($(shell uname -s), Darwin)
+coverage: test
+	open cover/index.html
+endif
+
+test: extras
+	$(PYENV) nosetests $(NOSEARGS)
+	$(PYENV) py.test README.rst
+
+extras: env/make.extras
+env/make.extras: $(EXTRAS_REQS) | env
 	rm -rf env/build
 	$(PYENV) for req in $?; do pip install -r $$req; done
 	touch $@
 
-clean:
-	python setup.py clean
-	rm -rf build dist
-	rm -rf tmp/* out/*
-	find . -type f -name "*.pyc" -exec rm {} \;
-
 nuke: clean
 	rm -rf *.egg *.egg-info env bin cover coverage.xml nosetests.xml
 
+clean:
+	python setup.py clean
+	rm -rf dist build
+	find . -path ./env -prune -o -type f -name "*.pyc" -exec rm {} \;
+
+develop:
+	@echo "Installing for " `which pip`
+	pip uninstall $(PYMODULE) || true
+	python setup.py develop
+
 env virtualenv: env/bin/activate
 env/bin/activate: requirements.txt setup.py
-	test -f env/bin/activate || virtualenv --no-site-packages env
-	$(PYENV) pip install -U setuptools
-	$(PYENV) pip install -e . -r requirements.txt
-	touch env/bin/activate
+	test -f $@ || virtualenv --no-site-packages env
+	$(PYENV) pip install -U pip wheel
+	$(PYENV) pip install -e . -r $<
+	touch $@
