@@ -1,2 +1,2 @@
-cityhash==0.0.3
-pymaptools>=0.1.6
+git+https://github.com/escherba/cityhash#egg=cityhash-0.0.3
+git+https://github.com/escherba/pymaptools#egg=pymaptools-0.1.15
