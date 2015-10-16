@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-
 import random
+import sys
 import string
 import argparse
 from itertools import chain, izip, repeat, islice
@@ -197,9 +196,15 @@ def do_simulation(args):
         print i, seq
 
 
+def load_simulation(args):
+    for line in args.input:
+        label, text = line.split(" ")
+        yield (label, text.strip())
+
+
 def do_run_test(args):
-    data = get_simulation(args)
-    print len(get_clusters(args, data))
+    for cluster in get_clusters(args, load_simulation(args)):
+        print cluster
 
 
 if __name__ == '__main__':
@@ -226,6 +231,8 @@ if __name__ == '__main__':
 
         subparsers = p.add_subparsers()
         p_run_tests = subparsers.add_parser('run_test', help='run tests')
+        p_run_tests.add_argument('--input', type=argparse.FileType('r'), default=sys.stdin,
+                                 help='File input')
         p_run_tests.add_argument('--shingle_span', type=int, dest='shingle_span', default=3,
                                  help='shingle length (in tokens)', required=False)
         p_run_tests.add_argument('--width', type=int, dest='width', default=3,
