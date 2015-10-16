@@ -42,9 +42,15 @@ develop:
 	pip uninstall $(PYMODULE) || true
 	python setup.py develop
 
+ifeq ($(PIP_SYSTEM_SITE_PACKAGES),1)
+VENV_OPTS="--system-site-packages"
+else
+VENV_OPTS="--no-site-packages"
+endif
+
 env virtualenv: env/bin/activate
 env/bin/activate: requirements.txt setup.py
-	test -f $@ || virtualenv --no-site-packages env
+	test -f $@ || virtualenv $(VENV_OPTS) env
 	$(PIP) install -U pip wheel
 	$(PIP) install cython
 	$(PIP) install -r $<

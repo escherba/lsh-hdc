@@ -5,6 +5,7 @@ import argparse
 from itertools import chain, izip, repeat, islice
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
+from sklearn.metrics import homogeneity_score
 
 
 def random_string(length=4, alphabet=string.letters):
@@ -167,7 +168,7 @@ def get_simulation(opts):
         seq_length = gauss_unsigned(mu=seq_len_mu, sigma=seq_len_sigma)
         master = mcg.generate(seq_length)
         for seq_id in range(cluster_size):
-            data.append(("{}:{}".format(c_id, seq_id), mcm.mutate(master)))
+            data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
             pos_count += 1
     num_negatives = int(pos_count * ((1.0 - pos_ratio) / pos_ratio))
     for neg_idx in range(num_negatives):
@@ -202,9 +203,29 @@ def load_simulation(args):
         yield (label, text.strip())
 
 
+def clusters_to_labels(cluster_iter):
+    labels_true = []
+    labels_pred = []
+    for idx, cluster in enumerate(cluster_iter):
+        if len(cluster) == 1:
+            pred_cluster = 0
+        else:
+            pred_cluster = idx
+        for point in cluster:
+            if ':' in point:
+                true_cluster, _ = point.split(':')
+                true_cluster = int(true_cluster)
+            else:
+                true_cluster = 0
+            labels_true.append(true_cluster)
+            labels_pred.append(pred_cluster)
+    return labels_true, labels_pred
+
+
 def do_cluster(args):
-    for cluster in get_clusters(args, load_simulation(args)):
-        print cluster
+    clusters = get_clusters(args, load_simulation(args))
+    labels_true, labels_pred = clusters_to_labels(clusters)
+    print "Homogeneity: %.3f" % homogeneity_score(labels_true, labels_pred)
 
 
 if __name__ == '__main__':
