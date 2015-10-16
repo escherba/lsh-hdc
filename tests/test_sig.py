@@ -11,7 +11,6 @@ from lsh_hdc.preprocess import RegexTokenizer
 
 class TestSig(unittest.TestCase):
     def test_shingler(self):
-
         s = Shingler(span=5, skip=1, unique=True)
         shingles = s.get_shingles("abracadabra")
         self.assertIn(("d", "b", "a"), shingles)
@@ -21,7 +20,6 @@ class TestSig(unittest.TestCase):
         self.assertEqual(("a", "r", "c"), shingles[0])
 
     def test_word_shingler(self):
-
         s = Shingler(span=5, skip=1, unique=True, tokenizer=RegexTokenizer())
         shingles = s.get_shingles("the quick brown fox jumps over a lazy dog")
         self.assertIn(("jumps", "a", "dog"), shingles)
@@ -41,41 +39,41 @@ class TestSig(unittest.TestCase):
         s = randset()
         self.assertEqual(mh.get_signature(s), mh.get_signature(s))
 
-    def test_simhash64(self):
-        """Simhash signature of an empty string should be zero and unicode and
-        regular strings should give the same simhash signatures
-        """
+    def test_simhash64_1(self):
         sh = SimHashSignature(64)
-
         sig1 = sh.get_signature("")
         sig2 = sh.get_signature(u"")
         self.assertEqual(sig1, sig2)
 
+    def test_simhash64_2(self):
+        sh = SimHashSignature(64)
         sig3 = sh.get_signature("abracadabra")
         sig4 = sh.get_signature(u"abracadabra")
         self.assertEqual(sig3, sig4)
 
+    def test_simhash64_3(self):
+        sh = SimHashSignature(64)
         str1 = "♡♥❤❥"
         str2 = u"♡♥❤❥"
         sig5 = sh.get_signature(str1)
         sig6 = sh.get_signature(str2)
         self.assertNotEqual(sig5, sig6)
 
-    def test_simhash128(self):
-        """Simhash signature of an empty string should be zero and unicode and
-        regular strings should give the same simhash signatures
-        """
+    def test_simhash128_1(self):
         sh = SimHashSignature(128)
-
         sig1 = sh.get_signature("")
         sig2 = sh.get_signature(u"")
         self.assertEqual(0, sig1)
         self.assertEqual(sig1, sig2)
 
+    def test_simhash128_2(self):
+        sh = SimHashSignature(128)
         sig3 = sh.get_signature("abracadabra")
         sig4 = sh.get_signature(u"abracadabra")
         self.assertEqual(sig3, sig4)
 
+    def test_simhash128_3(self):
+        sh = SimHashSignature(128)
         str1 = "♡♥❤❥"
         str2 = u"♡♥❤❥"
         sig5 = sh.get_signature(str1)
@@ -92,80 +90,92 @@ class TestSig(unittest.TestCase):
             num2 = (1 << 64) * a + b
             self.assertEqual(num1, num2)
 
-    def test_simhash_similarity(self):
-        """Signatures should be consistent"""
+    def test_simhash_similarity_1(self):
         sh = SimHashSignature(64)
-
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracadabra")
         dist = hamming(sig1, sig2)
         self.assertEqual(0, dist)
 
+    def test_simhash_similarity_2(self):
+        sh = SimHashSignature(64)
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("arbcd")
         dist = hamming(sig1, sig2)
-        self.assertEqual(14, dist)
+        self.assertEqual(12, dist)
 
+    def test_simhash_similarity_3(self):
+        sh = SimHashSignature(64)
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("")
         dist = hamming(sig1, sig2)
-        self.assertEqual(34, dist)
+        self.assertEqual(37, dist)
 
-    def test_minhash_sketch_similarity(self):
-        """Signatures should be consistent"""
+    def test_minhash_sketch_similarity_1(self):
         sh = MinHashSketchSignature(64)
-
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracadabra")
         dist = hamming(sig1, sig2)
         self.assertEqual(0, dist)
 
+    def test_minhash_sketch_similarity_2(self):
+        sh = MinHashSketchSignature(64)
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("arbcd")
         dist = hamming(sig1, sig2)
         self.assertEqual(0, dist)
 
+    def test_minhash_sketch_similarity_3(self):
+        sh = MinHashSketchSignature(64)
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("")
         dist = hamming(sig1, sig2)
-        self.assertEqual(32, dist)
+        self.assertEqual(28, dist)
 
-    def test_simhash_feature_weights(self):
-        """Features should be weighted and should contribute to
-        similarity/distance
-        """
+    def test_simhash_feature_weights_1(self):
         sh = SimHashSignature(64)
-
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracdabra")
         dist = hamming(sig1, sig2)
-        self.assertEqual(2, dist)
+        self.assertEqual(3, dist)
 
+    def test_simhash_feature_weights_2(self):
+        sh = SimHashSignature(64)
         sig1 = sh.get_signature("abracadabra", ("cats", 0))
         sig2 = sh.get_signature("abracdabra", ("dogs", 0))
         dist = hamming(sig1, sig2)
-        self.assertEqual(2, dist)
+        self.assertEqual(3, dist)
 
+    def test_simhash_feature_weights_3(self):
+        sh = SimHashSignature(64)
         sig1 = sh.get_signature("abracadabra", ("cats", 0))
         sig2 = sh.get_signature("abracadabra", ("dogs", 0))
         dist = hamming(sig1, sig2)
         self.assertEqual(0, dist)
 
+    def test_simhash_feature_weights_4(self):
+        sh = SimHashSignature(64)
         sig1 = sh.get_signature("abracadabra", ("ca", 4))
         sig2 = sh.get_signature("abracadabra", ("do", 4))
         dist = hamming(sig1, sig2)
-        self.assertEqual(16, dist)
+        self.assertEqual(11, dist)
 
+    def test_simhash_feature_weights_5(self):
+        sh = SimHashSignature(64)
         sig1 = sh.get_signature("abracadabra", ("ca", 5))
         sig2 = sh.get_signature("abracadabra", ("do", 5))
         dist = hamming(sig1, sig2)
-        self.assertEqual(16, dist)
+        self.assertEqual(11, dist)
 
+    def test_simhash_feature_weights_6(self):
+        sh = SimHashSignature(64)
         sig1 = sh.get_signature("abracadabra", ("cats", 200))
         sig2 = sh.get_signature("abracadabra", ("dogs", 200))
         dist = hamming(sig1, sig2)
-        self.assertEqual(31, dist)
+        self.assertEqual(33, dist)
 
+    def test_simhash_feature_weights_7(self):
+        sh = SimHashSignature(64)
         sig1 = sh.get_signature("abracadabra", ("cats", 10))
         sig2 = sh.get_signature("abracadabra", ("cats", 10))
         dist = hamming(sig1, sig2)

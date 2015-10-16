@@ -63,7 +63,7 @@ class TestCluster(unittest.TestCase):
                     tot_err += abs(jsim - threshold)
                     break
         avg_error = float(tot_err) / n_tests
-        self.assertLessEqual(avg_error, 0.22)
+        self.assertLessEqual(avg_error, 0.30)
 
 
 if __name__ == '__main__':

@@ -27,7 +27,7 @@ class TestFiles(unittest.TestCase):
             shingles = shingler.get_shingles(name)
             cluster.add_item(shingles, name)
         clusters = cluster.get_clusters()
-        self.assertEqual(341, len(clusters))
+        self.assertEqual(327, len(clusters))
 
     def test_names_kmin(self):
         """Should return 252 clusters of names.
@@ -42,7 +42,7 @@ class TestFiles(unittest.TestCase):
         clusters = cluster.get_clusters()
         # for cluster in clusters:
         #     print cluster
-        self.assertEqual(327, len(clusters))
+        self.assertEqual(346, len(clusters))
 
     def test_names_kmin_scheme(self):
         """Should return 145 clusters of names.
@@ -72,7 +72,7 @@ class TestFiles(unittest.TestCase):
             shingles = shingler.get_shingles(text)
             cluster.add_item(shingles, label)
         clusters = cluster.get_clusters()
-        self.assertEqual(97, len(clusters))
+        self.assertEqual(96, len(clusters))
 
     @staticmethod
     def run_simulated_manually(filepath, lines_to_read=sys.maxint,
