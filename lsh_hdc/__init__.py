@@ -15,8 +15,14 @@ from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from abc import abstractmethod
 from pymaptools.iter import cycle, take, shinglify, isiterable
-from metrohash import metrohash64 as chash64, metrohash128 as chash128
 from lsh_hdc.utils import totuple, tsorted
+
+# TODO: also try out these:
+
+# https://github.com/lebedov/xxh
+# https://github.com/flier/pyfasthash
+#
+from metrohash import metrohash64 as chash64, metrohash128 as chash128
 
 
 LOG = getLogger(__name__)
