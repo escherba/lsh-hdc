@@ -642,8 +642,7 @@ class SimHashSignature(Signature):
     def _hash_fun_128(value, seed=0):
         if not isinstance(value, basestring):
             value = repr(value)
-        part_a, part_b = chash128(value, seed)
-        return (1 << 64) * part_a + part_b
+        return chash128(value, seed)
 
     def get_signature(self, tokens, *features):
         """Returns weighted SimHash signature of a word vector

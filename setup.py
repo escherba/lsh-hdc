@@ -71,7 +71,7 @@ def build_extras(glob_pattern):
 INSTALL_REQUIRES, INSTALL_DEPS = parse_reqs(
     resource_string(__name__, 'requirements.txt').splitlines())
 TESTS_REQUIRE, TESTS_DEPS = parse_reqs(
-    resource_string(__name__, 'requirements-tests.txt').splitlines())
+    resource_string(__name__, 'dev-requirements.txt').splitlines())
 EXTRAS_REQUIRE, EXTRAS_DEPS = build_extras('requirements-extras.*.txt')
 DEPENDENCY_LINKS = list(set(itertools.chain(
     INSTALL_DEPS,

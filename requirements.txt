@@ -1,3 +1,3 @@
 regex
-git+https://github.com/escherba/python-metrohash#egg=metrohash-0.0.2
+git+https://github.com/escherba/python-metrohash#egg=metrohash-0.0.3
 git+https://github.com/escherba/pymaptools#egg=pymaptools-0.1.15
