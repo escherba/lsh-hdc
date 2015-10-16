@@ -2,6 +2,7 @@ nose
 coverage
 nosexcover
 mock
+pytest
 PyYAML>=3.10
 ipdb>=0.8
 ipython>=2.2.0

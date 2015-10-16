@@ -154,6 +154,7 @@ def get_default_shingler(**opts):
 class HDClustering(object):
 
     def __init__(self, cfg, trace_every=0,
+                 content_field='content',
                  get_body=None, get_label=None, get_prefix=None, min_support=None,
                  seed=0, tokenizer=None):
 
@@ -164,6 +165,7 @@ class HDClustering(object):
         self._get_prefix = get_prefix
 
         self.trace_every = trace_every
+        self.get_content = operator.itemgetter(content_field)
 
         # Set options
         self.min_support = cfg['min_support'] if min_support is None else min_support
@@ -240,7 +242,7 @@ class HDClustering(object):
     def _map_item(self, obj, body, label, prefix=None):
 
         # Extract features
-        obj_content = obj['content']
+        obj_content = self.get_content(obj)
         content_tokens = self.tokenizer.tokenize(obj_content)
 
         features = self.shingler.get_shingles(content_tokens, prefix=prefix)

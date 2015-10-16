@@ -69,7 +69,7 @@ class TestSig(unittest.TestCase):
 
         sig1 = sh.get_signature("")
         sig2 = sh.get_signature(u"")
-        self.assertEqual(sig1, 0)
+        self.assertEqual(0, sig1)
         self.assertEqual(sig1, sig2)
 
         sig3 = sh.get_signature("abracadabra")
@@ -99,17 +99,17 @@ class TestSig(unittest.TestCase):
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracadabra")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 0)
+        self.assertEqual(0, dist)
 
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("arbcd")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 13)
+        self.assertEqual(14, dist)
 
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 32)
+        self.assertEqual(34, dist)
 
     def test_minhash_sketch_similarity(self):
         """Signatures should be consistent"""
@@ -118,17 +118,17 @@ class TestSig(unittest.TestCase):
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracadabra")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 0)
+        self.assertEqual(0, dist)
 
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("arbcd")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 0)
+        self.assertEqual(0, dist)
 
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 26)
+        self.assertEqual(32, dist)
 
     def test_simhash_feature_weights(self):
         """Features should be weighted and should contribute to
@@ -139,37 +139,37 @@ class TestSig(unittest.TestCase):
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("abracdabra")
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 3)
+        self.assertEqual(2, dist)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 0))
         sig2 = sh.get_signature("abracdabra", ("dogs", 0))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 3)
+        self.assertEqual(2, dist)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 0))
         sig2 = sh.get_signature("abracadabra", ("dogs", 0))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 0)
+        self.assertEqual(0, dist)
 
         sig1 = sh.get_signature("abracadabra", ("ca", 4))
         sig2 = sh.get_signature("abracadabra", ("do", 4))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 9)
+        self.assertEqual(16, dist)
 
         sig1 = sh.get_signature("abracadabra", ("ca", 5))
         sig2 = sh.get_signature("abracadabra", ("do", 5))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 9)
+        self.assertEqual(16, dist)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 200))
         sig2 = sh.get_signature("abracadabra", ("dogs", 200))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 21)
+        self.assertEqual(31, dist)
 
         sig1 = sh.get_signature("abracadabra", ("cats", 10))
         sig2 = sh.get_signature("abracadabra", ("cats", 10))
         dist = hamming(sig1, sig2)
-        self.assertEqual(dist, 0)
+        self.assertEqual(0, dist)
 
     def test_signature_similarity(self):
         """The probability that two sets' signatures match at some index are
