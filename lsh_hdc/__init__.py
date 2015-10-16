@@ -633,25 +633,15 @@ class SimHashSignature(Signature):
         raise NotImplementedError
 
     @staticmethod
-    def _hash_fun_64(item, seed=0):
-        type_of_x = type(item)
-        if type_of_x == str:
-            value = item
-        elif type_of_x == unicode:
-            value = item.encode("utf-8")
-        else:
-            value = repr(item)
+    def _hash_fun_64(value, seed=0):
+        if not isinstance(value, basestring):
+            value = repr(value)
         return chash64(value, seed)
 
     @staticmethod
-    def _hash_fun_128(item, seed=0):
-        type_of_x = type(item)
-        if type_of_x == str:
-            value = item
-        elif type_of_x == unicode:
-            value = item.encode("utf-8")
-        else:
-            value = repr(item)
+    def _hash_fun_128(value, seed=0):
+        if not isinstance(value, basestring):
+            value = repr(value)
         part_a, part_b = chash128(value, seed)
         return (1 << 64) * part_a + part_b
 
