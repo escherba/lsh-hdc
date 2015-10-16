@@ -2,8 +2,7 @@ import operator
 from pymaptools import UnionFind
 from itertools import imap
 from collections import defaultdict, Counter
-from lflearn.content import MessageSource
-from lflearn.preprocess import HTMLNormalizer, RegexTokenizer, URLNormalizer
+from lsh_hdc.preprocess import RegexTokenizer
 from lsh_hdc import Shingler, MinHashSignature, LSHC
 from logging import getLogger
 
@@ -121,16 +120,6 @@ class MinHashCluster(Cluster):
         super(MinHashCluster, self).__init__(signer=signer)
 
 
-def get_default_normalizer(**opts):
-    normalizer = HTMLNormalizer(**opts)
-    normalizer.url_normalizer = URLNormalizer()
-    return normalizer
-
-
-def get_default_tokenizer(**opts):
-    return RegexTokenizer(**opts)
-
-
 def get_default_shingler(**opts):
     shingler = Shingler(**opts)
     shingler._normalizer = None
@@ -140,7 +129,7 @@ def get_default_shingler(**opts):
 
 class HDClustering(object):
 
-    def __init__(self, cfg, content_filter=None, trace_every=0,
+    def __init__(self, cfg, trace_every=0,
                  get_body=None, get_label=None, get_prefix=None, seed=None,
                  min_support=None, normalizer=None, tokenizer=None):
 
@@ -153,16 +142,12 @@ class HDClustering(object):
         self.trace_every = trace_every
 
         # Set options
-        self.content_filter = content_filter
         self.random_state = cfg['random_state'] if seed is None else seed
         cfg_signer = cfg['signer']
         self.min_support = cfg_signer['min_support'] if min_support is None else min_support
 
-        # normalizer and tokenizer
-        self.normalizer = get_default_normalizer(
-            **cfg.get('preprocessor', {}).get('normalizer', {})) \
-            if normalizer is None else normalizer
-        self.tokenizer = get_default_tokenizer() if tokenizer is None else tokenizer
+        # tokenizer
+        self.tokenizer = RegexTokenizer() if tokenizer is None else tokenizer
 
         # Configure minhash signer
         sig_width = cfg_signer['width']
@@ -199,21 +184,14 @@ class HDClustering(object):
     def _map_item(self, obj, body, label, prefix=None):
 
         # Extract features
-        src = MessageSource.source(obj)
         obj_content = obj['content']
         normalized_content, meta = self.normalizer.normalize(obj_content)
         content_tokens = self.tokenizer.tokenize(normalized_content)
 
-        if self.content_filter is not None:
-            rule_accept, rule_score = self.content_filter.accept(
-                obj, content_tokens=content_tokens, urls=meta.get('url_components', []), src=src)
-        else:
-            rule_accept = False
-        if not rule_accept:
-            features = self.shingler.get_shingles(content_tokens, prefix=prefix)
-            keys = self.signer.get_signature(features)
-            sketch = None
-            yield (keys, (label, sketch))
+        features = self.shingler.get_shingles(content_tokens, prefix=prefix)
+        keys = self.signer.get_signature(features)
+        sketch = None
+        yield (keys, (label, sketch))
 
     def clusters_from_iter(self, data):
         """Find clusters in an iterable"""

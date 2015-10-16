@@ -3,10 +3,10 @@ import unittest
 import random
 from cityhash import CityHash128
 from pymaptools.bitwise import hamming, bitstring_padded, from_bitstring
-from lsh_hdc.utils import randset, sigsim, randstr
 from lsh_hdc import MinHashSignature, SimHashSignature, MinHashSketchSignature, \
     jaccard_sim, Shingler
-from lflearn.preprocess import RegexTokenizer
+from lsh_hdc.utils import randset, sigsim, randstr
+from lsh_hdc.preprocess import RegexTokenizer
 
 
 class TestSig(unittest.TestCase):

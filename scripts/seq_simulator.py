@@ -2,12 +2,10 @@
 
 import random
 import string
-import json
 import argparse
 from itertools import chain, izip, repeat, islice
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
-from lflearn.metrics import FeatureClusterSummarizer, describe_clusters
 
 
 def random_string(length=4, alphabet=string.letters):
@@ -180,30 +178,17 @@ def get_simulation(opts):
     return data
 
 
-def test_simulated(opts, data):
+def get_clusters(opts, data):
     cluster = Cluster(width=opts.width,
                       bandwidth=opts.bandwidth,
                       lsh_scheme=opts.lsh_scheme)
     shingler = Shingler(span=opts.shingle_span)
-    s = FeatureClusterSummarizer()
     content_dict = dict()
     for label, text in data:
         content_dict[label] = text
         shingles = shingler.get_shingles(text)
-        s.add_features(label, shingles)
         cluster.add_item(shingles, label)
-    clusters = cluster.get_clusters()
-
-    c = describe_clusters(clusters, lambda x: len(x.split(':')) > 1)
-    ti = s.summarize_clusters(clusters)
-    print json.dumps(dict(
-        stats=c.dict(),
-        ratios=dict(
-            precision=c.get_precision(),
-            recall=c.get_recall()
-        ),
-        ti=ti
-    ))
+    return cluster.get_clusters()
 
 
 def do_simulation(args):
@@ -214,13 +199,13 @@ def do_simulation(args):
 
 def do_run_test(args):
     data = get_simulation(args)
-    test_simulated(args, data)
+    print len(get_clusters(args, data))
 
 
 if __name__ == '__main__':
         p = argparse.ArgumentParser(
             description="Simulate results and/or run tests on them")
-        #p.add_argument('--filter', type=str, required=False, default='None',
+        # p.add_argument('--filter', type=str, required=False, default='None',
         #               help='[TN, FN, FP, TP, None]')
         p.add_argument('--num_clusters', type=int, dest='num_clusters',
                        default=1000, help='number of clusters', required=False)

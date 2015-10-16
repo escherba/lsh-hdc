@@ -1,9 +1,10 @@
 .PHONY: clean coverage develop env extras package release test virtualenv
 
-PYENV = . env/bin/activate;
-PYTHON = $(PYENV) python
-EXTRAS_REQS := $(wildcard requirements-*.txt)
-DISTRIBUTE = sdist bdist_wheel
+PYENV := . env/bin/activate;
+PYTHON := $(PYENV) python
+PIP := $(PYENV) pip
+EXTRAS_REQS := dev-requirements.txt $(wildcard extras-*-requirements.txt)
+DISTRIBUTE := sdist bdist_wheel
 
 package: env
 	$(PYTHON) setup.py $(DISTRIBUTE)
@@ -44,6 +45,7 @@ develop:
 env virtualenv: env/bin/activate
 env/bin/activate: requirements.txt setup.py
 	test -f $@ || virtualenv --no-site-packages env
-	$(PYENV) pip install -U pip wheel
-	$(PYENV) pip install -r $<
+	$(PIP) install -U pip wheel
+	$(PIP) install cython
+	$(PIP) install -r $<
 	touch $@
