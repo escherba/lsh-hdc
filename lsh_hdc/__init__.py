@@ -15,7 +15,7 @@ from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from abc import abstractmethod
 from pymaptools.iter import cycle, take, shinglify, isiterable
-from cityhash import CityHash64, CityHash64WithSeed, CityHash128WithSeed
+from metrohash import metrohash64 as chash64, metrohash128 as chash128
 from lsh_hdc.utils import totuple, tsorted
 
 
@@ -36,14 +36,14 @@ def long2int(num):
 
 
 def chash(obj):
-    """Convenience function for calling CityHash64
+    """Convenience function for calling chash64
 
     :param obj: input string/hashable object
     :type obj: object
     :return: integer
     :rtype: int
     """
-    return long2int(CityHash64(obj))
+    return long2int(chash64(obj, 0))
 
 
 def mshinglify(iterable, span, skip=0):
@@ -479,9 +479,9 @@ class MinHashSignature(Signature):
 
         def hash_factory(seed):
             if universe_size is None:
-                fun = lambda x: CityHash64WithSeed(repr(x), seed)
+                fun = lambda x: chash64(repr(x), seed)
             else:
-                fun = lambda x: CityHash64WithSeed(repr(x), seed) % universe_size
+                fun = lambda x: chash64(repr(x), seed) % universe_size
             return fun
 
         # draw a sample of unique random integers from pool of [0, sys.maxint]
@@ -633,26 +633,16 @@ class SimHashSignature(Signature):
         raise NotImplementedError
 
     @staticmethod
-    def _hash_fun_64(item, seed=0):
-        type_of_x = type(item)
-        if type_of_x == str:
-            value = item
-        elif type_of_x == unicode:
-            value = item.encode("utf-8")
-        else:
-            value = repr(item)
-        return CityHash64WithSeed(value, seed)
+    def _hash_fun_64(value, seed=0):
+        if not isinstance(value, basestring):
+            value = repr(value)
+        return chash64(value, seed)
 
     @staticmethod
-    def _hash_fun_128(item, seed=0):
-        type_of_x = type(item)
-        if type_of_x == str:
-            value = item
-        elif type_of_x == unicode:
-            value = item.encode("utf-8")
-        else:
-            value = repr(item)
-        part_a, part_b = CityHash128WithSeed(value, (seed, seed))
+    def _hash_fun_128(value, seed=0):
+        if not isinstance(value, basestring):
+            value = repr(value)
+        part_a, part_b = chash128(value, seed)
         return (1 << 64) * part_a + part_b
 
     def get_signature(self, tokens, *features):
@@ -748,12 +738,12 @@ class LSHC(object):
         :rtype: collections.Iterable
 
         Note: we use XOR-ing because it seems to be the fastest way to combine
-        hashes, but we could also use CityHash64 or even the poorly distributed
+        hashes, but we could also use chash64 or even the poorly distributed
         default hash function. For example, we could do this:
 
         .. code-block:: python
 
-            lsh_sig = CityHash64(repr(band))
+            lsh_sig = chash64(repr(band), 0)
 
         """
         list_sig = sig if isinstance(sig, list) else list(sig)

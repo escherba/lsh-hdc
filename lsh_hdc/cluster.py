@@ -5,8 +5,7 @@ from pymaptools.bitwise import hamming
 from itertools import imap
 from collections import defaultdict, Counter
 from math import floor
-from lflearn.content import MessageSource
-from lflearn.preprocess import HTMLNormalizer, RegexTokenizer, URLNormalizer
+from lsh_hdc.preprocess import RegexTokenizer
 from lsh_hdc import Shingler, SimHashSignature, MinHashSketchSignature, \
     MinHashSignature, LSHC
 from logging import getLogger
@@ -146,28 +145,18 @@ class SketchModel(object):
     minhash = 1
 
 
-def get_default_normalizer(**opts):
-    normalizer = HTMLNormalizer(**opts)
-    normalizer.url_normalizer = URLNormalizer()
-    return normalizer
-
-
-def get_default_tokenizer(**opts):
-    return RegexTokenizer(**opts)
-
-
 def get_default_shingler(**opts):
     shingler = Shingler(**opts)
-    shingler._normalizer = None
     shingler._tokenizer = None
     return shingler
 
 
 class HDClustering(object):
 
-    def __init__(self, cfg, content_filter=None, trace_every=0,
+    def __init__(self, cfg, trace_every=0,
+                 content_field='content',
                  get_body=None, get_label=None, get_prefix=None, min_support=None,
-                 seed=0, normalizer=None, tokenizer=None):
+                 seed=0, tokenizer=None):
 
         """Read configuration"""
         self.cfg = cfg
@@ -176,16 +165,13 @@ class HDClustering(object):
         self._get_prefix = get_prefix
 
         self.trace_every = trace_every
+        self.get_content = operator.itemgetter(content_field)
 
         # Set options
-        self.content_filter = content_filter
         self.min_support = cfg['min_support'] if min_support is None else min_support
 
-        # normalizer and tokenizer
-        self.normalizer = get_default_normalizer(
-            **cfg.get('preprocessor', {}).get('normalizer', {})) \
-            if normalizer is None else normalizer
-        self.tokenizer = get_default_tokenizer() if tokenizer is None else tokenizer
+        # Tokenizer
+        self.tokenizer = RegexTokenizer() if tokenizer is None else tokenizer
 
         # Configure minhash signer
         sig_width = cfg['sig_width']
@@ -227,7 +213,6 @@ class HDClustering(object):
                 self.sketch_signer = MinHashSketchSignature(self.sketch_bits, seed=seed)
 
             self.sketch_shingler._tokenizer = None
-            self.sketch_shingler._normalizer = None
 
             self.max_dist = \
                 int(floor(self.sketch_bits *
@@ -257,28 +242,20 @@ class HDClustering(object):
     def _map_item(self, obj, body, label, prefix=None):
 
         # Extract features
-        src = MessageSource.source(obj)
-        obj_content = obj['content']
-        normalized_content, meta = self.normalizer.normalize(obj_content)
-        content_tokens = self.tokenizer.tokenize(normalized_content)
+        obj_content = self.get_content(obj)
+        content_tokens = self.tokenizer.tokenize(obj_content)
 
-        if self.content_filter is not None:
-            rule_accept, rule_score = self.content_filter.accept(
-                obj, content_tokens=content_tokens, urls=meta.get('url_components', []), src=src)
+        features = self.shingler.get_shingles(content_tokens, prefix=prefix)
+        if self.sketch_enabled and (self.sketch_shingler is None or self.sketch_signer is None):
+            keys, sketch = self.signer.get_signature(features, with_sketch=True)
+        elif self.sketch_enabled and (self.sketch_shingler is not None and self.sketch_signer is not None):
+            keys = self.signer.get_signature(features)
+            sketch_features = self.sketch_shingler.get_shingles(content_tokens)
+            sketch = self.sketch_signer.get_signature(sketch_features)
         else:
-            rule_accept = False
-        if not rule_accept:
-            features = self.shingler.get_shingles(content_tokens, prefix=prefix)
-            if self.sketch_enabled and (self.sketch_shingler is None or self.sketch_signer is None):
-                keys, sketch = self.signer.get_signature(features, with_sketch=True)
-            elif self.sketch_enabled and (self.sketch_shingler is not None and self.sketch_signer is not None):
-                keys = self.signer.get_signature(features)
-                sketch_features = self.sketch_shingler.get_shingles(content_tokens)
-                sketch = self.sketch_signer.get_signature(sketch_features)
-            else:
-                keys = self.signer.get_signature(features)
-                sketch = None
-            yield (keys, (label, sketch))
+            keys = self.signer.get_signature(features)
+            sketch = None
+        yield (keys, (label, sketch))
 
     def clusters_from_iter(self, data):
         """Find clusters in an iterable"""
