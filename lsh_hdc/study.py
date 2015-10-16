@@ -5,7 +5,7 @@ import argparse
 from itertools import chain, izip, repeat, islice
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
-from sklearn.metrics import homogeneity_score
+from sklearn.metrics import homogeneity_completeness_v_measure
 
 
 def random_string(length=4, alphabet=string.letters):
@@ -225,7 +225,11 @@ def clusters_to_labels(cluster_iter):
 def do_cluster(args):
     clusters = get_clusters(args, load_simulation(args))
     labels_true, labels_pred = clusters_to_labels(clusters)
-    print "Homogeneity: %.3f" % homogeneity_score(labels_true, labels_pred)
+    print """
+Homogeneity:  %.3f
+Completeness: %.3f
+V-measure:    %.3f
+""" % homogeneity_completeness_v_measure(labels_true, labels_pred)
 
 
 if __name__ == '__main__':
