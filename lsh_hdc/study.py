@@ -202,7 +202,7 @@ def load_simulation(args):
         yield (label, text.strip())
 
 
-def do_run_test(args):
+def do_cluster(args):
     for cluster in get_clusters(args, load_simulation(args)):
         print cluster
 
@@ -230,19 +230,18 @@ if __name__ == '__main__':
                        help='Std. dev. of cluster size', required=False)
 
         subparsers = p.add_subparsers()
-        p_run_tests = subparsers.add_parser('run_test', help='run tests')
-        p_run_tests.add_argument('--input', type=argparse.FileType('r'), default=sys.stdin,
-                                 help='File input')
-        p_run_tests.add_argument('--shingle_span', type=int, dest='shingle_span', default=3,
-                                 help='shingle length (in tokens)', required=False)
-        p_run_tests.add_argument('--width', type=int, dest='width', default=3,
-                                 help='length of minhash feature vectors', required=False)
-        p_run_tests.add_argument('--bandwidth', type=int, dest='bandwidth', default=3,
-                                 help='rows per band', required=False)
-        p_run_tests.add_argument('--lsh_scheme', type=str, dest='lsh_scheme', default="b2",
-                                 help='LSH binning scheme',
-                                 required=False)
-        p_run_tests.set_defaults(func=do_run_test)
+        p_cluster = subparsers.add_parser('cluster', help='run tests')
+        p_cluster.add_argument('--input', type=argparse.FileType('r'), default=sys.stdin,
+                               help='File input')
+        p_cluster.add_argument('--shingle_span', type=int, dest='shingle_span', default=3,
+                               help='shingle length (in tokens)', required=False)
+        p_cluster.add_argument('--width', type=int, dest='width', default=3,
+                               help='length of minhash feature vectors', required=False)
+        p_cluster.add_argument('--bandwidth', type=int, dest='bandwidth', default=3,
+                               help='rows per band', required=False)
+        p_cluster.add_argument('--lsh_scheme', type=str, dest='lsh_scheme', default="b2",
+                               help='LSH binning scheme', required=False)
+        p_cluster.set_defaults(func=do_cluster)
 
         p_simulate = subparsers.add_parser('simulate', help='run tests')
         p_simulate.set_defaults(func=do_simulation)
