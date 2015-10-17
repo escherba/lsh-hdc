@@ -29,8 +29,6 @@ from metrohash import metrohash64 as chash64, metrohash128 as chash128
 # xxh-hash from https://github.com/lebedov/xxh (quite good, super-fast)
 #from xxh import hash64 as chash64, hash64 as chash128
 
-# Built-in Python hash function (do not use):
-#chash64 = chash128 = lambda x, seed=0: hash(x)
 
 LOG = getLogger(__name__)
 
