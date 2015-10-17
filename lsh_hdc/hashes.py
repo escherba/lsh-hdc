@@ -138,9 +138,9 @@ def hash_builtin_64(x, seed=0):
     Note: hash() is a terrible hash function. For more examples see
     http://michaelnielsen.org/blog/consistent-hashing/
     """
-    a = hash_combine(seed, hash(x))
-    b = hash_combine(seed, hash(u"_" + repr(x) + u"_"))
-    ab = (1 << 32) * a + b
+    a = hash(x)
+    b = hash(u"_" + repr(x) + u"_")
+    ab = hash_combine(seed, (1 << 32) * a + b)
     mask = 2 ** 64 - 1
     return (ab % mask + ab & mask) & mask
 
