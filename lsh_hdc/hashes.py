@@ -99,8 +99,7 @@ class HashCombiner(object):
 
     def combine(self, hashes):
         ab = sum(hsh * coeff for hsh, coeff in izip(hashes, self._coeffs))
-        mask = self._mask
-        return (ab % mask + ab & mask) & mask
+        return ab & self._mask
 
 
 def hash_combine(seed, val):
@@ -120,16 +119,14 @@ def hash_md5_64(x, seed=0):
     """
     a, b = unpack('<QQ', md5(hashable(x)).digest())
     ab = hash_combine(seed, hash_combine(a, b))
-    mask = 2 ** 64 - 1
-    return (ab % mask + ab & mask) & mask
+    return ab & (2 ** 64 - 1)
 
 
 def hash_md5_128(x, seed=0):
     """Return value is 128 bits
     """
     ab = hash_combine(seed, long(md5(hashable(x)).hexdigest(), 16))
-    mask = 2 ** 128 - 1
-    return (ab % mask + ab & mask) & mask
+    return ab & (2 ** 128 - 1)
 
 
 def hash_builtin_64(x, seed=0):
@@ -139,10 +136,9 @@ def hash_builtin_64(x, seed=0):
     http://michaelnielsen.org/blog/consistent-hashing/
     """
     a = hash(x)
-    b = hash("<" + repr(x) + ">")
+    b = hash("_" + repr(x))
     ab = hash_combine(seed, (1 << 32) * a + b)
-    mask = 2 ** 64 - 1
-    return (ab % mask + ab & mask) & mask
+    return ab & (2 ** 64 - 1)
 
 
 def hash_builtin_128(x, seed=0):
@@ -152,10 +148,8 @@ def hash_builtin_128(x, seed=0):
     http://michaelnielsen.org/blog/consistent-hashing/
     """
     a = hash_builtin_64(x, seed)
-    b = hash_builtin_64("<" + repr(x) + ">", seed)
-    ab = (1 << 64) * a + b
-    mask = 2 ** 128 - 1
-    return (ab % mask + ab & mask) & mask
+    b = hash_builtin_64("_" + repr(x), seed)
+    return (1 << 64) * a + b
 
 
 class VarlenHash(object):

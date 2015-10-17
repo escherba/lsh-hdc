@@ -8,7 +8,7 @@ from lsh_hdc.cluster import MinHashCluster as Cluster
 from sklearn.metrics import homogeneity_completeness_v_measure
 
 
-def random_string(length=4, alphabet=string.letters):
+def random_string(length, alphabet=string.letters):
     """
 
     :param length: length of the string
