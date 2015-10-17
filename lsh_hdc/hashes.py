@@ -139,7 +139,7 @@ def hash_builtin_64(x, seed=0):
     http://michaelnielsen.org/blog/consistent-hashing/
     """
     a = hash(x)
-    b = hash(u"_" + repr(x) + u"_")
+    b = hash("<" + repr(x) + ">")
     ab = hash_combine(seed, (1 << 32) * a + b)
     mask = 2 ** 64 - 1
     return (ab % mask + ab & mask) & mask
@@ -152,7 +152,7 @@ def hash_builtin_128(x, seed=0):
     http://michaelnielsen.org/blog/consistent-hashing/
     """
     a = hash_builtin_64(x, seed)
-    b = hash_builtin_64(u"_" + repr(x) + u"_", seed)
+    b = hash_builtin_64("<" + repr(x) + ">", seed)
     ab = (1 << 64) * a + b
     mask = 2 ** 128 - 1
     return (ab % mask + ab & mask) & mask
