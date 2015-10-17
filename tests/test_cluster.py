@@ -33,7 +33,7 @@ class TestCluster(unittest.TestCase):
     def test_dissimilar_sets(self):
         """Two non-similar sets should not be clustered"""
         cluster = Cluster(width=10, bandwidth=2)
-        cluster.add_item("12yu5abcdef")
+        cluster.add_item("yu5abcdef967")
         cluster.add_item("1234567890z")
         print cluster.get_clusters()
         num_clusters = len(cluster.get_clusters())

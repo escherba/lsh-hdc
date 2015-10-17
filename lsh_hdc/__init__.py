@@ -16,14 +16,21 @@ from itertools import imap, izip, islice, chain, combinations
 from abc import abstractmethod
 from pymaptools.iter import cycle, take, shinglify, isiterable
 from lsh_hdc.utils import totuple, tsorted
+from lsh_hdc.hashes import VarlenHash, HashCombiner, hashable
 
-# TODO: also try out these:
-
-# https://github.com/lebedov/xxh
-# https://github.com/flier/pyfasthash
-#
+# MetroHash (current)
 from metrohash import metrohash64 as chash64, metrohash128 as chash128
+#from lsh_hdc.hashes import hash_md5_64 as chash64, hash_md5_128 as chash128
+#from lsh_hdc.hashes import hash_builtin_64 as chash64, hash_builtin_128 as chash128
 
+# CityHash (previously used)
+#from cityhash import CityHash64WithSeed as chash64, CityHash128WithSeed as chash128
+
+# xxh-hash from https://github.com/lebedov/xxh (quite good, super-fast)
+#from xxh import hash64 as chash64, hash64 as chash128
+
+# Built-in Python hash function (do not use):
+#chash64 = chash128 = lambda x, seed=0: hash(x)
 
 LOG = getLogger(__name__)
 
@@ -469,25 +476,14 @@ class MinHashSignature(Signature):
 
     def create_hash_functions(self):
         """Return a list of length self.width of different hash functions
-
-        Note: hash() is not as uniform as haslib.md5. For more examples see
-        See http://michaelnielsen.org/blog/consistent-hashing/
-
-        Other possible hash funcitons include:
-
-        .. code-block:: python
-
-            lambda x: long2int(long(md5(repr(x)).hexdigest(), 16))
-            lambda x: hash(repr(x))
-
         """
         universe_size = self.universe_size
 
         def hash_factory(seed):
             if universe_size is None:
-                fun = lambda x: chash64(repr(x), seed)
+                fun = lambda x: chash64(hashable(x), seed)
             else:
-                fun = lambda x: chash64(repr(x), seed) % universe_size
+                fun = lambda x: chash64(hashable(x), seed) % universe_size
             return fun
 
         # draw a sample of unique random integers from pool of [0, sys.maxint]
@@ -579,46 +575,6 @@ class MinHashSketchSignature(MinHashSignature):
         return self._minhash_sketch(minhash_sample)
 
 
-def hash_combine(seed, val):
-    """Combine seed with hash value
-    """
-    return seed ^ (val + 0x9e3779b9 + (seed << 6) + (seed >> 2))
-
-
-def create_varlen_hash(scale=sys.maxint):
-    """Create a hash function of arbitrary output length
-    :param scale: integer or long indicating roughly how large should the
-                  hashe values be
-    :type scale: int,long
-
-    Note: the return value of this function increases as the length of the
-    text to be hashed increases. So the fuction has terrible distribution
-    properties.
-    """
-    def _hash_fun_long(item, seed=0):
-        """A variable-length version of Python's builtin hash"""
-        type_of_x = type(item)
-        if type_of_x == str:
-            value = item
-        elif type_of_x == unicode:
-            value = item.encode("utf-8")
-        else:
-            value = repr(item)
-        length_of_v = len(value)
-        if length_of_v > 0:
-            item = ord(value[0]) << 7
-            mask = scale - 1
-            for char in value:
-                item = ((item * 1000003) ^ ord(char)) & mask
-            item ^= length_of_v
-            if item == -1:
-                item = -2
-            return hash_combine(item, seed)
-        else:
-            return 0
-    return _hash_fun_long
-
-
 class SimHashSignature(Signature):
 
     def __init__(self, bit_depth=64, seed=0):
@@ -633,22 +589,18 @@ class SimHashSignature(Signature):
         elif bit_depth <= 128:
             self.hash_fun = self._hash_fun_128
         else:
-            self.hash_fun = create_varlen_hash(bit_depth)
+            self.hash_fun = VarlenHash(bit_depth)
 
     def create_hash_functions(self):
         raise NotImplementedError
 
     @staticmethod
     def _hash_fun_64(value, seed=0):
-        if not isinstance(value, basestring):
-            value = repr(value)
-        return chash64(value, seed)
+        return chash64(hashable(value), seed)
 
     @staticmethod
     def _hash_fun_128(value, seed=0):
-        if not isinstance(value, basestring):
-            value = repr(value)
-        return chash128(value, seed)
+        return chash128(hashable(value), seed)
 
     def get_signature(self, tokens, *features):
         """Returns weighted SimHash signature of a word vector
@@ -699,20 +651,6 @@ class SimHashSignature(Signature):
                 else:
                     vec[i] -= scaled_weight
         return sum(1 << i for i in bits if vec[i] > 0)
-
-
-class HashCombiner(object):
-
-    """use polynomial hashing to reduce a vector of hashes
-    """
-    def __init__(self, size, prime=31, mod=18446744073709551615L):
-        self._coeffs = [prime ** i for i in xrange(size)]
-        self._mod = mod
-
-    def combine(self, hashes):
-        # TODO: Cythonize this?
-        return sum(hsh * coeff for hsh, coeff in izip(hashes, self._coeffs)) \
-            % self._mod
 
 
 class LSHC(object):
