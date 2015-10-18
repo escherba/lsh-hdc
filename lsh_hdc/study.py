@@ -147,7 +147,6 @@ def get_simulation(opts):
     c_size_sigma = opts.c_size_sigma
     pos_ratio = opts.pos_ratio
 
-    # Aim for 50% of strings in clusters, 50% outside of clusters
     pos_count = 0
     mcg = MarkovChainGenerator()
     mcm = MarkovChainMutator(p_err=opts.p_err)
@@ -182,6 +181,8 @@ def get_clusters(opts, data):
 
 
 def do_simulation(args):
+    if args.seed is not None:
+        random.seed(args.seed)
     data = get_simulation(args)
     for i, seq in data:
         print i, seq
@@ -229,26 +230,29 @@ def parse_args(args=None):
 
     p_simul = subparsers.add_parser('simulate', help='run tests')
     p_simul.add_argument(
-        '--num_clusters', type=int, dest='num_clusters',
-        default=1000, help='number of clusters', required=False)
+        '--num_clusters', type=int, default=1000,
+        help='number of clusters')
     p_simul.add_argument(
-        '--pos_ratio', type=float, dest='pos_ratio', default=0.1,
-        help='ratio of positives', required=False)
+        '--seed', type=int, default=None,
+        help='Random number generator seed for reproducibility')
     p_simul.add_argument(
-        '--p_err', type=float, dest='p_err', default=0.10, required=False,
+        '--pos_ratio', type=float, default=0.1,
+        help='ratio of positives')
+    p_simul.add_argument(
+        '--p_err', type=float, default=0.10,
         help='Probability of error at any location in sequence')
     p_simul.add_argument(
-        '--seq_len_mu', type=float, dest='seq_len_mu', required=False,
-        default=3, help='Mean of sequence length')
+        '--seq_len_mu', type=float, default=3,
+        help='Mean of sequence length')
     p_simul.add_argument(
-        '--seq_len_sigma', type=float, dest='seq_len_sigma', default=10,
-        help='Std. dev. of sequence length', required=False)
+        '--seq_len_sigma', type=float, default=10,
+        help='Std. dev. of sequence length')
     p_simul.add_argument(
-        '--c_size_mu', type=float, dest='c_size_mu', default=2,
-        help='Mean of cluster size', required=False)
+        '--c_size_mu', type=float, default=2,
+        help='Mean of cluster size')
     p_simul.add_argument(
-        '--c_size_sigma', type=float, dest='c_size_sigma', default=10,
-        help='Std. dev. of cluster size', required=False)
+        '--c_size_sigma', type=float, default=10,
+        help='Std. dev. of cluster size')
     p_simul.set_defaults(func=do_simulation)
 
     p_clust = subparsers.add_parser('cluster', help='run tests')
@@ -256,17 +260,17 @@ def parse_args(args=None):
         '--input', type=GzipFileType('r'), default=sys.stdin,
         help='File input')
     p_clust.add_argument(
-        '--shingle_span', type=int, dest='shingle_span', default=3,
-        help='shingle length (in tokens)', required=False)
+        '--shingle_span', type=int, default=3,
+        help='shingle length (in tokens)')
     p_clust.add_argument(
-        '--width', type=int, dest='width', default=3,
-        help='length of minhash feature vectors', required=False)
+        '--width', type=int, default=3,
+        help='length of minhash feature vectors')
     p_clust.add_argument(
-        '--bandwidth', type=int, dest='bandwidth', default=3,
-        help='rows per band', required=False)
+        '--bandwidth', type=int, default=3,
+        help='rows per band')
     p_clust.add_argument(
-        '--lsh_scheme', type=str, dest='lsh_scheme', default="b2",
-        help='LSH binning scheme', required=False)
+        '--lsh_scheme', type=str, default="b2",
+        help='LSH binning scheme')
     p_clust.set_defaults(func=do_cluster)
 
     namespace = parser.parse_args()
