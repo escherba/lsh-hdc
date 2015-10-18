@@ -7,6 +7,10 @@ from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
 from sklearn.metrics import homogeneity_completeness_v_measure
+from pymaptools.io import GzipFileType
+
+
+ALPHABET = string.letters + string.digits
 
 
 def gauss_unsigned(mu, sigma):
@@ -40,7 +44,7 @@ def intersperse(delimiter, seq):
 
 
 def draw(discrete_prob_dist):
-    """Draw random value from discrete probability distribution
+    """Draw a random value from a discrete probability distribution
     represented as a dict: P(x=value) = discrete_prob_dist[value].
 
     Method: http://en.wikipedia.org/wiki/Pseudo-random_number_sampling
@@ -50,24 +54,24 @@ def draw(discrete_prob_dist):
     :returns: scalar drawn from the distribution
     :rtype: object
     """
-    limit = 0
+    limit = 0.0
     r = random.random()
-    for value in discrete_prob_dist:
-        limit += discrete_prob_dist[value]
+    for key in discrete_prob_dist.iterkeys():
+        limit += discrete_prob_dist[key]
         if r < limit:
-            return value
+            return key
 
 
-class MarkovChainGenerator:
+class MarkovChainGenerator(object):
 
-    def __init__(self, alphabet=string.letters):
+    def __init__(self, alphabet=ALPHABET):
         self.alphabet = alphabet
         self.chain = MarkovChainGenerator.get_markov_chain(alphabet)
 
     def generate(self, length):
         """Generate a string according to a Markov chain"""
         s = [random_string(length=1, alphabet=self.alphabet)]
-        for i in range(length - 1):
+        for _ in xrange(length - 1):
             s.append(str(draw(self.chain[s[-1]])))
         return ''.join(s)
 
@@ -80,21 +84,21 @@ class MarkovChainGenerator:
         :rtype: dict
         """
         l = len(alphabet)
-        markov_chain = {}
+        markov_chain = dict()
         for from_letter in alphabet:
-            slice_points = sorted([0] + [random.random() for _ in range(l - 1)] + [1])
+            slice_points = sorted([0] + [random.random() for _ in xrange(l - 1)] + [1])
             transition_probabilities = \
-                [slice_points[i + 1] - slice_points[i] for i in range(l)]
+                [slice_points[i + 1] - slice_points[i] for i in xrange(l)]
             markov_chain[from_letter] = \
-                {letter: p for letter, p in zip(alphabet, transition_probabilities)}
+                {letter: p for letter, p in izip(alphabet, transition_probabilities)}
         return markov_chain
 
 
-class MarkovChainMutator:
+class MarkovChainMutator(object):
 
     delimiter = '-'
 
-    def __init__(self, p_err=0.2, alphabet=string.letters):
+    def __init__(self, p_err=0.2, alphabet=ALPHABET):
         self.alphabet = alphabet
         self.chain = MarkovChainMutator.get_markov_chain(alphabet + self.delimiter, p_err=p_err)
 
@@ -112,11 +116,11 @@ class MarkovChainMutator:
         alpha_set = set(alphabet)
         l = len(alpha_set)
         for from_letter in alpha_set:
-            slice_points = sorted([0] + [random.uniform(0, p_err) for _ in range(l - 2)]) + [p_err]
+            slice_points = sorted([0] + [random.uniform(0, p_err) for _ in xrange(l - 2)]) + [p_err]
             transition_prob = \
-                [slice_points[idx + 1] - slice_points[idx] for idx in range(l - 1)] + [1.0 - p_err]
+                [slice_points[idx + 1] - slice_points[idx] for idx in xrange(l - 1)] + [1.0 - p_err]
             markov_chain[from_letter] = \
-                dict(zip(list(alpha_set - {from_letter}) + [from_letter], transition_prob))
+                dict(izip(list(alpha_set - {from_letter}) + [from_letter], transition_prob))
         return markov_chain
 
     def mutate(self, seq):
@@ -143,21 +147,21 @@ def get_simulation(opts):
     c_size_sigma = opts.c_size_sigma
     pos_ratio = opts.pos_ratio
 
-    # Shoot for 50% of strings in clusters, 50% outside of clusters
+    # Aim for 50% of strings in clusters, 50% outside of clusters
     pos_count = 0
     mcg = MarkovChainGenerator()
     mcm = MarkovChainMutator(p_err=opts.p_err)
     data = []
-    for c_id in range(num_clusters):
+    for c_id in xrange(num_clusters):
         cluster_size = gauss_unsigned2(
             threshold=2, mu=c_size_mu, sigma=c_size_sigma)
         seq_length = gauss_unsigned(mu=seq_len_mu, sigma=seq_len_sigma)
         master = mcg.generate(seq_length)
-        for seq_id in range(cluster_size):
+        for seq_id in xrange(cluster_size):
             data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
             pos_count += 1
     num_negatives = int(pos_count * ((1.0 - pos_ratio) / pos_ratio))
-    for neg_idx in range(num_negatives):
+    for neg_idx in xrange(num_negatives):
         seq_length = gauss_unsigned(mu=seq_len_mu, sigma=seq_len_sigma)
         data.append(("{}".format(neg_idx), mcg.generate(seq_length)))
     random.shuffle(data)
@@ -218,44 +222,60 @@ V-measure:    %.3f
 """ % homogeneity_completeness_v_measure(labels_true, labels_pred)
 
 
+def parse_args(args=None):
+    parser = argparse.ArgumentParser(
+        description="Simulate results and/or run tests on them")
+    subparsers = parser.add_subparsers()
+
+    p_simul = subparsers.add_parser('simulate', help='run tests')
+    p_simul.add_argument(
+        '--num_clusters', type=int, dest='num_clusters',
+        default=1000, help='number of clusters', required=False)
+    p_simul.add_argument(
+        '--pos_ratio', type=float, dest='pos_ratio', default=0.1,
+        help='ratio of positives', required=False)
+    p_simul.add_argument(
+        '--p_err', type=float, dest='p_err', default=0.10, required=False,
+        help='Probability of error at any location in sequence')
+    p_simul.add_argument(
+        '--seq_len_mu', type=float, dest='seq_len_mu', required=False,
+        default=3, help='Mean of sequence length')
+    p_simul.add_argument(
+        '--seq_len_sigma', type=float, dest='seq_len_sigma', default=10,
+        help='Std. dev. of sequence length', required=False)
+    p_simul.add_argument(
+        '--c_size_mu', type=float, dest='c_size_mu', default=2,
+        help='Mean of cluster size', required=False)
+    p_simul.add_argument(
+        '--c_size_sigma', type=float, dest='c_size_sigma', default=10,
+        help='Std. dev. of cluster size', required=False)
+    p_simul.set_defaults(func=do_simulation)
+
+    p_clust = subparsers.add_parser('cluster', help='run tests')
+    p_clust.add_argument(
+        '--input', type=GzipFileType('r'), default=sys.stdin,
+        help='File input')
+    p_clust.add_argument(
+        '--shingle_span', type=int, dest='shingle_span', default=3,
+        help='shingle length (in tokens)', required=False)
+    p_clust.add_argument(
+        '--width', type=int, dest='width', default=3,
+        help='length of minhash feature vectors', required=False)
+    p_clust.add_argument(
+        '--bandwidth', type=int, dest='bandwidth', default=3,
+        help='rows per band', required=False)
+    p_clust.add_argument(
+        '--lsh_scheme', type=str, dest='lsh_scheme', default="b2",
+        help='LSH binning scheme', required=False)
+    p_clust.set_defaults(func=do_cluster)
+
+    namespace = parser.parse_args()
+    return namespace
+
+
+def run(args):
+    args.func(args)
+
+
 if __name__ == '__main__':
-        p = argparse.ArgumentParser(
-            description="Simulate results and/or run tests on them")
-        # p.add_argument('--filter', type=str, required=False, default='None',
-        #               help='[TN, FN, FP, TP, None]')
-        p.add_argument('--num_clusters', type=int, dest='num_clusters',
-                       default=1000, help='number of clusters', required=False)
-        p.add_argument('--pos_ratio', type=float, dest='pos_ratio', default=0.1,
-                       help='ratio of positives', required=False)
-        p.add_argument('--p_err', type=float, dest='p_err', default=0.10,
-                       help='Probability of error at any location in sequence',
-                       required=False)
-        p.add_argument('--seq_len_mu', type=float, dest='seq_len_mu',
-                       default=3, help='Mean of sequence length',
-                       required=False)
-        p.add_argument('--seq_len_sigma', type=float, dest='seq_len_sigma', default=10,
-                       help='Std. dev. of sequence length', required=False)
-        p.add_argument('--c_size_mu', type=float, dest='c_size_mu', default=2,
-                       help='Mean of cluster size', required=False)
-        p.add_argument('--c_size_sigma', type=float, dest='c_size_sigma', default=10,
-                       help='Std. dev. of cluster size', required=False)
-
-        subparsers = p.add_subparsers()
-        p_cluster = subparsers.add_parser('cluster', help='run tests')
-        p_cluster.add_argument('--input', type=argparse.FileType('r'), default=sys.stdin,
-                               help='File input')
-        p_cluster.add_argument('--shingle_span', type=int, dest='shingle_span', default=3,
-                               help='shingle length (in tokens)', required=False)
-        p_cluster.add_argument('--width', type=int, dest='width', default=3,
-                               help='length of minhash feature vectors', required=False)
-        p_cluster.add_argument('--bandwidth', type=int, dest='bandwidth', default=3,
-                               help='rows per band', required=False)
-        p_cluster.add_argument('--lsh_scheme', type=str, dest='lsh_scheme', default="b2",
-                               help='LSH binning scheme', required=False)
-        p_cluster.set_defaults(func=do_cluster)
-
-        p_simulate = subparsers.add_parser('simulate', help='run tests')
-        p_simulate.set_defaults(func=do_simulation)
-
-        args = p.parse_args()
-        args.func(args)
+    run(parse_args())
