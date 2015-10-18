@@ -5,6 +5,9 @@
 *.so
 cythonize.dat
 
+# custom extension intermediate
+lsh_hdc/ext.cpp
+
 # Packages
 *.egg
 *.egg-info

@@ -1,5 +1,3 @@
-__author__ = 'space'
-
 import random
 import sys
 import abc
@@ -102,7 +100,7 @@ class HashCombiner(object):
         return ab & self._mask
 
 
-def hash_combine(seed, val):
+def hash_combine_boost(seed, val):
     """Combine seed with hash value (after Boost library)
     """
     return seed ^ (val + 0x9e3779b9 + (seed << 6) + (seed >> 2))
@@ -118,14 +116,14 @@ def hash_md5_64(x, seed=0):
     """Return value is 128 bits
     """
     a, b = unpack('<QQ', md5(hashable(x)).digest())
-    ab = hash_combine(seed, hash_combine(a, b))
+    ab = hash_combine_boost(seed, hash_combine_boost(a, b))
     return ab & (2 ** 64 - 1)
 
 
 def hash_md5_128(x, seed=0):
     """Return value is 128 bits
     """
-    ab = hash_combine(seed, long(md5(hashable(x)).hexdigest(), 16))
+    ab = hash_combine_boost(seed, long(md5(hashable(x)).hexdigest(), 16))
     return ab & (2 ** 128 - 1)
 
 
@@ -137,7 +135,7 @@ def hash_builtin_64(x, seed=0):
     """
     a = hash(x)
     b = hash("_" + repr(x))
-    ab = hash_combine(seed, (1 << 32) * a + b)
+    ab = hash_combine_boost(seed, (1 << 32) * a + b)
     return ab & (2 ** 64 - 1)
 
 
@@ -182,6 +180,6 @@ class VarlenHash(object):
             item ^= length_of_v
             if item == -1:
                 item = -2
-            return hash_combine(item, seed)
+            return hash_combine_boost(item, seed)
         else:
             return 0
