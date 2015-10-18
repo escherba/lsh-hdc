@@ -20,8 +20,8 @@ from lsh_hdc.ext import hashable, VarlenHash, PHashCombiner as HashCombiner
 
 # MetroHash (current)
 from metrohash import metrohash64 as chash64, metrohash128 as chash128
-#from lsh_hdc.ext import hash_md5_64 as chash64, hash_md5_128 as chash128
 #from lsh_hdc.ext import hash_builtin_64 as chash64, hash_builtin_128 as chash128
+#from lsh_hdc.ext import hash_md5_64 as chash64, hash_md5_128 as chash128
 
 # CityHash (previously used)
 #from cityhash import CityHash64WithSeed as chash64, CityHash128WithSeed as chash128

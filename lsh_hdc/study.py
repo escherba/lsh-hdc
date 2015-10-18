@@ -11,6 +11,7 @@ from lsh_hdc.utils import random_string
 from sklearn.metrics import homogeneity_completeness_v_measure
 from pymaptools.io import GzipFileType
 from pymaptools.iter import intersperse
+from pymaptools.sample import discrete_sample
 
 
 ALPHABET = string.letters + string.digits
@@ -33,39 +34,22 @@ def gauss_uint_threshold(threshold=1, **kwargs):
     return result
 
 
-def discrete_sample(prob_dist):
-    """Sample a random value from a discrete probability distribution
-    represented as a dict: P(x=value) = prob_dist[value].
-
-    Note: the prob_dist parameter doesn't have to be an ordered dict,
-    however for performance reasons it is best if it is.
-
-    :param prob_dist: the probability distribution
-    :type prob_dist: collections.Mapping
-    :returns: scalar drawn from the distribution
-    :rtype: object
-    """
-    limit = 0.0
-    r = random.random()
-    for key, val in prob_dist.iteritems():
-        limit += val
-        if r <= limit:
-            return key
-
-
 class MarkovChainGenerator(object):
 
     def __init__(self, alphabet=ALPHABET):
         self.alphabet = alphabet
         self.chain = MarkovChainGenerator.get_markov_chain(alphabet)
 
-    def generate(self, length):
+    def generate(self, start, length):
+        """Generate a sequence according to a Markov chain"""
+        for _ in xrange(length):
+            prob_dist = self.chain[start]
+            start = discrete_sample(prob_dist)
+            yield start
+
+    def generate_str(self, start, length):
         """Generate a string according to a Markov chain"""
-        s = [random_string(length=1, alphabet=self.alphabet)]
-        for _ in xrange(length - 1):
-            prob_dist = self.chain[s[-1]]
-            s.append(str(discrete_sample(prob_dist)))
-        return ''.join(s)
+        return ''.join(self.generate(start, length))
 
     @staticmethod
     def get_markov_chain(alphabet):
@@ -140,23 +124,35 @@ def get_simulation(args):
     seq_len_sigma = args.seq_len_sigma
     c_size_mu = args.c_size_mu
     c_size_sigma = args.c_size_sigma
+    seq_len_min = args.seq_len_min
 
     pos_count = 0
     mcg = MarkovChainGenerator()
     mcm = MarkovChainMutator(p_err=args.p_err)
     data = []
+
+    # pick first letter at random
+    start = random_string(length=1, alphabet=mcg.alphabet)
+
     for c_id in xrange(args.num_clusters):
         cluster_size = gauss_uint_threshold(
             threshold=2, mu=c_size_mu, sigma=c_size_sigma)
-        seq_length = gauss_uint(mu=seq_len_mu, sigma=seq_len_sigma)
-        master = mcg.generate(seq_length)
+        seq_length = gauss_uint_threshold(
+            threshold=seq_len_min, mu=seq_len_mu, sigma=seq_len_sigma)
+        master = mcg.generate_str(start, seq_length)
+        if len(master) > 0:
+            start = master[-1]
         for seq_id in xrange(cluster_size):
             data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
             pos_count += 1
     num_negatives = int(pos_count * (1.0 - args.pos_ratio) / args.pos_ratio)
     for neg_idx in xrange(num_negatives):
-        seq_length = gauss_uint(mu=seq_len_mu, sigma=seq_len_sigma)
-        data.append(("{}".format(neg_idx), mcg.generate(seq_length)))
+        seq_length = gauss_uint_threshold(
+            threshold=seq_len_min, mu=seq_len_mu, sigma=seq_len_sigma)
+        master = mcg.generate_str(start, seq_length)
+        if len(master) > 0:
+            start = master[-1]
+        data.append(("{}".format(neg_idx), master))
     random.shuffle(data)
     return data
 
@@ -236,7 +232,10 @@ def parse_args(args=None):
         '--p_err', type=float, default=0.10,
         help='Probability of error at any location in sequence')
     p_simul.add_argument(
-        '--seq_len_mu', type=float, default=3,
+        '--seq_len_min', type=int, default=2,
+        help='Minimum sequence length')
+    p_simul.add_argument(
+        '--seq_len_mu', type=float, default=4,
         help='Mean of sequence length')
     p_simul.add_argument(
         '--seq_len_sigma', type=float, default=10,
