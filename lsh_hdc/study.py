@@ -2,12 +2,13 @@ import random
 import sys
 import string
 import argparse
-from itertools import chain, izip, repeat, islice
+from itertools import izip
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
 from sklearn.metrics import homogeneity_completeness_v_measure
 from pymaptools.io import GzipFileType
+from pymaptools.iter import intersperse
 
 
 ALPHABET = string.letters + string.digits
@@ -28,19 +29,6 @@ def gauss_unsigned2(threshold=1, **kwargs):
     while result < threshold:
         result = gauss_unsigned(**kwargs)
     return result
-
-
-def intersperse(delimiter, seq):
-    """Intersperse a sequence with a delimiter
-
-    :param delimiter: scalar
-    :type delimiter: object
-    :param seq: some iterable sequence
-    :type seq: collections.iterable
-    :returns: sequence interspersed with a delimiter
-    :returns: collections.iterable
-    """
-    return islice(chain.from_iterable(izip(repeat(delimiter), seq)), 1, None)
 
 
 def draw(discrete_prob_dist):
@@ -138,20 +126,18 @@ class MarkovChainMutator(object):
         return ''.join(el for el in seq_list if el != self.delimiter)
 
 
-def get_simulation(opts):
+def get_simulation(args):
 
-    num_clusters = opts.num_clusters
-    seq_len_mu = opts.seq_len_mu
-    seq_len_sigma = opts.seq_len_sigma
-    c_size_mu = opts.c_size_mu
-    c_size_sigma = opts.c_size_sigma
-    pos_ratio = opts.pos_ratio
+    seq_len_mu = args.seq_len_mu
+    seq_len_sigma = args.seq_len_sigma
+    c_size_mu = args.c_size_mu
+    c_size_sigma = args.c_size_sigma
 
     pos_count = 0
     mcg = MarkovChainGenerator()
-    mcm = MarkovChainMutator(p_err=opts.p_err)
+    mcm = MarkovChainMutator(p_err=args.p_err)
     data = []
-    for c_id in xrange(num_clusters):
+    for c_id in xrange(args.num_clusters):
         cluster_size = gauss_unsigned2(
             threshold=2, mu=c_size_mu, sigma=c_size_sigma)
         seq_length = gauss_unsigned(mu=seq_len_mu, sigma=seq_len_sigma)
@@ -159,7 +145,7 @@ def get_simulation(opts):
         for seq_id in xrange(cluster_size):
             data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
             pos_count += 1
-    num_negatives = int(pos_count * ((1.0 - pos_ratio) / pos_ratio))
+    num_negatives = int(pos_count * (1.0 - args.pos_ratio) / args.pos_ratio)
     for neg_idx in xrange(num_negatives):
         seq_length = gauss_unsigned(mu=seq_len_mu, sigma=seq_len_sigma)
         data.append(("{}".format(neg_idx), mcg.generate(seq_length)))
@@ -167,11 +153,11 @@ def get_simulation(opts):
     return data
 
 
-def get_clusters(opts, data):
-    cluster = Cluster(width=opts.width,
-                      bandwidth=opts.bandwidth,
-                      lsh_scheme=opts.lsh_scheme)
-    shingler = Shingler(span=opts.shingle_span)
+def get_clusters(args, data):
+    cluster = Cluster(width=args.width,
+                      bandwidth=args.bandwidth,
+                      lsh_scheme=args.lsh_scheme)
+    shingler = Shingler(span=args.shingle_span)
     content_dict = dict()
     for label, text in data:
         content_dict[label] = text
