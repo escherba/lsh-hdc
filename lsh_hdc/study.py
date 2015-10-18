@@ -2,6 +2,8 @@ import random
 import sys
 import string
 import argparse
+import operator
+from collections import OrderedDict
 from itertools import izip
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
@@ -14,7 +16,7 @@ from pymaptools.iter import intersperse
 ALPHABET = string.letters + string.digits
 
 
-def gauss_unsigned(mu, sigma):
+def gauss_uint(mu, sigma):
     """Draw a positive integer from Gaussian distribution
     :param mu: mean
     :param sigma: std. dev
@@ -24,29 +26,30 @@ def gauss_unsigned(mu, sigma):
     return abs(int(random.gauss(mu, sigma)))
 
 
-def gauss_unsigned2(threshold=1, **kwargs):
+def gauss_uint_threshold(threshold=1, **kwargs):
     result = -1
     while result < threshold:
-        result = gauss_unsigned(**kwargs)
+        result = gauss_uint(**kwargs)
     return result
 
 
-def draw(discrete_prob_dist):
-    """Draw a random value from a discrete probability distribution
-    represented as a dict: P(x=value) = discrete_prob_dist[value].
+def discrete_sample(prob_dist):
+    """Sample a random value from a discrete probability distribution
+    represented as a dict: P(x=value) = prob_dist[value].
 
-    Method: http://en.wikipedia.org/wiki/Pseudo-random_number_sampling
+    Note: the prob_dist parameter doesn't have to be an ordered dict,
+    however for performance reasons it is best if it is.
 
-    :param discrete_prob_dist: the probability distribution
-    :type discrete_prob_dist: dict
+    :param prob_dist: the probability distribution
+    :type prob_dist: collections.Mapping
     :returns: scalar drawn from the distribution
     :rtype: object
     """
     limit = 0.0
     r = random.random()
-    for key in discrete_prob_dist.iterkeys():
-        limit += discrete_prob_dist[key]
-        if r < limit:
+    for key, val in prob_dist.iteritems():
+        limit += val
+        if r <= limit:
             return key
 
 
@@ -60,7 +63,8 @@ class MarkovChainGenerator(object):
         """Generate a string according to a Markov chain"""
         s = [random_string(length=1, alphabet=self.alphabet)]
         for _ in xrange(length - 1):
-            s.append(str(draw(self.chain[s[-1]])))
+            prob_dist = self.chain[s[-1]]
+            s.append(str(discrete_sample(prob_dist)))
         return ''.join(s)
 
     @staticmethod
@@ -73,12 +77,14 @@ class MarkovChainGenerator(object):
         """
         l = len(alphabet)
         markov_chain = dict()
+        second = operator.itemgetter(1)
         for from_letter in alphabet:
             slice_points = sorted([0] + [random.random() for _ in xrange(l - 1)] + [1])
             transition_probabilities = \
                 [slice_points[i + 1] - slice_points[i] for i in xrange(l)]
-            markov_chain[from_letter] = \
-                {letter: p for letter, p in izip(alphabet, transition_probabilities)}
+            letter_probs = sorted(izip(alphabet, transition_probabilities),
+                                  key=second, reverse=True)
+            markov_chain[from_letter] = OrderedDict(letter_probs)
         return markov_chain
 
 
@@ -118,12 +124,14 @@ class MarkovChainMutator(object):
         :returns: mutated sequence
         :rtype: str
         """
-        seq_list = list(intersperse(self.delimiter, seq)) + [self.delimiter]
+        delimiter = self.delimiter
+        seq_list = list(intersperse(delimiter, seq)) + [delimiter]
         mutation_site = random.randint(0, len(seq_list) - 1)
         from_letter = seq_list[mutation_site]
-        to_letter = draw(self.chain[from_letter])
+        prob_dist = self.chain[from_letter]
+        to_letter = discrete_sample(prob_dist)
         seq_list[mutation_site] = to_letter
-        return ''.join(el for el in seq_list if el != self.delimiter)
+        return ''.join(el for el in seq_list if el != delimiter)
 
 
 def get_simulation(args):
@@ -138,16 +146,16 @@ def get_simulation(args):
     mcm = MarkovChainMutator(p_err=args.p_err)
     data = []
     for c_id in xrange(args.num_clusters):
-        cluster_size = gauss_unsigned2(
+        cluster_size = gauss_uint_threshold(
             threshold=2, mu=c_size_mu, sigma=c_size_sigma)
-        seq_length = gauss_unsigned(mu=seq_len_mu, sigma=seq_len_sigma)
+        seq_length = gauss_uint(mu=seq_len_mu, sigma=seq_len_sigma)
         master = mcg.generate(seq_length)
         for seq_id in xrange(cluster_size):
             data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
             pos_count += 1
     num_negatives = int(pos_count * (1.0 - args.pos_ratio) / args.pos_ratio)
     for neg_idx in xrange(num_negatives):
-        seq_length = gauss_unsigned(mu=seq_len_mu, sigma=seq_len_sigma)
+        seq_length = gauss_uint(mu=seq_len_mu, sigma=seq_len_sigma)
         data.append(("{}".format(neg_idx), mcg.generate(seq_length)))
     random.shuffle(data)
     return data
