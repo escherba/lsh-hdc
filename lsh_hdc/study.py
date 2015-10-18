@@ -5,26 +5,12 @@ import argparse
 from itertools import chain, izip, repeat, islice
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
+from lsh_hdc.utils import random_string
 from sklearn.metrics import homogeneity_completeness_v_measure
 
 
-def random_string(length, alphabet=string.letters):
-    """
-
-    :param length: length of the string
-    :type length: int
-    :param alphabet: alphabet to draw letters from
-    :type alphabet: str
-    :return: random string of specified length
-    :rtype: str
-    """
-    l = len(alphabet) - 1
-    return ''.join(str(alphabet[random.randint(0, l)])
-                   for _ in range(length))
-
-
-def gauss_unsigned(mu=3, sigma=15):
-    """
+def gauss_unsigned(mu, sigma):
+    """Draw a positive integer from Gaussian distribution
     :param mu: mean
     :param sigma: std. dev
     :return: positive integer drawn from Gaussian distribution

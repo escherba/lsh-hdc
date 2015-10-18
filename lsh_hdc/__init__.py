@@ -33,30 +33,6 @@ from metrohash import metrohash64 as chash64, metrohash128 as chash128
 LOG = getLogger(__name__)
 
 
-def long2int(num):
-    """Lossily map a long type to the range of int
-
-    :param num: input long variable
-    :type num: long
-    :return: input mapped to int range
-    :rtype : int
-    """
-
-    smi1 = sys.maxint + 1
-    return int(num % (smi1 + smi1) - smi1)
-
-
-def chash(obj):
-    """Convenience function for calling chash64
-
-    :param obj: input string/hashable object
-    :type obj: object
-    :return: integer
-    :rtype: int
-    """
-    return long2int(chash64(obj, 0))
-
-
 def mshinglify(iterable, span, skip=0):
     """Same as shingligy except repeatedly mask one word
 

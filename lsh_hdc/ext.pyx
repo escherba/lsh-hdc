@@ -151,3 +151,16 @@ cdef class VarlenHash(object):
             return hash_combine_boost(item, seed)
         else:
             return 0
+
+
+cpdef long2int(num):
+    """Lossily map a long type to the range of int
+
+    :param num: input long variable
+    :type num: long
+    :return: input mapped to int range
+    :rtype : int
+    """
+
+    smi1 = sys.maxint + 1
+    return int(num % (smi1 + smi1) - smi1)

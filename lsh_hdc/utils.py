@@ -113,12 +113,16 @@ def randset():
     return tuple(set(gapply(n, random.choice, range(k))))
 
 
-alphabet = string.ascii_lowercase + string.ascii_uppercase + string.digits
-
-
-def randstr(n):
-    """Return a random string of length n"""
-    return ''.join(random.choice(alphabet) for _ in xrange(n))
+def random_string(length, alphabet=string.letters):
+    """Generate a random string
+    :param length: length of the string
+    :type length: int
+    :param alphabet: alphabet to draw letters from
+    :type alphabet: str
+    :return: random string of specified length
+    :rtype: str
+    """
+    return ''.join(str(random.choice(alphabet)) for _ in xrange(length))
 
 
 def sigsim(x, y, dim):
