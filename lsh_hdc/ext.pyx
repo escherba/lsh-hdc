@@ -15,31 +15,14 @@ ctypedef uint32_t uint32
 ctypedef uint64_t uint64
 
 
-cdef class PHashCombiner64(object):
+cdef class PHashCombiner(object):
     """Use polynomial hashing to reduce a vector of hashes
     """
 
     cdef list _coeffs
-    cdef uint64 _mask
+    cdef _mask
 
-    def __init__(self, uint64 size, uint64 prime=31, uint64 bits=64):
-        self._coeffs = [prime ** i for i in xrange(size)]
-        self._mask = (1 << bits) - 1
-
-    def combine(self, hashes):
-        """Combine a list of integer hashes
-        """
-        ab = sum(h * c for h, c in izip(hashes, self._coeffs))
-        return ab & self._mask
-
-
-cdef class PHashCombiner128(object):
-    """Use polynomial hashing to reduce a vector of hashes
-    """
-
-    cdef list _coeffs
-
-    def __init__(self, size, prime=31, bits=64):
+    def __cinit__(self, size, prime=31, bits=64):
         self._coeffs = [prime ** i for i in xrange(size)]
         self._mask = (1 << bits) - 1
 

@@ -16,12 +16,12 @@ from itertools import imap, izip, islice, chain, combinations
 from abc import abstractmethod
 from pymaptools.iter import cycle, take, shinglify, isiterable
 from lsh_hdc.utils import totuple, tsorted
-from lsh_hdc.hashes import VarlenHash, HashCombiner, hashable
+from lsh_hdc.ext import hashable, VarlenHash, PHashCombiner as HashCombiner
 
 # MetroHash (current)
 from metrohash import metrohash64 as chash64, metrohash128 as chash128
-#from lsh_hdc.hashes import hash_md5_64 as chash64, hash_md5_128 as chash128
-#from lsh_hdc.hashes import hash_builtin_64 as chash64, hash_builtin_128 as chash128
+#from lsh_hdc.ext import hash_md5_64 as chash64, hash_md5_128 as chash128
+#from lsh_hdc.ext import hash_builtin_64 as chash64, hash_builtin_128 as chash128
 
 # CityHash (previously used)
 #from cityhash import CityHash64WithSeed as chash64, CityHash128WithSeed as chash128
