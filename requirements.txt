@@ -1,7 +1,9 @@
 virtualenv
+numpy
 pandas
 matplotlib
 scikit-learn
+cython
 regex
 metrohash>=0.0.9
 cityhash>=0.1.2
