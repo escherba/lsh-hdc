@@ -1,11 +1,14 @@
 # disable built-in rules
 .SUFFIXES:
 
+MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
+CURRENT_DIR := $(notdir $(patsubst %/,%,$(dir $(MKFILE_PATH))))
+
 ifeq ($(OUTPUT_DIR),)
 # OUTPUT_DIR has not been defined, so generate a name for
 # one and include default experiment config file
-OUTPUT_DIR := experiment/out-$(shell date +%Y%m%d%H%M%S)
-include experiment/conf.mk
+OUTPUT_DIR := $(CURRENT_DIR)/out-$(shell date +%Y%m%d%H%M%S)
+include $(CURRENT_DIR)/conf.mk
 else
 # OUTPUT_DIR has been defined, include the make config from
 # that directory only. It's likely that the following
@@ -34,7 +37,7 @@ $(OUTPUT_DIR)/%.json: $(OUTPUT_DIR)/conf.mk
 # Secondary files will be kept
 .SECONDARY: $(OUTPUT_DIR)/conf.mk $(OUTPUT_DIR)/summary.ndjson $(OUTPUT_DIR)/summary.csv
 
-$(OUTPUT_DIR)/%.mk: experiment/%.mk
+$(OUTPUT_DIR)/%.mk: $(CURRENT_DIR)/%.mk
 	@mkdir -p $(dir $@)
 	if [ ! -f "$@" ]; then cp -p $< $@; fi
 
