@@ -17,6 +17,8 @@ $OUTPUT_DIR)/summary.json: $(FILENAMES) | experiment/include.mk
 	@mkdir -p $(dir $@)
 	cat $^ > $@
 
+.SECONDARY: $(OUTPUT_DIR)/summary.csv $(OUTPUT_DIR)/summary.json
+
 $(OUTPUT_DIR)/summary.csv: $(OUTPUT_DIR)/summary.json
 	@mkdir -p $(dir $@)
 	$(PYTHON) -m lsh_hdc.study summary --input $< --output $(dir $@)
