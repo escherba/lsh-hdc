@@ -297,7 +297,8 @@ def do_summa(args):
         colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
         fig, ax = plt.subplots()
         for color, (label, dfel) in izip(colors, groups):
-            dfel.plot(ax=ax, label=label, color=color, x="cluster_size", y=column, kind="scatter")
+            dfel.plot(ax=ax, label=label, color=color, x="cluster_size",
+                      logx=True, y=column, kind="scatter")
         fig_path = os.path.join(args.output, column + ".png")
         plt.savefig(fig_path)
 
