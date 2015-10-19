@@ -1,23 +1,25 @@
 include experiment/include.mk
 include experiment/misc.mk
 
+OUTPUT_DIR := experiment/out
 
 FILENAMES := $(shell for csz in $(CLUSTER_SIZES); do for h in $(HASHES); do for s in $(SEEDS); do printf "experiment/%03d-%s-%d.json " $$csz $$h $$s; done; done; done)
 
 
-experiment/%.json: experiment/misc.mk
+$(OUTPUT_DIR)/%.json: experiment/misc.mk
+	@mkdir -p $(dir $@)
 	$(PYTHON) -m lsh_hdc.study joint $(MISC_ARGS) --output $@ \
 		--cluster_size $(word 1,$(subst -, ,$*)) \
 		--hashfun $(word 2,$(subst -, ,$*)) \
 		--seed $(word 3,$(subst -, ,$*))
 
-experiment/summary.json: $(FILENAMES) | experiment/include.mk
-	mkdir -p $(dir $@)
+$OUTPUT_DIR)/summary.json: $(FILENAMES) | experiment/include.mk
+	@mkdir -p $(dir $@)
 	cat $^ > $@
 
-experiment/summary.csv: experiment/summary.json
-	mkdir -p $(dir $@)
+$(OUTPUT_DIR)/summary.csv: $(OUTPUT_DIR)/summary.json
+	@mkdir -p $(dir $@)
 	$(PYTHON) -m lsh_hdc.study summary --input $< --output $(dir $@)
 
-analysis: experiment/summary.csv
+analysis: $(OUTPUT_DIR)/summary.csv
 	@echo "all done"

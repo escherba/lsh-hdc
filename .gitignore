@@ -62,9 +62,7 @@ results/
 domino.log
 
 # Misc
-experiment/*.json
-experiment/*.csv
-experiment/*.png
+experiment/out/
 data/
 tmp/
 out/
