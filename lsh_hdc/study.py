@@ -11,7 +11,7 @@ from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
 from sklearn.metrics import homogeneity_completeness_v_measure
-from pymaptools.io import GzipFileType
+from pymaptools.io import GzipFileType, read_json_lines, ndjson2col
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 from pymaptools.benchmark import PMTimer
@@ -251,8 +251,9 @@ def do_simulation(args):
     if args.seed is not None:
         random.seed(args.seed)
     data, _ = get_simulation(args)
+    output = args.output
     for i, seq in data:
-        print i, seq
+        output.write("%s %s\n", (i, seq))
 
 
 def perform_clustering(args, data):
@@ -267,7 +268,7 @@ def perform_clustering(args, data):
 
 def do_cluster(args):
     results = perform_clustering(args, load_simulation(args))
-    print json.dumps(results)
+    args.output.write("%s\n" % json.dumps(results))
 
 
 def do_joint(args):
@@ -276,7 +277,14 @@ def do_joint(args):
     data, stats = get_simulation(args)
     results = perform_clustering(args, data)
     stats.update(results)
-    print json.dumps(stats)
+    args.output.write("%s\n" % json.dumps(stats))
+
+
+def do_summa(args):
+    import pandas as pd
+    obj = ndjson2col(read_json_lines(args.input))
+    df = pd.DataFrame.from_dict(obj)
+    import pdb; pdb.set_trace()  # XXX BREAKPOINT
 
 
 def add_simul_args(p_simul):
@@ -337,6 +345,9 @@ def add_clust_args(p_clust):
 def parse_args(args=None):
     parser = argparse.ArgumentParser(
         description="Simulate data and/or run analysis")
+    parser.add_argument(
+        '--output', type=GzipFileType('w'), default=sys.stdout,
+        help='File output')
     subparsers = parser.add_subparsers()
 
     p_simul = subparsers.add_parser('simulate', help='generate simulation')
@@ -353,6 +364,11 @@ def parse_args(args=None):
     add_simul_args(p_joint)
     add_clust_args(p_joint)
     p_joint.set_defaults(func=do_joint)
+
+    p_summa = subparsers.add_parser('summary', help='summarize analysis results')
+    p_summa.add_argument(
+        '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
+    p_summa.set_defaults(func=do_summa)
 
     namespace = parser.parse_args()
     return namespace
