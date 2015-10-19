@@ -130,8 +130,7 @@ def hash_md5_128(x, seed=0):
 def hash_builtin_64(x, seed=0):
     """Return value is 32 bits
 
-    Note: hash() is a terrible hash function. For more examples see
-    http://michaelnielsen.org/blog/consistent-hashing/
+    Note: vanilla hash() is a terrible hash function
     """
     a = hash(x)
     b = hash("_" + repr(x))
