@@ -299,7 +299,7 @@ def create_plots(df, output_dir, metrics, **kwargs):
         for color, (label, dfel) in izip(colors, groups):
             dfel.plot(ax=ax, label=label, color=color, x="cluster_size",
                       y=column, kind="scatter", **kwargs)
-        fig_path = os.path.join(output_dir, column + ".png")
+        fig_path = os.path.join(output_dir, "fig_" + column + ".png")
         plt.legend(prop=fontP)
         plt.savefig(fig_path)
 

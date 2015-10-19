@@ -1,4 +1,4 @@
 #!/bin/bash
 
-make build_ext
-make -j10 analysis
+make -r build_ext
+make -r -j10 analysis
