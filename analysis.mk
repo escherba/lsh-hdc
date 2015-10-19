@@ -1,8 +1,8 @@
 # disable built-in rules
 .SUFFIXES:
 
-include experiment/include.mk
-include experiment/misc.mk
+include experiment/grid.mk
+include experiment/conf.mk
 
 # If OUTPUT_DIR is not set externally, define it. This
 # lets us build make targets while passing a parameter:
@@ -23,7 +23,7 @@ $(OUTPUT_DIR)/%.mk: experiment/%.mk
 	@mkdir -p $(dir $@)
 	if [ ! -f "$@" ]; then cp -p $< $@; fi
 
-$(OUTPUT_DIR)/%.json: $(OUTPUT_DIR)/misc.mk
+$(OUTPUT_DIR)/%.json: $(OUTPUT_DIR)/conf.mk
 	@mkdir -p $(dir $@)
 	$(PYTHON) -m lsh_hdc.study joint $(MISC_ARGS) --output $@ \
 		--cluster_size $(word 1,$(subst -, ,$*)) \
@@ -32,7 +32,7 @@ $(OUTPUT_DIR)/%.json: $(OUTPUT_DIR)/misc.mk
 
 
 # Secondary files will be kept
-.SECONDARY: $(OUTPUT_DIR)/include.mk $(OUTPUT_DIR)/misc.mk $(OUTPUT_DIR)/summary.ndjson $(OUTPUT_DIR)/summary.csv
+.SECONDARY: $(OUTPUT_DIR)/grid.mk $(OUTPUT_DIR)/conf.mk $(OUTPUT_DIR)/summary.ndjson $(OUTPUT_DIR)/summary.csv
 
 $(OUTPUT_DIR)/summary.ndjson: $(FILENAMES)
 	@mkdir -p $(dir $@)
