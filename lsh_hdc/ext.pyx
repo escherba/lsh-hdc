@@ -35,21 +35,21 @@ cdef class PHashCombiner(object):
         return ab & self._mask
 
 
-cpdef uint64 hash_combine_boost_64(uint64 seed, uint64 v):
+cpdef inline uint64 hash_combine_boost_64(uint64 seed, uint64 v):
     """Hash two 64-bit integers together
     Uses boost::hash_combine algorithm
     """
     return seed ^ (v + 0x9e3779b9ULL + (seed << 6ULL) + (seed >> 2ULL))
 
 
-cpdef hash_combine_boost(seed, v):
+cpdef inline hash_combine_boost(seed, v):
     """Hash two 64-bit integers together
     Uses boost::hash_combine algorithm
     """
     return seed ^ (v + 0x9e3779b9 + (seed << 6) + (seed >> 2))
 
 
-cpdef uint64 hash_combine_murmur_64(uint64 seed, uint64 v):
+cpdef inline uint64 hash_combine_murmur_64(uint64 seed, uint64 v):
     """Hash two 64-bit integers together
     Uses a Murmur-inspired hash function
     """
@@ -61,7 +61,7 @@ cpdef uint64 hash_combine_murmur_64(uint64 seed, uint64 v):
     return b
 
 
-cpdef hash_combine_murmur(seed, v):
+cpdef inline hash_combine_murmur(seed, v):
     """Hash two 64-bit integers together
     Uses a Murmur-inspired hash function
     """
@@ -73,7 +73,7 @@ cpdef hash_combine_murmur(seed, v):
     return b
 
 
-cpdef hashable(value):
+cpdef inline hashable(value):
     if not isinstance(value, basestring):
         return repr(value)
     return value
