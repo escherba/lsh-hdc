@@ -14,6 +14,7 @@ from sklearn.metrics import homogeneity_completeness_v_measure
 from pymaptools.io import GzipFileType
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
+from pymaptools.benchmark import PMTimer
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -151,19 +152,26 @@ def get_simulation(args):
     mcm = MarkovChainMutator(p_err=args.p_err)
     data = []
 
+    stats = dict()
+
     # pick first letter at random
     start = random_string(length=1, alphabet=mcg.alphabet)
 
     if (args.num_clusters is not None) and (args.pos_ratio is not None):
         num_clusters = args.num_clusters
+        stats['num_clusters'] = num_clusters
         pos_ratio = args.pos_ratio
     elif (args.num_clusters is not None) and (args.sim_size is not None) and (args.cluster_size is not None) and (args.pos_ratio is None):
         num_clusters = args.num_clusters
+        stats['num_clusters'] = num_clusters
+        stats['cluster_size'] = args.cluster_size
         pos_ratio = int(args.num_clusters * args.cluster_size / float(args.sim_size))
         logging.info("Will use %.3f ratio of positives to total", pos_ratio)
     elif (args.num_clusters is None) and (args.sim_size is not None) and (args.cluster_size is not None) and (args.pos_ratio is not None):
         # calculate from simulation size
+        stats['cluster_size'] = args.cluster_size
         num_clusters = int(args.sim_size * args.pos_ratio / float(args.cluster_size))
+        stats['num_clusters'] = num_clusters
         logging.info("Will create %d clusters of size %d", num_clusters, args.cluster_size)
         pos_ratio = args.pos_ratio
     else:
@@ -184,6 +192,7 @@ def get_simulation(args):
             data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
             pos_count += 1
     logging.info("Output %d positives", pos_count)
+    stats['num_positives'] = pos_count
     num_negatives = int(pos_count * ((1.0 - pos_ratio) / pos_ratio))
     for neg_idx in xrange(num_negatives):
         seq_length = gauss_uint_threshold(
@@ -193,8 +202,9 @@ def get_simulation(args):
             start = master[-1]
         data.append(("{}".format(neg_idx), master))
     logging.info("Output %d negatives", num_negatives)
+    stats['num_negatives'] = num_negatives
     random.shuffle(data)
-    return data
+    return data, stats
 
 
 def get_clusters(args, data):
@@ -210,14 +220,6 @@ def get_clusters(args, data):
         shingles = shingler.get_shingles(text)
         cluster.add_item(shingles, label)
     return cluster.get_clusters()
-
-
-def do_simulation(args):
-    if args.seed is not None:
-        random.seed(args.seed)
-    data = get_simulation(args)
-    for i, seq in data:
-        print i, seq
 
 
 def load_simulation(args):
@@ -245,19 +247,39 @@ def clusters_to_labels(cluster_iter):
     return labels_true, labels_pred
 
 
-def do_cluster(args):
-    clusters = get_clusters(args, load_simulation(args))
+def do_simulation(args):
+    if args.seed is not None:
+        random.seed(args.seed)
+    data, _ = get_simulation(args)
+    for i, seq in data:
+        print i, seq
+
+
+def perform_clustering(args, data):
+    with PMTimer() as timer:
+        clusters = get_clusters(args, data)
     labels_true, labels_pred = clusters_to_labels(clusters)
     measures = homogeneity_completeness_v_measure(labels_true, labels_pred)
-    print json.dumps(dict(izip(['homogeneity', 'completeness', 'v-measure'], measures)))
+    measure_keys = ['hash_function', 'homogeneity', 'completeness', 'v-measure', 'wall_time', 'cpu_time']
+    measure_vals = [args.hashfun] + list(measures) + [timer.wall_interval, timer.clock_interval]
+    return dict(izip(measure_keys, measure_vals))
 
 
-def parse_args(args=None):
-    parser = argparse.ArgumentParser(
-        description="Simulate results and/or run tests on them")
-    subparsers = parser.add_subparsers()
+def do_cluster(args):
+    results = perform_clustering(args, load_simulation(args))
+    print json.dumps(results)
 
-    p_simul = subparsers.add_parser('simulate', help='run tests')
+
+def do_joint(args):
+    if args.seed is not None:
+        random.seed(args.seed)
+    data, stats = get_simulation(args)
+    results = perform_clustering(args, data)
+    stats.update(results)
+    print json.dumps(stats)
+
+
+def add_simul_args(p_simul):
     p_simul.add_argument(
         '--num_clusters', type=int, default=None,
         help='Number of clusters to create')
@@ -291,12 +313,9 @@ def parse_args(args=None):
     p_simul.add_argument(
         '--c_size_sigma', type=float, default=10,
         help='Std. dev. of cluster size')
-    p_simul.set_defaults(func=do_simulation)
 
-    p_clust = subparsers.add_parser('cluster', help='run tests')
-    p_clust.add_argument(
-        '--input', type=GzipFileType('r'), default=sys.stdin,
-        help='File input')
+
+def add_clust_args(p_clust):
     p_clust.add_argument(
         '--hashfun', type=str, default='metrohash',
         choices=HASH_FUN_TABLE.keys(),
@@ -313,7 +332,28 @@ def parse_args(args=None):
     p_clust.add_argument(
         '--lsh_scheme', type=str, default="b2",
         help='LSH binning scheme')
+
+
+def parse_args(args=None):
+    parser = argparse.ArgumentParser(
+        description="Simulate results and/or run tests on them")
+    subparsers = parser.add_subparsers()
+
+    p_simul = subparsers.add_parser('simulate', help='generate simulation')
+    add_simul_args(p_simul)
+    p_simul.set_defaults(func=do_simulation)
+
+    p_clust = subparsers.add_parser('cluster', help='run clustering on input data')
+    p_clust.add_argument(
+        '--input', type=GzipFileType('r'), default=sys.stdin,
+        help='File input')
+    add_clust_args(p_clust)
     p_clust.set_defaults(func=do_cluster)
+
+    p_joint = subparsers.add_parser('joint', help='generate simulation and run clustering')
+    add_simul_args(p_joint)
+    add_clust_args(p_joint)
+    p_joint.set_defaults(func=do_joint)
 
     namespace = parser.parse_args()
     return namespace
