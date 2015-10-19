@@ -1,1 +1,1 @@
-MISC_ARGS := --pos_ratio 0.5 --seq_len_min 3 --sim_size 60000
+MISC_ARGS := --pos_ratio 0.2 --p_err 0.0 --seq_len_min 3 --sim_size 60000

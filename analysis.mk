@@ -10,7 +10,6 @@ FILENAMES := $(shell for csz in $(CLUSTER_SIZES); do for h in $(HASHES); do for 
 
 $(OUTPUT_DIR)/%.json: experiment/misc.mk
 	@mkdir -p $(dir $@)
-	echo $(word 1,$(subst -, ,$*))
 	$(PYTHON) -m lsh_hdc.study joint $(MISC_ARGS) --output $@ \
 		--cluster_size $(word 1,$(subst -, ,$*)) \
 		--hashfun $(word 2,$(subst -, ,$*)) \
