@@ -256,7 +256,8 @@ def do_simulation(args):
         output.write("%s %s\n", (i, seq))
 
 
-METRICS = ['homogeneity', 'completeness', 'nmi', 'time_wall', 'time_cpu']
+METRICS = ['homogeneity', 'completeness', 'nmi']
+BENCHMARKS = ['time_wall', 'time_cpu']
 
 
 def perform_clustering(args, data):
@@ -264,7 +265,7 @@ def perform_clustering(args, data):
         clusters = get_clusters(args, data)
     labels_true, labels_pred = clusters_to_labels(clusters)
     measures = homogeneity_completeness_v_measure(labels_true, labels_pred)
-    measure_keys = ['hash_function'] + METRICS
+    measure_keys = ['hash_function'] + METRICS + BENCHMARKS
     measure_vals = [args.hashfun] + list(measures) + [timer.wall_interval, timer.clock_interval]
     return dict(izip(measure_keys, measure_vals))
 
@@ -283,24 +284,35 @@ def do_joint(args):
     args.output.write("%s\n" % json.dumps(stats))
 
 
-def do_summa(args):
-    import pandas as pd
+def create_plots(df, output_dir, metrics, **kwargs):
     import matplotlib.pyplot as plt
     from palettable import colorbrewer
-    obj = ndjson2col(read_json_lines(args.input))
-    df = pd.DataFrame.from_dict(obj)
-    csv_path = os.path.join(args.output, "summary.csv")
-    df.to_csv(csv_path)
+    from matplotlib.font_manager import FontProperties
+    fontP = FontProperties()
+    fontP.set_size('small')
+
     groups = df.groupby(["hash_function"])
     palette_size = min(max(len(groups), 3), 9)
-    for column in METRICS:
+    for column in metrics:
         colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
         fig, ax = plt.subplots()
         for color, (label, dfel) in izip(colors, groups):
             dfel.plot(ax=ax, label=label, color=color, x="cluster_size",
-                      logx=True, y=column, kind="scatter")
-        fig_path = os.path.join(args.output, column + ".png")
+                      y=column, kind="scatter", **kwargs)
+        fig_path = os.path.join(output_dir, column + ".png")
+        plt.legend(prop=fontP)
         plt.savefig(fig_path)
+
+
+def do_summa(args):
+    import pandas as pd
+
+    obj = ndjson2col(read_json_lines(args.input))
+    df = pd.DataFrame.from_dict(obj)
+    csv_path = os.path.join(args.output, "summary.csv")
+    df.to_csv(csv_path)
+    create_plots(df, args.output, METRICS, logx=True)
+    create_plots(df, args.output, BENCHMARKS, logx=True)
 
 
 def add_simul_args(p_simul):
