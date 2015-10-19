@@ -380,7 +380,8 @@ def extend(lst, k):
 class MinHashSignature(Signature):
     """Obtain minhash signature"""
 
-    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1, seed=0):
+    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1,
+                 seed=0, hashfun=chash64):
         if width % kmin != 0:
             raise ValueError("width must be a multiple of kmin")
         if type(kmin) != int:
@@ -393,6 +394,7 @@ class MinHashSignature(Signature):
             raise ValueError("kmin must be >= 1")
         self.width = width / kmin
         self.kmin = kmin
+        self.hashfun = hashfun
 
         self.lsh_hasher = lsh_hasher
         self.seed = seed
@@ -452,13 +454,14 @@ class MinHashSignature(Signature):
     def create_hash_functions(self):
         """Return a list of length self.width of different hash functions
         """
+        hashfun = self.hashfun
         universe_size = self.universe_size
 
         def hash_factory(seed):
             if universe_size is None:
-                fun = lambda x: chash64(hashable(x), seed)
+                fun = lambda x: hashfun(hashable(x), seed)
             else:
-                fun = lambda x: chash64(hashable(x), seed) % universe_size
+                fun = lambda x: hashfun(hashable(x), seed) % universe_size
             return fun
 
         # draw a sample of unique random integers from pool of [0, sys.maxint]
@@ -552,30 +555,23 @@ class MinHashSketchSignature(MinHashSignature):
 
 class SimHashSignature(Signature):
 
-    def __init__(self, bit_depth=64, seed=0):
+    def __init__(self, bit_depth=64, seed=0, hashfun_map=((64, chash64), (128, chash128))):
         """
         :param bit_depth: Length of binary vector (bit resolution)
         :type bit_depth: int
         """
         self.bits = range(bit_depth)
         self.seed = seed
-        if bit_depth <= 64:
-            self.hash_fun = self._hash_fun_64
-        elif bit_depth <= 128:
-            self.hash_fun = self._hash_fun_128
+
+        for key_bits, val_fun in hashfun_map:
+            if bit_depth <= key_bits:
+                self.hashfun = lambda value, seed=0: val_fun(hashable(value), seed)
+                break
         else:
-            self.hash_fun = VarlenHash(bit_depth)
+            self.hashfun = VarlenHash(bit_depth)
 
     def create_hash_functions(self):
         raise NotImplementedError
-
-    @staticmethod
-    def _hash_fun_64(value, seed=0):
-        return chash64(hashable(value), seed)
-
-    @staticmethod
-    def _hash_fun_128(value, seed=0):
-        return chash128(hashable(value), seed)
 
     def get_signature(self, tokens, *features):
         """Returns weighted SimHash signature of a word vector
@@ -591,16 +587,16 @@ class SimHashSignature(Signature):
         :rtype: long
         :raises: OverflowError
         """
-        hash_fun = self.hash_fun
+        hashfun = self.hashfun
         seed = self.seed
         token_weights = (log1p(sum(imap(len, token))) for token in tokens)
         if features:
             features, feature_weights = izip(*features)
-            fin_features = (hash_fun(feature, seed)
+            fin_features = (hashfun(feature, seed)
                             for feature in chain(tokens, features))
             fin_weights = chain(token_weights, feature_weights)
         else:
-            fin_features = (hash_fun(feature, seed) for feature in tokens)
+            fin_features = (hashfun(feature, seed) for feature in tokens)
             fin_weights = token_weights
         return self._sig_with_weights(fin_features, fin_weights)
 

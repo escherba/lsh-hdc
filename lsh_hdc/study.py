@@ -13,6 +13,22 @@ from pymaptools.io import GzipFileType
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 
+# Various hash functions
+from metrohash import metrohash64
+from cityhash import CityHash64WithSeed
+from xxh import hash64 as xxh_hash64
+from lsh_hdc.ext import hash_builtin_64
+from lsh_hdc.ext import hash_md5_64
+
+
+HASH_FUN_TABLE = dict(
+    metrohash=metrohash64,
+    cityhash=CityHash64WithSeed,
+    xxh=xxh_hash64,
+    builtin=hash_builtin_64,
+    md5=hash_md5_64,
+)
+
 
 ALPHABET = string.letters + string.digits
 
@@ -158,9 +174,11 @@ def get_simulation(args):
 
 
 def get_clusters(args, data):
+    hashfun = HASH_FUN_TABLE[args.hashfun]
     cluster = Cluster(width=args.width,
                       bandwidth=args.bandwidth,
-                      lsh_scheme=args.lsh_scheme)
+                      lsh_scheme=args.lsh_scheme,
+                      hashfun=hashfun)
     shingler = Shingler(span=args.shingle_span)
     content_dict = dict()
     for label, text in data:
@@ -252,6 +270,10 @@ def parse_args(args=None):
     p_clust.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin,
         help='File input')
+    p_clust.add_argument(
+        '--hashfun', type=str, default='metrohash',
+        choices=HASH_FUN_TABLE.keys(),
+        help='Minimum sequence length')
     p_clust.add_argument(
         '--shingle_span', type=int, default=3,
         help='shingle length (in tokens)')
