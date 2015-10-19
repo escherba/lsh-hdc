@@ -336,21 +336,20 @@ def add_clust_args(p_clust):
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(
-        description="Simulate results and/or run tests on them")
+        description="Simulate data and/or run analysis")
     subparsers = parser.add_subparsers()
 
     p_simul = subparsers.add_parser('simulate', help='generate simulation')
     add_simul_args(p_simul)
     p_simul.set_defaults(func=do_simulation)
 
-    p_clust = subparsers.add_parser('cluster', help='run clustering on input data')
+    p_clust = subparsers.add_parser('analyze', help='run analysis')
     p_clust.add_argument(
-        '--input', type=GzipFileType('r'), default=sys.stdin,
-        help='File input')
+        '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
     add_clust_args(p_clust)
     p_clust.set_defaults(func=do_cluster)
 
-    p_joint = subparsers.add_parser('joint', help='generate simulation and run clustering')
+    p_joint = subparsers.add_parser('joint', help='generate simulation and analyze')
     add_simul_args(p_joint)
     add_clust_args(p_joint)
     p_joint.set_defaults(func=do_joint)
