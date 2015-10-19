@@ -15,41 +15,23 @@ from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from abc import abstractmethod
 from pymaptools.iter import cycle, take, shinglify, isiterable
-from lsh_hdc.utils import totuple, tsorted
+from lsh_hdc.utils import toiter, tsorted
+from lsh_hdc.ext import hashable, VarlenHash, PHashCombiner as HashCombiner
 
-# TODO: also try out these:
-
-# https://github.com/lebedov/xxh
-# https://github.com/flier/pyfasthash
-#
+# MetroHash (current)
 from metrohash import metrohash64 as chash64, metrohash128 as chash128
+
+# CityHash (previously used)
+#from cityhash import CityHash64WithSeed as chash64, CityHash128WithSeed as chash128
+
+# xxh-hash from https://github.com/lebedov/xxh
+#from xxh import hash64 as chash64, hash64 as chash128
+
+#from lsh_hdc.ext import hash_builtin_64 as chash64, hash_builtin_128 as chash128
+#from lsh_hdc.ext import hash_md5_64 as chash64, hash_md5_128 as chash128
 
 
 LOG = getLogger(__name__)
-
-
-def long2int(num):
-    """Lossily map a long type to the range of int
-
-    :param num: input long variable
-    :type num: long
-    :return: input mapped to int range
-    :rtype : int
-    """
-
-    smi1 = sys.maxint + 1
-    return int(num % (smi1 + smi1) - smi1)
-
-
-def chash(obj):
-    """Convenience function for calling chash64
-
-    :param obj: input string/hashable object
-    :type obj: object
-    :return: integer
-    :rtype: int
-    """
-    return long2int(chash64(obj, 0))
 
 
 def mshinglify(iterable, span, skip=0):
@@ -176,8 +158,8 @@ def lsh_combinations(width, bandwidth, ramp):
     mapping = collections.defaultdict(list)
     for get_left, get_right in izip(left_getters, right_getters):
         for element in master:
-            mapping[tsorted(totuple(get_left(element)))].append(
-                tsorted(totuple(get_right(element))))
+            mapping[tsorted(toiter(get_left(element)))].append(
+                tsorted(toiter(get_right(element))))
     return sorted(set(tsorted(k + v[0]) for k, v in mapping.iteritems()))
 
 
@@ -398,7 +380,8 @@ def extend(lst, k):
 class MinHashSignature(Signature):
     """Obtain minhash signature"""
 
-    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1, seed=0):
+    def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1,
+                 seed=0, hashfun=chash64):
         if width % kmin != 0:
             raise ValueError("width must be a multiple of kmin")
         if type(kmin) != int:
@@ -411,6 +394,7 @@ class MinHashSignature(Signature):
             raise ValueError("kmin must be >= 1")
         self.width = width / kmin
         self.kmin = kmin
+        self.hashfun = hashfun
 
         self.lsh_hasher = lsh_hasher
         self.seed = seed
@@ -469,25 +453,15 @@ class MinHashSignature(Signature):
 
     def create_hash_functions(self):
         """Return a list of length self.width of different hash functions
-
-        Note: hash() is not as uniform as haslib.md5. For more examples see
-        See http://michaelnielsen.org/blog/consistent-hashing/
-
-        Other possible hash funcitons include:
-
-        .. code-block:: python
-
-            lambda x: long2int(long(md5(repr(x)).hexdigest(), 16))
-            lambda x: hash(repr(x))
-
         """
+        hashfun = self.hashfun
         universe_size = self.universe_size
 
         def hash_factory(seed):
             if universe_size is None:
-                fun = lambda x: chash64(repr(x), seed)
+                fun = lambda x: hashfun(hashable(x), seed)
             else:
-                fun = lambda x: chash64(repr(x), seed) % universe_size
+                fun = lambda x: hashfun(hashable(x), seed) % universe_size
             return fun
 
         # draw a sample of unique random integers from pool of [0, sys.maxint]
@@ -579,76 +553,25 @@ class MinHashSketchSignature(MinHashSignature):
         return self._minhash_sketch(minhash_sample)
 
 
-def hash_combine(seed, val):
-    """Combine seed with hash value
-    """
-    return seed ^ (val + 0x9e3779b9 + (seed << 6) + (seed >> 2))
-
-
-def create_varlen_hash(scale=sys.maxint):
-    """Create a hash function of arbitrary output length
-    :param scale: integer or long indicating roughly how large should the
-                  hashe values be
-    :type scale: int,long
-
-    Note: the return value of this function increases as the length of the
-    text to be hashed increases. So the fuction has terrible distribution
-    properties.
-    """
-    def _hash_fun_long(item, seed=0):
-        """A variable-length version of Python's builtin hash"""
-        type_of_x = type(item)
-        if type_of_x == str:
-            value = item
-        elif type_of_x == unicode:
-            value = item.encode("utf-8")
-        else:
-            value = repr(item)
-        length_of_v = len(value)
-        if length_of_v > 0:
-            item = ord(value[0]) << 7
-            mask = scale - 1
-            for char in value:
-                item = ((item * 1000003) ^ ord(char)) & mask
-            item ^= length_of_v
-            if item == -1:
-                item = -2
-            return hash_combine(item, seed)
-        else:
-            return 0
-    return _hash_fun_long
-
-
 class SimHashSignature(Signature):
 
-    def __init__(self, bit_depth=64, seed=0):
+    def __init__(self, bit_depth=64, seed=0, hashfun_map=((64, chash64), (128, chash128))):
         """
         :param bit_depth: Length of binary vector (bit resolution)
         :type bit_depth: int
         """
         self.bits = range(bit_depth)
         self.seed = seed
-        if bit_depth <= 64:
-            self.hash_fun = self._hash_fun_64
-        elif bit_depth <= 128:
-            self.hash_fun = self._hash_fun_128
+
+        for key_bits, val_fun in hashfun_map:
+            if bit_depth <= key_bits:
+                self.hashfun = lambda value, seed=0: val_fun(hashable(value), seed)
+                break
         else:
-            self.hash_fun = create_varlen_hash(bit_depth)
+            self.hashfun = VarlenHash(bit_depth)
 
     def create_hash_functions(self):
         raise NotImplementedError
-
-    @staticmethod
-    def _hash_fun_64(value, seed=0):
-        if not isinstance(value, basestring):
-            value = repr(value)
-        return chash64(value, seed)
-
-    @staticmethod
-    def _hash_fun_128(value, seed=0):
-        if not isinstance(value, basestring):
-            value = repr(value)
-        return chash128(value, seed)
 
     def get_signature(self, tokens, *features):
         """Returns weighted SimHash signature of a word vector
@@ -664,16 +587,16 @@ class SimHashSignature(Signature):
         :rtype: long
         :raises: OverflowError
         """
-        hash_fun = self.hash_fun
+        hashfun = self.hashfun
         seed = self.seed
         token_weights = (log1p(sum(imap(len, token))) for token in tokens)
         if features:
             features, feature_weights = izip(*features)
-            fin_features = (hash_fun(feature, seed)
+            fin_features = (hashfun(feature, seed)
                             for feature in chain(tokens, features))
             fin_weights = chain(token_weights, feature_weights)
         else:
-            fin_features = (hash_fun(feature, seed) for feature in tokens)
+            fin_features = (hashfun(feature, seed) for feature in tokens)
             fin_weights = token_weights
         return self._sig_with_weights(fin_features, fin_weights)
 
@@ -699,20 +622,6 @@ class SimHashSignature(Signature):
                 else:
                     vec[i] -= scaled_weight
         return sum(1 << i for i in bits if vec[i] > 0)
-
-
-class HashCombiner(object):
-
-    """use polynomial hashing to reduce a vector of hashes
-    """
-    def __init__(self, size, prime=31, mod=18446744073709551615L):
-        self._coeffs = [prime ** i for i in xrange(size)]
-        self._mod = mod
-
-    def combine(self, hashes):
-        # TODO: Cythonize this?
-        return sum(hsh * coeff for hsh, coeff in izip(hashes, self._coeffs)) \
-            % self._mod
 
 
 class LSHC(object):

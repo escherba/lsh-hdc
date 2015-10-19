@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 import unittest
-import random
-from cityhash import CityHash128
-from pymaptools.bitwise import hamming, bitstring_padded, from_bitstring
+from pymaptools.bitwise import hamming
 from lsh_hdc import MinHashSignature, SimHashSignature, MinHashSketchSignature, \
     jaccard_sim, Shingler
-from lsh_hdc.utils import randset, sigsim, randstr
+from lsh_hdc.utils import randset, sigsim
 from lsh_hdc.preprocess import RegexTokenizer
 
 
@@ -80,16 +78,6 @@ class TestSig(unittest.TestCase):
         sig6 = sh.get_signature(str2)
         self.assertNotEqual(sig5, sig6)
 
-    def test_simhash128_addition(self):
-        """Test that our technique of combining two numbers works
-        """
-        for _ in xrange(100):
-            rstr = randstr(random.randint(0, 10))
-            a, b = CityHash128(rstr)
-            num1 = from_bitstring(bitstring_padded(64, b) + bitstring_padded(64, a))
-            num2 = (1 << 64) * a + b
-            self.assertEqual(num1, num2)
-
     def test_simhash_similarity_1(self):
         sh = SimHashSignature(64)
         sig1 = sh.get_signature("abracadabra")
@@ -130,7 +118,7 @@ class TestSig(unittest.TestCase):
         sig1 = sh.get_signature("abracadabra")
         sig2 = sh.get_signature("")
         dist = hamming(sig1, sig2)
-        self.assertEqual(28, dist)
+        self.assertEqual(32, dist)
 
     def test_simhash_feature_weights_1(self):
         sh = SimHashSignature(64)

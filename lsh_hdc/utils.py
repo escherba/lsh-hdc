@@ -1,31 +1,20 @@
 # -*- coding: utf-8 -*-
 import random
 import operator
-import json
 import string
 from itertools import imap
+from operator import itemgetter
+from pymaptools.iter import isiterable
 
 
-def totuple(a):
-    """convert possible scalar to tuple"""
-    return a if type(a) == tuple else (a,)
+def toiter(a):
+    """If scalar, convert to tuple"""
+    return a if isiterable(a) else (a,)
 
 
 def tsorted(a):
     """Sort a tuple"""
     return tuple(sorted(a))
-
-
-def read_json_file(file_path):
-    """Open a JSON file and read contents
-    :param file_path: path to file
-    :type file_path: str
-    :returns: iterator of JSON objects
-    :rtype: collections.iterable
-    """
-    with open(file_path, 'r') as json_file:
-        for line in json_file:
-            yield json.loads(line)
 
 
 def getpropval(obj):
@@ -35,45 +24,6 @@ def getpropval(obj):
     """
     return ((p, val) for p, val in ((p, getattr(obj, p)) for p in dir(obj))
             if not callable(val) and p[0] != '_')
-
-
-class JsonRepr(object):
-
-    def as_dict(self):
-        """
-
-        :rtype : dict
-        """
-        return dict(getpropval(self))
-
-    def __repr__(self):
-        """
-
-        :rtype : str
-        """
-        return json.dumps(self.as_dict())
-
-    def assign(self, o):
-        for k, v in getpropval(o):
-            setattr(self, k, v)
-
-
-def first(it):
-    """
-    :returns: first element of an iterable"""
-    return it[0]
-
-
-def second(it):
-    """
-    :returns: second element of an iterable"""
-    return it[1]
-
-
-def last(it):
-    """
-    :returns: last element of an iterable"""
-    return it[-1]
 
 
 def gapply(n, func, *args, **kwargs):
@@ -101,24 +51,27 @@ def lapply(n, func, *args, **kwargs):
     return list(gapply(n, func, *args, **kwargs))
 
 
-def randset():
-    """Return a random set.  These values of n and k have wide-ranging
-    similarities between pairs.
+def randset(value_range=(0, 10), sample_range=(5, 20)):
+    """Return a random set of integers sampled
 
     :returns: a list of integers
     :rtype: tuple
     """
-    n = random.choice(range(5, 20))
-    k = 10
-    return tuple(set(gapply(n, random.choice, range(k))))
+    n = random.choice(range(*sample_range))
+    source = range(*value_range)
+    return tuple(sorted(set(gapply(n, random.choice, source))))
 
 
-alphabet = string.ascii_lowercase + string.ascii_uppercase + string.digits
-
-
-def randstr(n):
-    """Return a random string of length n"""
-    return ''.join(random.choice(alphabet) for _ in xrange(n))
+def random_string(length, alphabet=string.letters):
+    """Generate a random string
+    :param length: length of the string
+    :type length: int
+    :param alphabet: alphabet to draw letters from
+    :type alphabet: str
+    :return: random string of specified length
+    :rtype: str
+    """
+    return ''.join(str(random.choice(alphabet)) for _ in xrange(length))
 
 
 def sigsim(x, y, dim):
@@ -145,6 +98,6 @@ def sort_by_length(els, reverse=True):
     :type reverse: bool
     :rtype: collections.iterable
     """
-    return imap(first,
+    return imap(itemgetter(0),
                 sorted(((s, len(s)) for s in els),
                        key=operator.itemgetter(1), reverse=reverse))
