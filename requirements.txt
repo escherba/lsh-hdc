@@ -3,6 +3,7 @@ numpy
 pandas
 matplotlib
 scikit-learn
+palettable
 cython
 regex
 metrohash>=0.0.9

@@ -167,13 +167,13 @@ def get_simulation(args):
         stats['num_clusters'] = num_clusters
         stats['cluster_size'] = args.cluster_size
         pos_ratio = int(args.num_clusters * args.cluster_size / float(args.sim_size))
-        logging.info("Will use %.3f ratio of positives to total", pos_ratio)
+        logging.info("Setting positive/total ratio to %.3f", pos_ratio)
     elif (args.num_clusters is None) and (args.sim_size is not None) and (args.cluster_size is not None) and (args.pos_ratio is not None):
         # calculate from simulation size
         stats['cluster_size'] = args.cluster_size
         num_clusters = int(args.sim_size * args.pos_ratio / float(args.cluster_size))
         stats['num_clusters'] = num_clusters
-        logging.info("Will create %d clusters of size %d", num_clusters, args.cluster_size)
+        logging.info("Creating %d clusters of size %d", num_clusters, args.cluster_size)
         pos_ratio = args.pos_ratio
     else:
         raise RuntimeError("Could not compute num_clusters and pos_ratio")
@@ -192,7 +192,6 @@ def get_simulation(args):
         for seq_id in xrange(cluster_size):
             data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
             pos_count += 1
-    logging.info("Output %d positives", pos_count)
     stats['num_positives'] = pos_count
     num_negatives = int(pos_count * ((1.0 - pos_ratio) / pos_ratio))
     for neg_idx in xrange(num_negatives):
@@ -202,7 +201,7 @@ def get_simulation(args):
         if len(master) > 0:
             start = master[-1]
         data.append(("{}".format(neg_idx), master))
-    logging.info("Output %d negatives", num_negatives)
+    logging.info("Positives: %d, Negatives: %d", pos_count, num_negatives)
     stats['num_negatives'] = num_negatives
     random.shuffle(data)
     return data, stats

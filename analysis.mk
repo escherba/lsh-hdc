@@ -6,6 +6,8 @@ OUTPUT_DIR := experiment/out
 FILENAMES := $(shell for csz in $(CLUSTER_SIZES); do for h in $(HASHES); do for s in $(SEEDS); do printf "$(OUTPUT_DIR)/%03d-%s-%d.json " $$csz $$h $$s; done; done; done)
 
 
+.INTERMEDIATE: $(FILENAMES)
+
 $(OUTPUT_DIR)/%.json: experiment/misc.mk
 	@mkdir -p $(dir $@)
 	echo $(word 1,$(subst -, ,$*))
@@ -13,7 +15,6 @@ $(OUTPUT_DIR)/%.json: experiment/misc.mk
 		--cluster_size $(word 1,$(subst -, ,$*)) \
 		--hashfun $(word 2,$(subst -, ,$*)) \
 		--seed $(word 3,$(subst -, ,$*))
-
 
 .SECONDARY: $(OUTPUT_DIR)/summary.csv
 
