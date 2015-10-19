@@ -101,9 +101,9 @@ cpdef uint64 hash_builtin_64(x, uint64 seed=0):
     Note: the built-in hash() is a terrible hash function. For some examples,
     see http://michaelnielsen.org/blog/consistent-hashing/
     """
-    cdef uint64 a = hash(x) & ((1 << 32) - 1)
-    cdef uint64 b = hash("_" + repr(x)) & ((1 << 32) - 1)
-    return hash_combine_boost_64(seed, (1 << 32) * a + b)
+    cdef uint64 a = hash(x) & ((1ULL << 32ULL) - 1ULL)
+    cdef uint64 b = hash(repr(x)) & ((1ULL << 32ULL) - 1ULL)
+    return hash_combine_boost_64(seed, (1ULL << 32ULL) * a + b)
 
 
 cpdef hash_builtin_128(x, seed=0):
@@ -113,7 +113,7 @@ cpdef hash_builtin_128(x, seed=0):
     see http://michaelnielsen.org/blog/consistent-hashing/
     """
     a = hash_builtin_64(x, seed)
-    b = hash_builtin_64("_" + repr(x), seed)
+    b = hash_builtin_64(repr(x), seed)
     return (1 << 64) * a + b
 
 

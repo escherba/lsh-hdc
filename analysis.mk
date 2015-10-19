@@ -29,6 +29,3 @@ $(OUTPUT_DIR)/summary.csv: $(OUTPUT_DIR)/summary.ndjson
 analysis: $(OUTPUT_DIR)/summary.csv
 	cp experiment/*.mk $(OUTPUT_DIR)/
 	@echo "all done"
-
-analysis_clean:
-	rm -rf $(OUTPUT_DIR)
