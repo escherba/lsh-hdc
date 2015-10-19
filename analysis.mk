@@ -23,3 +23,6 @@ $(OUTPUT_DIR)/summary.csv: $(OUTPUT_DIR)/summary.json
 
 analysis: $(OUTPUT_DIR)/summary.csv
 	@echo "all done"
+
+analysis_clean:
+	rm -rf $(OUTPUT_DIR)
