@@ -1,17 +1,18 @@
 import random
+import os
 import sys
 import string
-import argparse
 import operator
 import logging
 import json
 from collections import OrderedDict
-from itertools import izip
+from itertools import izip, cycle
 from lsh_hdc import Shingler
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
 from sklearn.metrics import homogeneity_completeness_v_measure
-from pymaptools.io import GzipFileType, read_json_lines, ndjson2col
+from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
+    PathArgumentParser
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 from pymaptools.benchmark import PMTimer
@@ -256,12 +257,15 @@ def do_simulation(args):
         output.write("%s %s\n", (i, seq))
 
 
+METRICS = ['homogeneity', 'completeness', 'nmi', 'time_wall', 'time_cpu']
+
+
 def perform_clustering(args, data):
     with PMTimer() as timer:
         clusters = get_clusters(args, data)
     labels_true, labels_pred = clusters_to_labels(clusters)
     measures = homogeneity_completeness_v_measure(labels_true, labels_pred)
-    measure_keys = ['hash_function', 'homogeneity', 'completeness', 'v-measure', 'wall_time', 'cpu_time']
+    measure_keys = ['hash_function'] + METRICS
     measure_vals = [args.hashfun] + list(measures) + [timer.wall_interval, timer.clock_interval]
     return dict(izip(measure_keys, measure_vals))
 
@@ -282,9 +286,21 @@ def do_joint(args):
 
 def do_summa(args):
     import pandas as pd
+    import matplotlib.pyplot as plt
+    from palettable import colorbrewer
     obj = ndjson2col(read_json_lines(args.input))
     df = pd.DataFrame.from_dict(obj)
-    import pdb; pdb.set_trace()  # XXX BREAKPOINT
+    csv_path = os.path.join(args.output, "summary.csv")
+    df.to_csv(csv_path)
+    groups = df.groupby(["hash_function"])
+    palette_size = min(max(len(groups), 3), 9)
+    colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
+    for column in METRICS:
+        fig, ax = plt.subplots()
+        for color, (label, dfel) in izip(colors, groups):
+            dfel.plot(ax=ax, label=label, color=color, x="cluster_size", y=column, kind="scatter")
+        fig_path = os.path.join(args.output, column + ".png")
+        plt.savefig(fig_path)
 
 
 def add_simul_args(p_simul):
@@ -343,11 +359,9 @@ def add_clust_args(p_clust):
 
 
 def parse_args(args=None):
-    parser = argparse.ArgumentParser(
+    parser = PathArgumentParser(
         description="Simulate data and/or run analysis")
-    parser.add_argument(
-        '--output', type=GzipFileType('w'), default=sys.stdout,
-        help='File output')
+
     subparsers = parser.add_subparsers()
 
     p_simul = subparsers.add_parser('simulate', help='generate simulation')
@@ -358,16 +372,22 @@ def parse_args(args=None):
     p_clust.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
     add_clust_args(p_clust)
+    p_clust.add_argument(
+        '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
     p_clust.set_defaults(func=do_cluster)
 
     p_joint = subparsers.add_parser('joint', help='generate simulation and analyze')
     add_simul_args(p_joint)
     add_clust_args(p_joint)
+    p_joint.add_argument(
+        '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
     p_joint.set_defaults(func=do_joint)
 
     p_summa = subparsers.add_parser('summary', help='summarize analysis results')
     p_summa.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
+    p_summa.add_argument(
+        '--output', type=str, metavar='DIR', help='Output directory')
     p_summa.set_defaults(func=do_summa)
 
     namespace = parser.parse_args()
