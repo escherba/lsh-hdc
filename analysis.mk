@@ -19,13 +19,10 @@ $(OUTPUT_DIR)/%.json: experiment/misc.mk
 
 $(OUTPUT_DIR)/summary.csv: $(FILENAMES)
 	@mkdir -p $(dir $@)
-	$(PYTHON) -m lsh_hdc.study summary --input $^ --output $(dir $@)
+	$(PYENV) cat $^ | python -m lsh_hdc.study summary --output $(dir $@)
 
 analysis: $(OUTPUT_DIR)/summary.csv
 	@echo "all done"
 
 analysis_clean:
 	rm -rf $(OUTPUT_DIR)
-
-test_test:
-	@echo $(FILENAMES)

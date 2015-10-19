@@ -1,4 +1,4 @@
 #!/bin/bash
 
-make env
+make build_ext
 make -j4 analysis
