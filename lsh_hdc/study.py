@@ -3,6 +3,8 @@ import sys
 import string
 import argparse
 import operator
+import logging
+import json
 from collections import OrderedDict
 from itertools import izip
 from lsh_hdc import Shingler
@@ -12,6 +14,8 @@ from sklearn.metrics import homogeneity_completeness_v_measure
 from pymaptools.io import GzipFileType
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
+
+logging.basicConfig(level=logging.DEBUG)
 
 # Various hash functions
 from metrohash import metrohash64
@@ -150,9 +154,27 @@ def get_simulation(args):
     # pick first letter at random
     start = random_string(length=1, alphabet=mcg.alphabet)
 
-    for c_id in xrange(args.num_clusters):
-        cluster_size = gauss_uint_threshold(
-            threshold=2, mu=c_size_mu, sigma=c_size_sigma)
+    if (args.num_clusters is not None) and (args.pos_ratio is not None):
+        num_clusters = args.num_clusters
+        pos_ratio = args.pos_ratio
+    elif (args.num_clusters is not None) and (args.sim_size is not None) and (args.cluster_size is not None) and (args.pos_ratio is None):
+        num_clusters = args.num_clusters
+        pos_ratio = int(args.num_clusters * args.cluster_size / float(args.sim_size))
+        logging.info("Will use %.3f ratio of positives to total", pos_ratio)
+    elif (args.num_clusters is None) and (args.sim_size is not None) and (args.cluster_size is not None) and (args.pos_ratio is not None):
+        # calculate from simulation size
+        num_clusters = int(args.sim_size * args.pos_ratio / float(args.cluster_size))
+        logging.info("Will create %d clusters of size %d", num_clusters, args.cluster_size)
+        pos_ratio = args.pos_ratio
+    else:
+        raise RuntimeError("Could not compute num_clusters and pos_ratio")
+
+    for c_id in xrange(num_clusters):
+        if args.cluster_size is None:
+            cluster_size = gauss_uint_threshold(
+                threshold=2, mu=c_size_mu, sigma=c_size_sigma)
+        else:
+            cluster_size = args.cluster_size
         seq_length = gauss_uint_threshold(
             threshold=seq_len_min, mu=seq_len_mu, sigma=seq_len_sigma)
         master = mcg.generate_str(start, seq_length)
@@ -161,7 +183,8 @@ def get_simulation(args):
         for seq_id in xrange(cluster_size):
             data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
             pos_count += 1
-    num_negatives = int(pos_count * (1.0 - args.pos_ratio) / args.pos_ratio)
+    logging.info("Output %d positives", pos_count)
+    num_negatives = int(pos_count * ((1.0 - pos_ratio) / pos_ratio))
     for neg_idx in xrange(num_negatives):
         seq_length = gauss_uint_threshold(
             threshold=seq_len_min, mu=seq_len_mu, sigma=seq_len_sigma)
@@ -169,6 +192,7 @@ def get_simulation(args):
         if len(master) > 0:
             start = master[-1]
         data.append(("{}".format(neg_idx), master))
+    logging.info("Output %d negatives", num_negatives)
     random.shuffle(data)
     return data
 
@@ -224,11 +248,8 @@ def clusters_to_labels(cluster_iter):
 def do_cluster(args):
     clusters = get_clusters(args, load_simulation(args))
     labels_true, labels_pred = clusters_to_labels(clusters)
-    print """
-Homogeneity:  %.3f
-Completeness: %.3f
-V-measure:    %.3f
-""" % homogeneity_completeness_v_measure(labels_true, labels_pred)
+    measures = homogeneity_completeness_v_measure(labels_true, labels_pred)
+    print json.dumps(dict(izip(['homogeneity', 'completeness', 'v-measure'], measures)))
 
 
 def parse_args(args=None):
@@ -238,8 +259,14 @@ def parse_args(args=None):
 
     p_simul = subparsers.add_parser('simulate', help='run tests')
     p_simul.add_argument(
-        '--num_clusters', type=int, default=1000,
-        help='number of clusters')
+        '--num_clusters', type=int, default=None,
+        help='Number of clusters to create')
+    p_simul.add_argument(
+        '--sim_size', type=int, default=None,
+        help='Simulation size (when number of clusters is not given)')
+    p_simul.add_argument(
+        '--cluster_size', type=int, default=None,
+        help='cluster size')
     p_simul.add_argument(
         '--seed', type=int, default=None,
         help='Random number generator seed for reproducibility')
