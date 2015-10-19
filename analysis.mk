@@ -16,11 +16,15 @@ $(OUTPUT_DIR)/%.json: experiment/misc.mk
 		--hashfun $(word 2,$(subst -, ,$*)) \
 		--seed $(word 3,$(subst -, ,$*))
 
-.SECONDARY: $(OUTPUT_DIR)/summary.csv
+.SECONDARY: $(OUTPUT_DIR)/summary.ndjson $(OUTPUT_DIR)/summary.csv
 
-$(OUTPUT_DIR)/summary.csv: $(FILENAMES)
+$(OUTPUT_DIR)/summary.ndjson: $(FILENAMES)
 	@mkdir -p $(dir $@)
-	$(PYENV) cat $^ | python -m lsh_hdc.study summary --output $(dir $@)
+	cat $^ > $@
+
+$(OUTPUT_DIR)/summary.csv: $(OUTPUT_DIR)/summary.ndjson
+	@mkdir -p $(dir $@)
+	$(PYTHON) -m lsh_hdc.study summary --output $(dir $@)
 
 analysis: $(OUTPUT_DIR)/summary.csv
 	@echo "all done"

@@ -293,8 +293,8 @@ def do_summa(args):
     df.to_csv(csv_path)
     groups = df.groupby(["hash_function"])
     palette_size = min(max(len(groups), 3), 9)
-    colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
     for column in METRICS:
+        colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
         fig, ax = plt.subplots()
         for color, (label, dfel) in izip(colors, groups):
             dfel.plot(ax=ax, label=label, color=color, x="cluster_size", y=column, kind="scatter")
