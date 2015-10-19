@@ -1,3 +1,5 @@
 regex
-metrohash>=0.0.7
+metrohash>=0.0.9
+cityhash>=0.1.2
+xxh==0.1.1
 git+https://github.com/escherba/pymaptools#egg=pymaptools-0.1.16

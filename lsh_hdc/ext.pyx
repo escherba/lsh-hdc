@@ -1,3 +1,5 @@
+#cython: infer_types=True
+
 import sys
 from struct import unpack
 from itertools import izip
