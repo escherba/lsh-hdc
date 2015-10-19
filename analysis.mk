@@ -1,7 +1,7 @@
 include experiment/include.mk
 include experiment/misc.mk
 
-OUTPUT_DIR := experiment/out
+OUTPUT_DIR := experiment/out-$(shell date +%Y%m%d%H%M%S)
 
 FILENAMES := $(shell for csz in $(CLUSTER_SIZES); do for h in $(HASHES); do for s in $(SEEDS); do printf "$(OUTPUT_DIR)/%03d-%s-%d.json " $$csz $$h $$s; done; done; done)
 
@@ -24,9 +24,10 @@ $(OUTPUT_DIR)/summary.ndjson: $(FILENAMES)
 
 $(OUTPUT_DIR)/summary.csv: $(OUTPUT_DIR)/summary.ndjson
 	@mkdir -p $(dir $@)
-	$(PYTHON) -m lsh_hdc.study summary --output $(dir $@)
+	$(PYTHON) -m lsh_hdc.study summary --input $< --output $(dir $@)
 
 analysis: $(OUTPUT_DIR)/summary.csv
+	cp experiment/*.mk $(OUTPUT_DIR)/
 	@echo "all done"
 
 analysis_clean:

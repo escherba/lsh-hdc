@@ -62,7 +62,7 @@ results/
 domino.log
 
 # Misc
-experiment/out/
+experiment/out-*
 data/
 tmp/
 out/
