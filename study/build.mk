@@ -28,7 +28,7 @@ FILENAMES := $(shell for csz in $(CLUSTER_SIZES); do for h in $(HASHES); do for 
 .SECONDARY: $(FILENAMES)
 
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
-	@mkdir -p $(dir $@)
+	@mkdir -p $(@D)
 	@$(PYTHON) -m lsh_hdc.study joint $(BUILD_ARGS) --output $@ \
 		--cluster_size $(word 1,$(subst -, ,$*)) \
 		--hashfun $(word 2,$(subst -, ,$*)) \
@@ -39,32 +39,32 @@ $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 .SECONDARY: $(EXPERIMENT)/config.mk $(EXPERIMENT)/summary.ndjson $(EXPERIMENT)/summary.csv
 
 $(EXPERIMENT)/%.mk: $(CURRENT_DIR)/%.mk
-	@mkdir -p $(dir $@)
+	@mkdir -p $(@D)
 	@echo "copying $< => $@"
 	@if [ ! -e "$@" ]; then cp -p $< $@; fi
 
 $(EXPERIMENT)/summary.ndjson: $(FILENAMES)
-	@mkdir -p $(dir $@)
+	@mkdir -p $(@D)
 	@cat $^ > $@
 	@rm -f $^
 
 $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
-	@mkdir -p $(dir $@)
-	@echo "archiving $(EXPERIMENT)"
+	@mkdir -p $(@D)
+	@echo "archiving $(@D)"
 	@# if a previous version of the target already exists,
 	@# archive the whole directory where the target lives.
 	@if [ -e $@ ]; then \
 		tar czf ` \
-			i=1; while [ -e $(EXPERIMENT)-$$i.tgz ]; do let i++; done; \
-			echo $(EXPERIMENT)-$$i.tgz; \
-		` $(EXPERIMENT); \
+			i=1; while [ -e $(@D)-$$i.tgz ]; do let i++; done; \
+			echo $(@D)-$$i.tgz; \
+		` $(@D); \
 	fi
-	@echo "writing 'summary.csv' under $(EXPERIMENT)"
+	@echo "writing 'summary.csv' under $(@D)"
 	@$(PYTHON) -m lsh_hdc.study summary \
 		--title "$(BUILD_ARGS)" \
 		--input $< \
-		--output $(dir $@)
+		--output $(@D)
 
 .PHONY: experiment
 experiment: $(EXPERIMENT)/summary.csv
-	@echo "done with $(EXPERIMENT)"
+	@echo "done with $(<D)"
