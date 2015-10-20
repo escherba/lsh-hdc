@@ -2,10 +2,10 @@
 
 NUM_PROCS=24
 TARGET=config.mk
-EXP_DIRS=study/exp-*
+TARGET_DIRS=study/exp-*
 
 make -r build_ext
-find $EXP_DIRS -type f -name $TARGET -print0 | \
+find $TARGET_DIRS -type f -name $TARGET -print0 | \
     while IFS= read -r -d '' target_path; do
         experiment=`dirname "$target_path"`
         echo "replicating '$experiment'"
