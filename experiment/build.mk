@@ -48,9 +48,12 @@ $(OUTPUT_DIR)/summary.ndjson: $(FILENAMES)
 
 $(OUTPUT_DIR)/summary.csv: $(OUTPUT_DIR)/summary.ndjson
 	@mkdir -p $(dir $@)
-	@echo "Creating summary file at $@"
-	@$(PYTHON) -m lsh_hdc.study summary --input $< --output $(dir $@)
-	@echo "compressing $(OUTPUT_DIR)..."
+	@echo "Writing 'summary.csv' in $(OUTPUT_DIR)"
+	@$(PYTHON) -m lsh_hdc.study summary \
+		--title "$(BUILD_ARGS)" \
+		--input $< \
+		--output $(dir $@)
+	@echo "compressing $(OUTPUT_DIR)"
 	@tar czf ` \
 		if [[ -e $(OUTPUT_DIR).tgz ]]; \
 			then i=0; \
@@ -63,4 +66,4 @@ $(OUTPUT_DIR)/summary.csv: $(OUTPUT_DIR)/summary.ndjson
 
 .PHONY: analysis
 analysis: $(OUTPUT_DIR)/summary.csv
-	@echo "all done"
+	@echo "done building $(OUTPUT_DIR)"
