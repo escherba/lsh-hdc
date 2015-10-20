@@ -294,8 +294,9 @@ def create_plots(args, df, metrics):
             colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
             fig, ax = plt.subplots()
             for color, (label, dfel) in izip(colors, groups):
-                dfel.plot(ax=ax, label=label, color=color, x="cluster_size",
-                          y=column, kind="scatter", logx=True, title=args.fig_title)
+                dfel.plot(ax=ax, label=label, x="cluster_size", linewidth='1.3',
+                          y=column, kind="scatter", logx=True, title=args.fig_title,
+                          facecolors='none', edgecolors=color)
             fig_filename = "fig_%s.%s" % (column, args.fig_format)
             fig_path = os.path.join(args.output, fig_filename)
             ax.legend(prop=fontP)
