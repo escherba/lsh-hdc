@@ -290,14 +290,15 @@ def create_plots(df, output_dir, metrics, **kwargs):
     groups = df.groupby(["hash_function"])
     palette_size = min(max(len(groups), 3), 9)
     for column in metrics:
-        colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
-        fig, ax = plt.subplots()
-        for color, (label, dfel) in izip(colors, groups):
-            dfel.plot(ax=ax, label=label, color=color, x="cluster_size",
-                      y=column, kind="scatter", **kwargs)
-        fig_path = os.path.join(output_dir, "fig_" + column + ".png")
-        plt.legend(prop=fontP)
-        plt.savefig(fig_path)
+        if column in df:
+            colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
+            fig, ax = plt.subplots()
+            for color, (label, dfel) in izip(colors, groups):
+                dfel.plot(ax=ax, label=label, color=color, x="cluster_size",
+                          y=column, kind="scatter", **kwargs)
+            fig_path = os.path.join(output_dir, "fig_" + column + ".svg")
+            plt.legend(prop=fontP)
+            plt.savefig(fig_path)
 
 
 def do_summa(args):
