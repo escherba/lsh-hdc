@@ -2,7 +2,7 @@
 
 NUM_PROCS=24
 TARGET=config.mk
-EXP_DIRS=experiment/exp-*
+EXP_DIRS=study/exp-*
 
 make -r build_ext
 find $EXP_DIRS -type f -name $TARGET -print0 | \
