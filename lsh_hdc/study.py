@@ -310,8 +310,8 @@ def do_summa(args):
     csv_path = os.path.join(args.output, "summary.csv")
     logging.info("Writing output summary to %s", csv_path)
     df.to_csv(csv_path)
-    create_plots(df, args.output, METRICS, logx=True)
-    create_plots(df, args.output, BENCHMARKS, logx=True)
+    create_plots(df, args.output, METRICS, logx=True, title=args.title)
+    create_plots(df, args.output, BENCHMARKS, logx=True, title=args.title)
 
 
 def add_simul_args(p_simul):
@@ -401,6 +401,8 @@ def parse_args(args=None):
     p_summa = subparsers.add_parser('summary', help='summarize analysis results')
     p_summa.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
+    p_summa.add_argument(
+        '--title', type=str, default=None, help='Title (for figures generated)')
     p_summa.add_argument(
         '--output', type=str, metavar='DIR', help='Output directory')
     p_summa.set_defaults(func=do_summa)
