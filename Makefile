@@ -29,6 +29,7 @@ coverage: test
 endif
 
 test: env build_ext
+	$(PIP) install -r dev-requirements.txt
 	$(PYENV) nosetests $(NOSEARGS)
 	$(PYENV) py.test README.rst
 
