@@ -298,8 +298,8 @@ def create_plots(args, df, metrics):
                           y=column, kind="scatter", logx=True, title=args.fig_title)
             fig_filename = "fig_%s.%s" % (column, args.fig_format)
             fig_path = os.path.join(args.output, fig_filename)
-            plt.legend(prop=fontP)
-            plt.savefig(fig_path)
+            ax.legend(prop=fontP)
+            fig.savefig(fig_path)
 
 
 def do_summa(args):
