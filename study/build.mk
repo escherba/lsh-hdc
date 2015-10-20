@@ -20,7 +20,14 @@ include $(EXPERIMENT)/config.mk
 endif
 
 
-FILENAMES := $(shell for csz in $(CLUSTER_SIZES); do for h in $(HASHES); do for s in $(SEEDS); do printf "$(EXPERIMENT)/%03d-%s-%d.json " $$csz $$h $$s; done; done; done)
+FILENAMES := $(shell \
+	for c in $(CLUSTER_SIZES); do \
+	for h in $(HASHES); do \
+	for s in $(SEEDS); do \
+		printf "$(EXPERIMENT)/%s-%s-%s.json " $$c $$h $$s; \
+	done; \
+	done; \
+	done)
 
 
 # We delete $(FILENAMES) manually for cleaner console output,
