@@ -10,5 +10,5 @@ find $TARGET_DIRS -type f -name $TARGET -print0 | \
         experiment=`dirname "$target_path"`
         echo "replicating '$experiment'"
         touch "$experiment/$TARGET"
-        EXPERIMENT="$experiment" make -r -j$NUM_PROCS run_experiment
+        EXPERIMENT="$experiment" make -r -j$NUM_PROCS experiment
     done
