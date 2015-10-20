@@ -28,7 +28,7 @@ coverage: test
 	open cover/index.html
 endif
 
-test: extras build_ext
+test: env build_ext
 	$(PYENV) nosetests $(NOSEARGS)
 	$(PYENV) py.test README.rst
 
