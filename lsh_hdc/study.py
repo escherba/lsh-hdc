@@ -11,7 +11,7 @@ from lsh_hdc import Shingler, HASH_FUNC_TABLE
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
 from sklearn.metrics import homogeneity_completeness_v_measure, \
-    roc_auc_score
+    adjusted_rand_score, adjusted_mutual_info_score, roc_auc_score
 from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
     PathArgumentParser
 from pymaptools.iter import intersperse
@@ -250,20 +250,24 @@ def do_simulation(args):
         output.write("%s %s\n", (i, seq))
 
 
-METRICS = ['homogeneity', 'completeness', 'nmi', 'roc_auc']
+MAIN_METRICS = ['homogeneity', 'completeness', 'nmi_score']
+MISC_METRICS = ['adj_rand_score', 'adj_nmi_score', 'roc_auc']
 BENCHMARKS = ['time_wall', 'time_cpu']
 
 
 def perform_clustering(args, data):
     with PMTimer() as timer:
         clusters = get_clusters(args, data)
-    labels_true, labels_pred = clusters_to_labels(clusters)
-    measures = homogeneity_completeness_v_measure(labels_true, labels_pred)
-    measure_keys = ['hash_function'] + METRICS + BENCHMARKS
-    measure_vals = [args.hashfun] + list(measures) + [timer.wall_interval, timer.clock_interval]
-    measure_keys.append('roc_auc')
-    measure_vals.append(roc_auc_score(*cluster_predictions(clusters)))
-    return dict(izip(measure_keys, measure_vals))
+    cluster_data = clusters_to_labels(clusters)
+    roc_data = cluster_predictions(clusters)
+    pairs = []
+    pairs.append(('hash_function', args.hashfun))
+    pairs.extend(zip(MAIN_METRICS[:2], homogeneity_completeness_v_measure(*cluster_data)[:2]))
+    pairs.append((MISC_METRICS[0], adjusted_rand_score(*cluster_data)))
+    pairs.append((MISC_METRICS[1], adjusted_mutual_info_score(*cluster_data)))
+    pairs.append((MISC_METRICS[2], roc_auc_score(*roc_data)))
+    pairs.extend(zip(BENCHMARKS, [timer.wall_interval, timer.clock_interval]))
+    return dict(pairs)
 
 
 def do_cluster(args):
@@ -311,7 +315,8 @@ def do_summa(args):
     csv_path = os.path.join(args.output, "summary.csv")
     logging.info("Writing output summary to %s", csv_path)
     df.to_csv(csv_path)
-    create_plots(args, df, METRICS)
+    create_plots(args, df, MAIN_METRICS)
+    create_plots(args, df, MISC_METRICS)
     create_plots(args, df, BENCHMARKS)
 
 
