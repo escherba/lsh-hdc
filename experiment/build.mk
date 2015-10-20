@@ -50,21 +50,20 @@ $(EXPERIMENT)/summary.ndjson: $(FILENAMES)
 
 $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	@mkdir -p $(dir $@)
-	@echo "writing 'summary.csv' in $(EXPERIMENT)"
+	@echo "archiving $(EXPERIMENT)"
+	@# if a previous version of the target already exists,
+	@# archive the whole directory where the target lives.
+	@if [ -e $@ ]; then \
+		tar czf ` \
+			i=1; while [ -e $(EXPERIMENT)-$$i.tgz ]; do let i++; done; \
+			echo $(EXPERIMENT)-$$i.tgz; \
+		` $(EXPERIMENT); \
+	fi
+	@echo "writing 'summary.csv' under $(EXPERIMENT)"
 	@$(PYTHON) -m lsh_hdc.study summary \
 		--title "$(BUILD_ARGS)" \
 		--input $< \
 		--output $(dir $@)
-	@echo "archiving $(EXPERIMENT)"
-	@tar czf ` \
-		if [ -e $(EXPERIMENT).tgz ]; \
-			then i=0; \
-			while [ -e $(EXPERIMENT)-$$i.tgz ]; \
-				do let i++; \
-			done; \
-			echo $(EXPERIMENT)-$$i.tgz; \
-		else echo $(EXPERIMENT).tgz; \
-		fi` $(EXPERIMENT)
 
 .PHONY: analysis
 analysis: $(EXPERIMENT)/summary.csv
