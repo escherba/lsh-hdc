@@ -109,8 +109,7 @@ cpdef uint64 hash_builtin_64(x, uint64 seed=0):
 cpdef hash_builtin_128(x, seed=0):
     """A better hash function based on Python's built-in hash()
 
-    Note: the built-in hash() is a terrible hash function. For some examples,
-    see http://michaelnielsen.org/blog/consistent-hashing/
+    Note: vanilla hash() is a terrible hash function.
     """
     a = hash_builtin_64(x, seed)
     b = hash_builtin_64(repr(x), seed)

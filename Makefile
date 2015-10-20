@@ -13,7 +13,7 @@ PYTHON := $(PYENV) python
 PIP := $(PYENV) pip
 
 
-include experiment/analysis.mk
+include experiment/build.mk
 
 package: env build_ext
 	$(PYTHON) setup.py $(DISTRIBUTE)

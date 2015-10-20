@@ -17,8 +17,6 @@ from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 from pymaptools.benchmark import PMTimer
 
-logging.basicConfig(level=logging.DEBUG)
-
 # Various hash functions
 from metrohash import metrohash64
 from cityhash import CityHash64WithSeed
@@ -310,6 +308,7 @@ def do_summa(args):
     obj = ndjson2col(read_json_lines(args.input))
     df = pd.DataFrame.from_dict(obj)
     csv_path = os.path.join(args.output, "summary.csv")
+    logging.info("Writing output summary to %s", csv_path)
     df.to_csv(csv_path)
     create_plots(df, args.output, METRICS, logx=True)
     create_plots(df, args.output, BENCHMARKS, logx=True)
@@ -374,6 +373,10 @@ def parse_args(args=None):
     parser = PathArgumentParser(
         description="Simulate data and/or run analysis")
 
+    parser.add_argument(
+        '--logging', type=str, default='WARN', help="Logging level",
+        choices=[key for key in logging._levelNames.keys() if isinstance(key, str)])
+
     subparsers = parser.add_subparsers()
 
     p_simul = subparsers.add_parser('simulate', help='generate simulation')
@@ -407,6 +410,7 @@ def parse_args(args=None):
 
 
 def run(args):
+    logging.basicConfig(level=getattr(logging, args.logging))
     args.func(args)
 
 
