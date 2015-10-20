@@ -1,10 +1,12 @@
 #!/bin/bash
 
-NUM_PROCS=24
+NUM_PROCS=10
 TARGET=config.mk
 TARGET_DIRS=study/exp-*
 
+make -r extras
 make -r build_ext
+
 find $TARGET_DIRS -type f -name $TARGET -print0 | \
     while IFS= read -r -d '' target_path; do
         experiment=`dirname "$target_path"`

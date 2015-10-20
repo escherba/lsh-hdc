@@ -28,7 +28,7 @@ coverage: test
 	open cover/index.html
 endif
 
-test: extras build_ext
+test: env build_ext
 	$(PYENV) nosetests $(NOSEARGS)
 	$(PYENV) py.test README.rst
 
@@ -55,8 +55,8 @@ $(EXTENSION): env $(EXTENSION_DEPS)
 
 develop:
 	@echo "Installing for " `which pip`
-	pip uninstall $(PYMODULE) || true
-	python setup.py develop
+	-pip uninstall --yes $(PYMODULE)
+	pip install -e .
 
 ifeq ($(PIP_SYSTEM_SITE_PACKAGES),1)
 VENV_OPTS="--system-site-packages"
@@ -65,9 +65,9 @@ VENV_OPTS="--no-site-packages"
 endif
 
 env virtualenv: env/bin/activate
-env/bin/activate: requirements.txt setup.py
+env/bin/activate: dev-requirements.txt requirements.txt | setup.py
 	test -f $@ || virtualenv $(VENV_OPTS) env
-	$(PIP) install -U pip wheel
-	$(PIP) install cython
-	$(PIP) install -r $<
+	$(PYENV) easy_install -U pip
+	$(PIP) install -U wheel cython
+	$(PYENV) for reqfile in $^; do pip install -r $$reqfile; done
 	touch $@

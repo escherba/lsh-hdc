@@ -19,9 +19,14 @@ else
 include $(EXPERIMENT)/config.mk
 endif
 
-
-FILENAMES := $(shell for csz in $(CLUSTER_SIZES); do for h in $(HASHES); do for s in $(SEEDS); do printf "$(EXPERIMENT)/%03d-%s-%d.json " $$csz $$h $$s; done; done; done)
-
+FILENAMES := $(shell \
+	for c in $(CLUSTER_SIZES); do \
+	for h in $(HASHES); do \
+	for s in $(SEEDS); do \
+		printf "$(EXPERIMENT)/%s-%s-%s.json " $$c $$h $$s; \
+	done; \
+	done; \
+	done)
 
 # We delete $(FILENAMES) manually for cleaner console output,
 # so let Make think they are secondary targets
@@ -36,7 +41,7 @@ $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 
 
 # Secondary files will be kept
-.SECONDARY: $(EXPERIMENT)/config.mk $(EXPERIMENT)/summary.ndjson $(EXPERIMENT)/summary.csv
+.SECONDARY: $(addprefix $(EXPERIMENT)/,config.mk summary.ndjson summary.csv)
 
 $(EXPERIMENT)/%.mk: $(CURRENT_DIR)/%.mk
 	@mkdir -p $(@D)
@@ -61,7 +66,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	fi
 	@echo "writing 'summary.csv' under $(@D)"
 	@$(PYTHON) -m lsh_hdc.study summary \
-		--title "$(BUILD_ARGS)" \
+		--fig_title "$(BUILD_ARGS)" \
 		--input $< \
 		--output $(@D)
 
