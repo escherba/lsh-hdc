@@ -1,6 +1,7 @@
 numpy
 pandas
 matplotlib
+scipy
 scikit-learn
 palettable
 metrohash>=0.0.11

@@ -29,7 +29,7 @@ coverage: test
 endif
 
 test: env build_ext
-	$(PIP) install -r dev-requirements.txt
+	$(PIP) install -r 
 	$(PYENV) nosetests $(NOSEARGS)
 	$(PYENV) py.test README.rst
 
@@ -66,9 +66,9 @@ VENV_OPTS="--no-site-packages"
 endif
 
 env virtualenv: env/bin/activate
-env/bin/activate: requirements.txt setup.py
+env/bin/activate: dev-requirements.txt requirements.txt | setup.py
 	test -f $@ || virtualenv $(VENV_OPTS) env
 	$(PYENV) easy_install -U pip
 	$(PIP) install -U wheel cython
-	$(PIP) install -r $<
+	$(PIP) install -e . -r $^
 	touch $@

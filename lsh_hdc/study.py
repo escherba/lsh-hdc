@@ -10,8 +10,6 @@ from itertools import izip, cycle
 from lsh_hdc import Shingler, HASH_FUNC_TABLE
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
-from sklearn.metrics import homogeneity_completeness_v_measure, \
-    adjusted_rand_score, adjusted_mutual_info_score, roc_auc_score
 from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
     PathArgumentParser
 from pymaptools.iter import intersperse
@@ -256,6 +254,8 @@ BENCHMARKS = ['time_wall', 'time_cpu']
 
 
 def perform_clustering(args, data):
+    from sklearn.metrics import homogeneity_completeness_v_measure, \
+        adjusted_rand_score, adjusted_mutual_info_score, roc_auc_score
     with PMTimer() as timer:
         clusters = get_clusters(args, data)
     cluster_data = clusters_to_labels(clusters)
