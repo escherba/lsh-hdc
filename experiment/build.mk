@@ -23,12 +23,12 @@ endif
 FILENAMES := $(shell for csz in $(CLUSTER_SIZES); do for h in $(HASHES); do for s in $(SEEDS); do printf "$(OUTPUT_DIR)/%03d-%s-%d.json " $$csz $$h $$s; done; done; done)
 
 
-# Intermediate files will be deleted once make is done
-.INTERMEDIATE: $(FILENAMES)
+# We delete $(FILENAMES) manually for cleaner console output,
+# so let Make think they are secondary targets
+.SECONDARY: $(FILENAMES)
 
 $(OUTPUT_DIR)/%.json: $(OUTPUT_DIR)/config.mk
 	@mkdir -p $(dir $@)
-	@echo "Building $*"
 	@$(PYTHON) -m lsh_hdc.study joint $(BUILD_ARGS) --output $@ \
 		--cluster_size $(word 1,$(subst -, ,$*)) \
 		--hashfun $(word 2,$(subst -, ,$*)) \
@@ -40,24 +40,26 @@ $(OUTPUT_DIR)/%.json: $(OUTPUT_DIR)/config.mk
 
 $(OUTPUT_DIR)/%.mk: $(CURRENT_DIR)/%.mk
 	@mkdir -p $(dir $@)
-	@if [[ ! -f "$@" ]]; then cp -p $< $@; fi
+	@echo "copying $< => $@"
+	@if [ ! -e "$@" ]; then cp -p $< $@; fi
 
 $(OUTPUT_DIR)/summary.ndjson: $(FILENAMES)
 	@mkdir -p $(dir $@)
 	@cat $^ > $@
+	@rm -f $^
 
 $(OUTPUT_DIR)/summary.csv: $(OUTPUT_DIR)/summary.ndjson
 	@mkdir -p $(dir $@)
-	@echo "Writing 'summary.csv' in $(OUTPUT_DIR)"
+	@echo "writing 'summary.csv' in $(OUTPUT_DIR)"
 	@$(PYTHON) -m lsh_hdc.study summary \
 		--title "$(BUILD_ARGS)" \
 		--input $< \
 		--output $(dir $@)
-	@echo "compressing $(OUTPUT_DIR)"
+	@echo "archiving $(OUTPUT_DIR)"
 	@tar czf ` \
-		if [[ -e $(OUTPUT_DIR).tgz ]]; \
+		if [ -e $(OUTPUT_DIR).tgz ]; \
 			then i=0; \
-			while [[ -e $(OUTPUT_DIR)-$$i.tgz ]]; \
+			while [ -e $(OUTPUT_DIR)-$$i.tgz ]; \
 				do let i++; \
 			done; \
 			echo $(OUTPUT_DIR)-$$i.tgz; \
