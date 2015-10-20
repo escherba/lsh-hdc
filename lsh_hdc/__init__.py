@@ -18,20 +18,26 @@ from pymaptools.iter import cycle, take, shinglify, isiterable
 from lsh_hdc.utils import toiter, tsorted
 from lsh_hdc.ext import hashable, VarlenHash, PHashCombiner as HashCombiner
 
-# MetroHash (current)
-from metrohash import metrohash64 as chash64, metrohash128 as chash128
+# Various hash functions
+from metrohash import metrohash64, metrohash128
+from cityhash import CityHash64WithSeed
+from xxh import hash64 as xxh_hash64
+from lsh_hdc.ext import hash_md5_64, hash_builtin_64
 
-# CityHash (previously used)
-#from cityhash import CityHash64WithSeed as chash64, CityHash128WithSeed as chash128
-
-# xxh-hash from https://github.com/lebedov/xxh
-#from xxh import hash64 as chash64, hash64 as chash128
-
-#from lsh_hdc.ext import hash_builtin_64 as chash64, hash_builtin_128 as chash128
-#from lsh_hdc.ext import hash_md5_64 as chash64, hash_md5_128 as chash128
+chash64 = metrohash64
+chash128 = metrohash128
 
 
 LOG = getLogger(__name__)
+
+
+HASH_FUNC_TABLE = {
+    "metrohash": (metrohash64,        False),
+    "cityhash":  (CityHash64WithSeed, False),
+    "xxh":       (xxh_hash64,         False),
+    "builtin":   (hash_builtin_64,    True),
+    "md5":       (hash_md5_64,        True),
+}
 
 
 def mshinglify(iterable, span, skip=0):
@@ -86,6 +92,33 @@ def consistent_sampler(pool_length=24, step=3, sample_size=8):
             class_indices.append(i)
             count += 1
     return sample_indices, class_indices
+
+
+def create_hash_factory(hashfun, complex_types=False, universe_size=None):
+    """Create a function to make hash functions
+    :param hashfun: hash function to use
+    :type hashfun: callable
+    :param complex_types: whether hash function supports hashing of complex
+                          types, either through native support or through repr
+    :type complex_types: bool
+    :param universe_size: upper limit to hash value
+    :type universe_size: int, long
+    :returns: a hash factory
+    :rtype: callable
+    """
+    def hash_factory(seed):
+        if complex_types:
+            if universe_size is None:
+                fun = lambda x: hashfun(x, seed)
+            else:
+                fun = lambda x: hashfun(x, seed) % universe_size
+        else:
+            if universe_size is None:
+                fun = lambda x: hashfun(hashable(x), seed)
+            else:
+                fun = lambda x: hashfun(hashable(x), seed) % universe_size
+        return fun
+    return hash_factory
 
 
 def create_getters(lot):
@@ -381,7 +414,7 @@ class MinHashSignature(Signature):
     """Obtain minhash signature"""
 
     def __init__(self, width, lsh_hasher=None, universe_size=None, kmin=1,
-                 seed=0, hashfun=chash64):
+                 seed=0, hashfun='metrohash'):
         if width % kmin != 0:
             raise ValueError("width must be a multiple of kmin")
         if type(kmin) != int:
@@ -394,7 +427,7 @@ class MinHashSignature(Signature):
             raise ValueError("kmin must be >= 1")
         self.width = width / kmin
         self.kmin = kmin
-        self.hashfun = hashfun
+        self.hashfun, self.complex_types = HASH_FUNC_TABLE[hashfun]
 
         self.lsh_hasher = lsh_hasher
         self.seed = seed
@@ -454,19 +487,14 @@ class MinHashSignature(Signature):
     def create_hash_functions(self):
         """Return a list of length self.width of different hash functions
         """
-        hashfun = self.hashfun
-        universe_size = self.universe_size
-
-        def hash_factory(seed):
-            if universe_size is None:
-                fun = lambda x: hashfun(hashable(x), seed)
-            else:
-                fun = lambda x: hashfun(hashable(x), seed) % universe_size
-            return fun
-
         # draw a sample of unique random integers from pool of [0, sys.maxint]
         random.seed(self.seed)
         seeds = random.sample(xrange(sys.maxint), self.width)
+        hash_factory = create_hash_factory(
+            self.hashfun,
+            complex_types=self.complex_types,
+            universe_size=self.universe_size
+        )
         return map(hash_factory, seeds)
 
     def _get_minhashes_kmin1p(self, vec):

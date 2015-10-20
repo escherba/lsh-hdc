@@ -7,31 +7,16 @@ import logging
 import json
 from collections import OrderedDict
 from itertools import izip, cycle
-from lsh_hdc import Shingler
+from lsh_hdc import Shingler, HASH_FUNC_TABLE
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
-from sklearn.metrics import homogeneity_completeness_v_measure
+from sklearn.metrics import homogeneity_completeness_v_measure, \
+    roc_auc_score
 from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
     PathArgumentParser
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 from pymaptools.benchmark import PMTimer
-
-# Various hash functions
-from metrohash import metrohash64
-from cityhash import CityHash64WithSeed
-from xxh import hash64 as xxh_hash64
-from lsh_hdc.ext import hash_builtin_64
-from lsh_hdc.ext import hash_md5_64
-
-
-HASH_FUN_TABLE = dict(
-    metrohash=metrohash64,
-    cityhash=CityHash64WithSeed,
-    xxh=xxh_hash64,
-    builtin=hash_builtin_64,
-    md5=hash_md5_64,
-)
 
 
 ALPHABET = string.letters + string.digits
@@ -206,11 +191,10 @@ def get_simulation(args):
 
 
 def get_clusters(args, data):
-    hashfun = HASH_FUN_TABLE[args.hashfun]
     cluster = Cluster(width=args.width,
                       bandwidth=args.bandwidth,
                       lsh_scheme=args.lsh_scheme,
-                      hashfun=hashfun)
+                      hashfun=args.hashfun)
     shingler = Shingler(span=args.shingle_span)
     content_dict = dict()
     for label, text in data:
@@ -245,6 +229,18 @@ def clusters_to_labels(cluster_iter):
     return labels_true, labels_pred
 
 
+def cluster_predictions(cluster_iter):
+    y_true = []
+    y_score = []
+    for idx, cluster in enumerate(cluster_iter):
+        pred_cluster = len(cluster)
+        for point in cluster:
+            true_cluster = ':' in point
+            y_true.append(true_cluster)
+            y_score.append(pred_cluster)
+    return y_true, y_score
+
+
 def do_simulation(args):
     if args.seed is not None:
         random.seed(args.seed)
@@ -254,7 +250,7 @@ def do_simulation(args):
         output.write("%s %s\n", (i, seq))
 
 
-METRICS = ['homogeneity', 'completeness', 'nmi']
+METRICS = ['homogeneity', 'completeness', 'nmi', 'roc_auc']
 BENCHMARKS = ['time_wall', 'time_cpu']
 
 
@@ -265,6 +261,8 @@ def perform_clustering(args, data):
     measures = homogeneity_completeness_v_measure(labels_true, labels_pred)
     measure_keys = ['hash_function'] + METRICS + BENCHMARKS
     measure_vals = [args.hashfun] + list(measures) + [timer.wall_interval, timer.clock_interval]
+    measure_keys.append('roc_auc')
+    measure_vals.append(roc_auc_score(*cluster_predictions(clusters)))
     return dict(izip(measure_keys, measure_vals))
 
 
@@ -353,7 +351,7 @@ def add_simul_args(p_simul):
 def add_clust_args(p_clust):
     p_clust.add_argument(
         '--hashfun', type=str, default='metrohash',
-        choices=HASH_FUN_TABLE.keys(),
+        choices=HASH_FUNC_TABLE.keys(),
         help='Minimum sequence length')
     p_clust.add_argument(
         '--shingle_span', type=int, default=3,
