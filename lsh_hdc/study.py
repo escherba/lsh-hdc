@@ -10,7 +10,8 @@ from itertools import izip, cycle
 from lsh_hdc import Shingler, HASH_FUNC_TABLE
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
-from sklearn.metrics import homogeneity_completeness_v_measure
+from sklearn.metrics import homogeneity_completeness_v_measure, \
+    roc_auc_score
 from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
     PathArgumentParser
 from pymaptools.iter import intersperse
@@ -228,6 +229,18 @@ def clusters_to_labels(cluster_iter):
     return labels_true, labels_pred
 
 
+def cluster_predictions(cluster_iter):
+    y_true = []
+    y_score = []
+    for idx, cluster in enumerate(cluster_iter):
+        pred_cluster = len(cluster)
+        for point in cluster:
+            true_cluster = ':' in point
+            y_true.append(true_cluster)
+            y_score.append(pred_cluster)
+    return y_true, y_score
+
+
 def do_simulation(args):
     if args.seed is not None:
         random.seed(args.seed)
@@ -237,7 +250,7 @@ def do_simulation(args):
         output.write("%s %s\n", (i, seq))
 
 
-METRICS = ['homogeneity', 'completeness', 'nmi']
+METRICS = ['homogeneity', 'completeness', 'nmi', 'roc_auc']
 BENCHMARKS = ['time_wall', 'time_cpu']
 
 
@@ -248,6 +261,8 @@ def perform_clustering(args, data):
     measures = homogeneity_completeness_v_measure(labels_true, labels_pred)
     measure_keys = ['hash_function'] + METRICS + BENCHMARKS
     measure_vals = [args.hashfun] + list(measures) + [timer.wall_interval, timer.clock_interval]
+    measure_keys.append('roc_auc')
+    measure_vals.append(roc_auc_score(*cluster_predictions(clusters)))
     return dict(izip(measure_keys, measure_vals))
 
 
