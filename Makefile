@@ -55,8 +55,8 @@ $(EXTENSION): env $(EXTENSION_DEPS)
 
 develop:
 	@echo "Installing for " `which pip`
-	pip uninstall $(PYMODULE) || true
-	python setup.py develop
+	-pip uninstall --yes $(PYMODULE)
+	pip install -e .
 
 ifeq ($(PIP_SYSTEM_SITE_PACKAGES),1)
 VENV_OPTS="--system-site-packages"
@@ -67,7 +67,7 @@ endif
 env virtualenv: env/bin/activate
 env/bin/activate: requirements.txt setup.py
 	test -f $@ || virtualenv $(VENV_OPTS) env
-	$(PIP) install -U pip wheel
-	$(PIP) install cython
+	$(PYENV) easy_install -U pip
+	$(PIP) install -U wheel cython
 	$(PIP) install -r $<
 	touch $@
