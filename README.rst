@@ -3,7 +3,7 @@ LSH-HDC
 
 Locality-Sensitive Hashing for High-Dimensional Clustering
 
-.. image:: https://circleci.com/gh/escherba/lsh-hdc.png?style=badge
+.. image:: https://circleci.com/gh/escherba/lsh-hdc.png?style=shield
     :target: https://circleci.com/gh/escherba/lsh-hdc
     :alt: Tests Status
 
