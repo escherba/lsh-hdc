@@ -3,4 +3,4 @@
 NUM_PROCS=10
 
 make -r build_ext
-make -r -j$NUM_PROCS analysis
+make -r -j$NUM_PROCS run_experiment

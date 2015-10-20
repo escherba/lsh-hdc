@@ -14,7 +14,7 @@ else
 # that directory only. It's likely that the following
 # has been invoked:
 #
-#    EXPERIMENT=/my/custom/dir make analysis
+#    EXPERIMENT=/my/custom/dir make run_experiment
 #
 include $(EXPERIMENT)/config.mk
 endif
@@ -65,6 +65,6 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 		--input $< \
 		--output $(dir $@)
 
-.PHONY: analysis
-analysis: $(EXPERIMENT)/summary.csv
+.PHONY: run_experiment
+run_experiment: $(EXPERIMENT)/summary.csv
 	@echo "done with $(EXPERIMENT)"
