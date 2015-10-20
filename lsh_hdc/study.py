@@ -7,7 +7,7 @@ import logging
 import json
 from collections import OrderedDict
 from itertools import izip, cycle
-from lsh_hdc import Shingler
+from lsh_hdc import Shingler, HASH_FUNC_TABLE
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
 from sklearn.metrics import homogeneity_completeness_v_measure
@@ -16,22 +16,6 @@ from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 from pymaptools.benchmark import PMTimer
-
-# Various hash functions
-from metrohash import metrohash64
-from cityhash import CityHash64WithSeed
-from xxh import hash64 as xxh_hash64
-from lsh_hdc.ext import hash_builtin_64
-from lsh_hdc.ext import hash_md5_64
-
-
-HASH_FUN_TABLE = dict(
-    metrohash=metrohash64,
-    cityhash=CityHash64WithSeed,
-    xxh=xxh_hash64,
-    builtin=hash_builtin_64,
-    md5=hash_md5_64,
-)
 
 
 ALPHABET = string.letters + string.digits
@@ -206,11 +190,10 @@ def get_simulation(args):
 
 
 def get_clusters(args, data):
-    hashfun = HASH_FUN_TABLE[args.hashfun]
     cluster = Cluster(width=args.width,
                       bandwidth=args.bandwidth,
                       lsh_scheme=args.lsh_scheme,
-                      hashfun=hashfun)
+                      hashfun=args.hashfun)
     shingler = Shingler(span=args.shingle_span)
     content_dict = dict()
     for label, text in data:
@@ -353,7 +336,7 @@ def add_simul_args(p_simul):
 def add_clust_args(p_clust):
     p_clust.add_argument(
         '--hashfun', type=str, default='metrohash',
-        choices=HASH_FUN_TABLE.keys(),
+        choices=HASH_FUNC_TABLE.keys(),
         help='Minimum sequence length')
     p_clust.add_argument(
         '--shingle_span', type=int, default=3,

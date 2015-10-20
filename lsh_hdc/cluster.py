@@ -8,7 +8,6 @@ from math import floor
 from lsh_hdc.preprocess import RegexTokenizer
 from lsh_hdc import Shingler, SimHashSignature, MinHashSketchSignature, \
     MinHashSignature, LSHC
-from metrohash import metrohash64 as chash64
 from logging import getLogger
 
 LOG = getLogger(__name__)
@@ -116,7 +115,7 @@ class Cluster(object):
 
 class MinHashCluster(Cluster):
     def __init__(self, width=12, bandwidth=3, lsh_scheme="a0",
-                 universe_size=None, kmin=1, seed=0, hashfun=chash64):
+                 universe_size=None, kmin=1, seed=0, hashfun='metrohash'):
         """
 
         :param width: Number of bands
