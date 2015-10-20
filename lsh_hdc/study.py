@@ -280,7 +280,7 @@ def do_joint(args):
     args.output.write("%s\n" % json.dumps(stats))
 
 
-def create_plots(df, output_dir, metrics, **kwargs):
+def create_plots(args, df, metrics):
     import matplotlib.pyplot as plt
     from palettable import colorbrewer
     from matplotlib.font_manager import FontProperties
@@ -295,8 +295,9 @@ def create_plots(df, output_dir, metrics, **kwargs):
             fig, ax = plt.subplots()
             for color, (label, dfel) in izip(colors, groups):
                 dfel.plot(ax=ax, label=label, color=color, x="cluster_size",
-                          y=column, kind="scatter", **kwargs)
-            fig_path = os.path.join(output_dir, "fig_" + column + ".svg")
+                          y=column, kind="scatter", logx=True, title=args.fig_title)
+            fig_filename = "fig_%s.%s" % (column, args.fig_format)
+            fig_path = os.path.join(args.output, fig_filename)
             plt.legend(prop=fontP)
             plt.savefig(fig_path)
 
@@ -309,8 +310,8 @@ def do_summa(args):
     csv_path = os.path.join(args.output, "summary.csv")
     logging.info("Writing output summary to %s", csv_path)
     df.to_csv(csv_path)
-    create_plots(df, args.output, METRICS, logx=True, title=args.title)
-    create_plots(df, args.output, BENCHMARKS, logx=True, title=args.title)
+    create_plots(args, df, METRICS)
+    create_plots(args, df, BENCHMARKS)
 
 
 def add_simul_args(p_simul):
@@ -401,7 +402,9 @@ def parse_args(args=None):
     p_summa.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
     p_summa.add_argument(
-        '--title', type=str, default=None, help='Title (for figures generated)')
+        '--fig_title', type=str, default=None, help='Title (for figures generated)')
+    p_summa.add_argument(
+        '--fig_format', type=str, default='svg', help='Figure format')
     p_summa.add_argument(
         '--output', type=str, metavar='DIR', help='Output directory')
     p_summa.set_defaults(func=do_summa)

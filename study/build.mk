@@ -66,7 +66,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	fi
 	@echo "writing 'summary.csv' under $(@D)"
 	@$(PYTHON) -m lsh_hdc.study summary \
-		--title "$(BUILD_ARGS)" \
+		--fig_title "$(BUILD_ARGS)" \
 		--input $< \
 		--output $(@D)
 
