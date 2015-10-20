@@ -29,7 +29,6 @@ coverage: test
 endif
 
 test: env build_ext
-	$(PIP) install -r 
 	$(PYENV) nosetests $(NOSEARGS)
 	$(PYENV) py.test README.rst
 
@@ -70,5 +69,5 @@ env/bin/activate: dev-requirements.txt requirements.txt | setup.py
 	test -f $@ || virtualenv $(VENV_OPTS) env
 	$(PYENV) easy_install -U pip
 	$(PIP) install -U wheel cython
-	$(PIP) install -e . -r $^
+	$(PYENV) for reqfile in $^; do pip install -r $$reqfile; done
 	touch $@
