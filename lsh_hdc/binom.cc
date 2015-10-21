@@ -148,25 +148,29 @@ unsigned long long bctable[] = {
 
 
 unsigned long long binomial(unsigned int n, unsigned int k) {
-    unsigned int i;
-    unsigned long long b;
+    // Originally by Lee Daniel Crocker
+    // http://etceterology.com/fast-binomial-coefficients
+    //
     //assert(n >= 0 && k >= 0);
 
-    if (0 == k || n == k) return 1ULL;
+    if (0u == k || n == k) return 1ULL;
     if (k > n) return 0ULL;
 
-    if (k > (n - k)) k = n - k;
-    if (1 == k) return (long long)n;
+    if (k > (n - k)) {
+        k = n - k;
+    }
+    if (1u == k) return (unsigned long long)n;
 
-    if (n <= 54 && k <= 54) {
-        return bctable[(((n - 3) * (n - 3)) >> 2) + (k - 2)];
+    if (n <= 54u && k <= 54u) {
+        return bctable[(((n - 3u) * (n - 3u)) >> 2u) + (k - 2u)];
     }
     /* Last resort: actually calculate */
-    b = 1ULL;
+    unsigned int i;
+    long long b = 1LL;
     for (i = 1u; i <= k; ++i) {
-        b *= (n - (k - i));
-        // if (b < 0) return -1ULL; /* Overflow */
-        b /= i;
+        b *= (long long)((n - k) + i);
+        if (b < 0) return (unsigned long long)-1LL; /* Overflow */
+        b /= (long long)i;
     }
     return b;
 }
