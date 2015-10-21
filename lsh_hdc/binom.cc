@@ -148,10 +148,11 @@ unsigned long long bctable[] = {
 
 
 int64_t binomial(int64_t n, int64_t k) {
-    // Originally by Lee Daniel Crocker
-    // http://etceterology.com/fast-binomial-coefficients
-    //
-    if (n < 0 || k < 0) return -1LL; // overflow
+    /* Originally by Lee Daniel Crocker
+     * http://etceterology.com/fast-binomial-coefficients
+     * Here I only made a small improvement to overflow handling
+     */
+    if (n < 0 || k < 0) return -1LL; /* overflow */
 
     if (0LL == k || n == k) return 1LL;
     if (k > n) return 0LL;
@@ -168,9 +169,10 @@ int64_t binomial(int64_t n, int64_t k) {
     int64_t i;
     int64_t b = 1LL;
     for (i = 1LL; i <= k; ++i) {
-        b *= ((n - k) + i);
-        if (b < 0LL) return -1LL; /* Overflow */
-        b /= i;
+        int64_t mult = (n - k) + i;
+        int64_t tmp = b * mult;
+        if (tmp < 0 || tmp / b != mult) return -1LL; /* Overflow */
+        b = tmp / i;
     }
     return b;
 }
