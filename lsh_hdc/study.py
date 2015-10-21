@@ -248,25 +248,54 @@ def do_simulation(args):
         output.write("%s %s\n", (i, seq))
 
 
-MAIN_METRICS = ['homogeneity', 'completeness', 'nmi_score']
-MISC_METRICS = ['adj_rand_score', 'adj_nmi_score', 'roc_auc']
-BENCHMARKS = ['time_wall', 'time_cpu']
+METRICS = [
+    'homogeneity', 'completeness', 'nmi_score',
+    'adj_rand_score', 'adj_nmi_score', 'roc_auc',
+    'time_wall', 'time_cpu'
+]
+
+CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_score', 'adj_nmi_score']
+CLUSTER_METRICS = ['homogeneity', 'completeness', 'nmi_score']
+ROC_METRICS = ['roc_auc']
+
+
+def add_cluster_metrics(args, clusters, pairs):
+    if (set(CLUSTER_METRICS_ALL) & set(args.metrics)):
+        cluster_data = clusters_to_labels(clusters)
+        if (set(CLUSTER_METRICS) & set(args.metrics)):
+            from sklearn.metrics import homogeneity_completeness_v_measure
+            pairs.extend(zip(CLUSTER_METRICS, homogeneity_completeness_v_measure(*cluster_data)))
+        if 'adj_rand_score' in args.metrics:
+            from sklearn.metrics import adjusted_rand_score
+            pairs.append(('adj_rand_score', adjusted_rand_score(*cluster_data)))
+        if 'adj_nmi_score' in args.metrics:
+            from sklearn.metrics import adjusted_mutual_info_score
+            pairs.append(('adj_nmi_score', adjusted_mutual_info_score(*cluster_data)))
+
+
+def add_roc_metrics(args, clusters, pairs):
+    if (set(ROC_METRICS) & set(args.metrics)):
+        from sklearn.metrics import roc_auc_score
+        roc_data = cluster_predictions(clusters)
+        if 'roc_auc' in args.metrics:
+            pairs.append(('roc_auc', roc_auc_score(*roc_data)))
+
+
+def add_timer_metrics(args, timer, pairs):
+    if 'time_wall' in args.metrics:
+        pairs.append(('time_wall', timer.wall_interval))
+    if 'time_cpu' in args.metrics:
+        pairs.append(('time_cpu', timer.clock_interval))
 
 
 def perform_clustering(args, data):
-    from sklearn.metrics import homogeneity_completeness_v_measure, \
-        adjusted_rand_score, adjusted_mutual_info_score, roc_auc_score
     with PMTimer() as timer:
         clusters = get_clusters(args, data)
-    cluster_data = clusters_to_labels(clusters)
-    roc_data = cluster_predictions(clusters)
     pairs = []
     pairs.append(('hash_function', args.hashfun))
-    pairs.extend(zip(MAIN_METRICS[:2], homogeneity_completeness_v_measure(*cluster_data)[:2]))
-    pairs.append((MISC_METRICS[0], adjusted_rand_score(*cluster_data)))
-    pairs.append((MISC_METRICS[1], adjusted_mutual_info_score(*cluster_data)))
-    pairs.append((MISC_METRICS[2], roc_auc_score(*roc_data)))
-    pairs.extend(zip(BENCHMARKS, [timer.wall_interval, timer.clock_interval]))
+    add_timer_metrics(args, timer, pairs)
+    add_cluster_metrics(args, clusters, pairs)
+    add_roc_metrics(args, clusters, pairs)
     return dict(pairs)
 
 
@@ -315,9 +344,7 @@ def do_summa(args):
     csv_path = os.path.join(args.output, "summary.csv")
     logging.info("Writing output summary to %s", csv_path)
     df.to_csv(csv_path)
-    create_plots(args, df, MAIN_METRICS)
-    create_plots(args, df, MISC_METRICS)
-    create_plots(args, df, BENCHMARKS)
+    create_plots(args, df, METRICS)
 
 
 def add_simul_args(p_simul):
@@ -373,6 +400,9 @@ def add_clust_args(p_clust):
     p_clust.add_argument(
         '--lsh_scheme', type=str, default="b2",
         help='LSH binning scheme')
+    p_clust.add_argument(
+        '--metrics', type=str, nargs='*', default=('nmi_score', 'time_cpu'),
+        choices=METRICS, help='Which metrics to calculate')
 
 
 def parse_args(args=None):
