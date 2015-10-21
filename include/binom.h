@@ -16,4 +16,6 @@
  * =====================================================================================
  */
 
-unsigned long long binomial(unsigned int n, unsigned int k);
+#include <stdint.h>
+
+int64_t binomial(int64_t n, int64_t k);

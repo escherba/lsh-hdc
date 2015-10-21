@@ -9,10 +9,11 @@ from hashlib import md5
 cdef extern from * nogil:
     ctypedef unsigned char uint8_t
     ctypedef unsigned long int uint32_t
+    ctypedef long long int int64_t
     ctypedef unsigned long long int uint64_t
 
 cdef extern from "binom.h" nogil:
-    cdef unsigned long long binomial(unsigned int n, unsigned int k)
+    cdef int64_t binomial(int64_t n, int64_t k)
 
 
 ctypedef uint8_t uint8
@@ -20,8 +21,12 @@ ctypedef uint32_t uint32
 ctypedef uint64_t uint64
 
 
-cpdef unsigned long long binom(unsigned int n, unsigned int k):
-    return binomial(n, k)
+cpdef binom(int64_t n, int64_t k):
+    cdef int64_t result = binomial(n, k)
+    if result < 0LL:
+        raise OverflowError()
+    else:
+        return result
 
 
 cdef class PHashCombiner(object):
