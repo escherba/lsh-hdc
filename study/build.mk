@@ -28,14 +28,12 @@ FILENAMES := $(shell \
 	done; \
 	done)
 
-# We delete $(FILENAMES) manually for cleaner console output,
-# so let Make think they are secondary targets
-.SECONDARY: $(FILENAMES)
+.INTERMEDIATE: $(FILENAMES)
 
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
 	@$(PYTHON) -m lsh_hdc.study joint $(BUILD_ARGS) --output $@ \
-		--metrics nmi_score roc_auc time_cpu \
+		--metrics nmi_score roc_auc adj_rand_score time_cpu \
 		--cluster_size $(word 1,$(subst -, ,$*)) \
 		--hashfun $(word 2,$(subst -, ,$*)) \
 		--seed $(word 3,$(subst -, ,$*))
@@ -52,7 +50,6 @@ $(EXPERIMENT)/config.mk: $(CURRENT_DIR)/new_exp_config.mk
 $(EXPERIMENT)/summary.ndjson: $(FILENAMES)
 	@mkdir -p $(@D)
 	@cat $^ > $@
-	@rm -f $^
 
 $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	@mkdir -p $(@D)
@@ -61,7 +58,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	@# archive the whole directory where the target lives.
 	@if [ -e $@ ]; then \
 		tar czf ` \
-			i=0; while [ -e $(@D)-$$i.tgz ]; do let i++; done; \
+			i=0; while [ -e $(@D)-$$i.tgz ]; do i=$$(($$i+1)); done; \
 			echo $(@D)-$$i.tgz; \
 		` $(@D); \
 	fi
