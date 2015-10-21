@@ -28,9 +28,7 @@ FILENAMES := $(shell \
 	done; \
 	done)
 
-# We delete $(FILENAMES) manually for cleaner console output,
-# so let Make think they are secondary targets
-.SECONDARY: $(FILENAMES)
+.INTERMEDIATE: $(FILENAMES)
 
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
@@ -52,7 +50,6 @@ $(EXPERIMENT)/config.mk: $(CURRENT_DIR)/new_exp_config.mk
 $(EXPERIMENT)/summary.ndjson: $(FILENAMES)
 	@mkdir -p $(@D)
 	@cat $^ > $@
-	@rm -f $^
 
 $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	@mkdir -p $(@D)
