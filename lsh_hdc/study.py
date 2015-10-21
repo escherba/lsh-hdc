@@ -245,7 +245,7 @@ def do_simulation(args):
     data, _ = get_simulation(args)
     output = args.output
     for i, seq in data:
-        output.write("%s %s\n", (i, seq))
+        output.write("%s %s\n" % (i, seq))
 
 
 METRICS = [
@@ -425,6 +425,8 @@ def parse_args(args=None):
 
     p_simul = subparsers.add_parser('simulate', help='generate simulation')
     add_simul_args(p_simul)
+    p_simul.add_argument(
+        '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
     p_simul.set_defaults(func=do_simulation)
 
     p_clust = subparsers.add_parser('analyze', help='run analysis')
