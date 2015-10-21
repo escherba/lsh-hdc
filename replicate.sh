@@ -13,7 +13,7 @@ TOTAL=`find $TARGET_DIRS -type f -name $TARGET | wc -l | sed 's/ *//g'`
 find $TARGET_DIRS -type f -name $TARGET | \
     while read target_path; do
         experiment=`dirname "$target_path"`
-        echo "replicating '$experiment' using $NUM_PROCS processes ($IDX / $TOTAL)"
+        echo "Experiment $IDX out of $TOTAL: replicating '$experiment' using $NUM_PROCS processes"
         touch "$experiment/$TARGET"
         EXPERIMENT="$experiment" time make -r -j$NUM_PROCS experiment
         IDX=$(($IDX+1))
