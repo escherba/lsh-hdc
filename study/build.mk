@@ -8,7 +8,7 @@ ifeq ($(EXPERIMENT),)
 # EXPERIMENT has not been defined, so generate a name for
 # one and include default experiment config file
 EXPERIMENT := $(CURRENT_DIR)/exp-$(shell date +%Y%m%d%H%M%S)
-include $(CURRENT_DIR)/config.mk
+include $(CURRENT_DIR)/new_exp_config.mk
 else
 # EXPERIMENT has been defined, include the make config from
 # that directory only. It's likely that the following
@@ -35,6 +35,7 @@ FILENAMES := $(shell \
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
 	@$(PYTHON) -m lsh_hdc.study joint $(BUILD_ARGS) --output $@ \
+		--metrics nmi_score time_wall \
 		--cluster_size $(word 1,$(subst -, ,$*)) \
 		--hashfun $(word 2,$(subst -, ,$*)) \
 		--seed $(word 3,$(subst -, ,$*))
@@ -43,7 +44,7 @@ $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 # Secondary files will be kept
 .SECONDARY: $(addprefix $(EXPERIMENT)/,config.mk summary.ndjson summary.csv)
 
-$(EXPERIMENT)/%.mk: $(CURRENT_DIR)/%.mk
+$(EXPERIMENT)/config.mk: $(CURRENT_DIR)/new_exp_config.mk
 	@mkdir -p $(@D)
 	@echo "copying $< => $@"
 	@if [ ! -e "$@" ]; then cp -p $< $@; fi
