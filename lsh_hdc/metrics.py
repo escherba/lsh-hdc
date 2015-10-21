@@ -1,4 +1,4 @@
-from math import log as log_nat
+from math import log as logn
 from collections import defaultdict, Counter, Mapping
 from itertools import izip
 
@@ -14,9 +14,9 @@ def cond_entropy(counts, N):
     """
     if isinstance(counts, Mapping):
         counts = counts.values()
-    log_row_total = log_nat(sum(counts))
+    log_row_total = logn(sum(counts))
     # to avoid loss of precision, calculate 'log(a/b)' as 'log(a) - loh(b)'
-    return -sum(c * (log_nat(c) - log_row_total) for c in counts if c != 0) / N
+    return -sum(c * (logn(c) - log_row_total) for c in counts if c != 0) / N
 
 
 def harmonic_mean(x, y):
