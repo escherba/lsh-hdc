@@ -401,8 +401,9 @@ def add_clust_args(p_clust):
         '--lsh_scheme', type=str, default="b2",
         help='LSH binning scheme')
     p_clust.add_argument(
-        '--metrics', type=str, nargs='*', default=('nmi_score', 'time_cpu'),
-        choices=METRICS, help='Which metrics to calculate')
+        '--metrics', type=str, nargs='*', choices=METRICS,
+        default=('roc_auc', 'nmi_score', 'time_cpu'),
+        help='Which metrics to calculate')
 
 
 def parse_args(args=None):

@@ -35,7 +35,7 @@ FILENAMES := $(shell \
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
 	@$(PYTHON) -m lsh_hdc.study joint $(BUILD_ARGS) --output $@ \
-		--metrics nmi_score time_wall \
+		--metrics nmi_score roc_auc time_cpu \
 		--cluster_size $(word 1,$(subst -, ,$*)) \
 		--hashfun $(word 2,$(subst -, ,$*)) \
 		--seed $(word 3,$(subst -, ,$*))
