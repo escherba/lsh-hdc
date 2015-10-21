@@ -4,6 +4,22 @@ from lsh_hdc.metrics import clustering_metrics
 
 class TestMetrics(unittest.TestCase):
 
+    def test_perfectly_good_clustering(self):
+        """Perfect separation
+        """
+        h, c, v = clustering_metrics([0, 0, 1, 1], [1, 1, 0, 0])
+        self.assertAlmostEqual(h, 1.00, 2)
+        self.assertAlmostEqual(c, 1.00, 2)
+        self.assertAlmostEqual(v, 1.00, 2)
+
+    def test_perfectly_bad_clustering(self):
+        """No separation
+        """
+        h, c, v = clustering_metrics([0, 0, 1, 1], [1, 1, 1, 1])
+        self.assertAlmostEqual(h, 0.00, 2)
+        self.assertAlmostEqual(c, 0.00, 2)
+        self.assertAlmostEqual(v, 0.00, 2)
+
     def test_homogeneous_but_not_complete_labeling(self):
         """homogeneous but not complete clustering
         """
