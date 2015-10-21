@@ -1,4 +1,4 @@
-from math import log as log_nat
+from math import log as logn
 from collections import defaultdict, Counter, Mapping
 from itertools import izip
 
@@ -14,14 +14,17 @@ def cond_entropy(counts, N):
     """
     if isinstance(counts, Mapping):
         counts = counts.values()
-    row_total = float(sum(counts))
-    return -sum(c * log_nat(c / row_total) for c in counts if c != 0) / N
+    log_row_total = logn(sum(counts))
+    # to avoid loss of precision, calculate 'log(a/b)' as 'log(a) - loh(b)'
+    return -sum(c * (logn(c) - log_row_total) for c in counts if c != 0) / N
 
 
 def harmonic_mean(x, y):
     """Harmonic mean of two numbers. Returns a float
     """
-    return (2.0 * x * y) / (x + y)
+    # Since harmonic mean converges to arithmetic mean as x approaches y,
+    # return the latter when x == y, which is numerically safer.
+    return (x + y) / 2.0 if x == y else (2.0 * x * y) / (x + y)
 
 
 def clustering_metrics(labels_true, labels_pred):
@@ -57,7 +60,9 @@ def clustering_metrics(labels_true, labels_pred):
     H_K = cond_entropy(kluster_total, N)
     H_CK = sum(cond_entropy(x, N) for x in klusters.itervalues())
     H_KC = sum(cond_entropy(x, N) for x in classes.itervalues())
-    homogeneity = 1.0 - H_CK / H_C
-    completeness = 1.0 - H_KC / H_K
+    # The '<=' comparisons below both prevent division by zero errors
+    # and guarantee that the scores are always non-negative.
+    homogeneity = 0.0 if H_C <= H_CK else 1.0 - H_CK / H_C
+    completeness = 0.0 if H_K <= H_KC else 1.0 - H_KC / H_K
     nmi_score = harmonic_mean(homogeneity, completeness)
     return homogeneity, completeness, nmi_score
