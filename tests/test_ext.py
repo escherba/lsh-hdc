@@ -62,3 +62,4 @@ class TestCombiners(unittest.TestCase):
         # self.assertEqual(binomial(4.5, 1.5), 6.5625)
         self.assertEqual(binomial(1100, 1), 1100)
         self.assertEqual(binomial(1100, 2), 604450)
+        self.assertEqual(binomial(10**9, 2), 499999999500000000)
