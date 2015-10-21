@@ -258,6 +258,13 @@ CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_sco
 CLUSTER_METRICS = ['homogeneity', 'completeness', 'nmi_score']
 ROC_METRICS = ['roc_auc']
 
+LEGEND_METRIC_KWARGS = {
+    'homogeneity': dict(loc='lower right'),
+    'roc_auc': dict(loc='lower right'),
+    'time_wall': dict(loc='upper left'),
+    'time_cpu': dict(loc='upper left'),
+}
+
 
 def add_cluster_metrics(args, clusters, pairs):
     if (set(CLUSTER_METRICS_ALL) & set(args.metrics)):
@@ -322,17 +329,17 @@ def create_plots(args, df, metrics):
 
     groups = df.groupby(["hash_function"])
     palette_size = min(max(len(groups), 3), 9)
-    for column in metrics:
-        if column in df:
+    for metric in metrics:
+        if metric in df:
             colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
             fig, ax = plt.subplots()
             for color, (label, dfel) in izip(colors, groups):
                 dfel.plot(ax=ax, label=label, x="cluster_size", linewidth='1.3',
-                          y=column, kind="scatter", logx=True, title=args.fig_title,
+                          y=metric, kind="scatter", logx=True, title=args.fig_title,
                           facecolors='none', edgecolors=color)
-            fig_filename = "fig_%s.%s" % (column, args.fig_format)
+            fig_filename = "fig_%s.%s" % (metric, args.fig_format)
             fig_path = os.path.join(args.output, fig_filename)
-            ax.legend(prop=fontP)
+            ax.legend(prop=fontP, **LEGEND_METRIC_KWARGS.get(metric, {}))
             fig.savefig(fig_path)
 
 
