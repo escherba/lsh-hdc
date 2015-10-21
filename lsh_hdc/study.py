@@ -270,8 +270,8 @@ def add_cluster_metrics(args, clusters, pairs):
     if (set(CLUSTER_METRICS_ALL) & set(args.metrics)):
         cluster_data = clusters_to_labels(clusters)
         if (set(CLUSTER_METRICS) & set(args.metrics)):
-            from sklearn.metrics import homogeneity_completeness_v_measure
-            pairs.extend(zip(CLUSTER_METRICS, homogeneity_completeness_v_measure(*cluster_data)))
+            from lsh_hdc.metrics import clustering_metrics
+            pairs.extend(zip(CLUSTER_METRICS, clustering_metrics(*cluster_data)))
         if 'adj_rand_score' in args.metrics:
             from sklearn.metrics import adjusted_rand_score
             pairs.append(('adj_rand_score', adjusted_rand_score(*cluster_data)))
