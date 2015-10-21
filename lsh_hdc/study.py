@@ -245,7 +245,7 @@ def do_simulation(args):
     data, _ = get_simulation(args)
     output = args.output
     for i, seq in data:
-        output.write("%s %s\n", (i, seq))
+        output.write("%s %s\n" % (i, seq))
 
 
 METRICS = [
@@ -270,8 +270,8 @@ def add_cluster_metrics(args, clusters, pairs):
     if (set(CLUSTER_METRICS_ALL) & set(args.metrics)):
         cluster_data = clusters_to_labels(clusters)
         if (set(CLUSTER_METRICS) & set(args.metrics)):
-            from sklearn.metrics import homogeneity_completeness_v_measure
-            pairs.extend(zip(CLUSTER_METRICS, homogeneity_completeness_v_measure(*cluster_data)))
+            from lsh_hdc.metrics import clustering_metrics
+            pairs.extend(zip(CLUSTER_METRICS, clustering_metrics(*cluster_data)))
         if 'adj_rand_score' in args.metrics:
             from sklearn.metrics import adjusted_rand_score
             pairs.append(('adj_rand_score', adjusted_rand_score(*cluster_data)))
@@ -425,6 +425,8 @@ def parse_args(args=None):
 
     p_simul = subparsers.add_parser('simulate', help='generate simulation')
     add_simul_args(p_simul)
+    p_simul.add_argument(
+        '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
     p_simul.set_defaults(func=do_simulation)
 
     p_clust = subparsers.add_parser('analyze', help='run analysis')
