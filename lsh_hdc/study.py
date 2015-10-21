@@ -249,12 +249,11 @@ def do_simulation(args):
 
 
 METRICS = [
-    'homogeneity', 'completeness', 'nmi_score',
-    'adj_rand_score', 'adj_nmi_score', 'roc_auc',
-    'time_wall', 'time_cpu'
+    'homogeneity', 'completeness', 'nmi_score', 'adj_rand_score',
+    'roc_auc', 'time_wall', 'time_cpu'
 ]
 
-CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_score', 'adj_nmi_score']
+CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_score']
 CLUSTER_METRICS = ['homogeneity', 'completeness', 'nmi_score']
 ROC_METRICS = ['roc_auc']
 
@@ -268,16 +267,12 @@ LEGEND_METRIC_KWARGS = {
 
 def add_cluster_metrics(args, clusters, pairs):
     if (set(CLUSTER_METRICS_ALL) & set(args.metrics)):
-        cluster_data = clusters_to_labels(clusters)
+        from lsh_hdc.metrics import ClusteringMetrics
+        cm = ClusteringMetrics.from_labels(*clusters_to_labels(clusters))
         if (set(CLUSTER_METRICS) & set(args.metrics)):
-            from lsh_hdc.metrics import clustering_metrics
-            pairs.extend(zip(CLUSTER_METRICS, clustering_metrics(*cluster_data)))
+            pairs.extend(zip(CLUSTER_METRICS, cm.clustering_metrics()))
         if 'adj_rand_score' in args.metrics:
-            from sklearn.metrics import adjusted_rand_score
-            pairs.append(('adj_rand_score', adjusted_rand_score(*cluster_data)))
-        if 'adj_nmi_score' in args.metrics:
-            from sklearn.metrics import adjusted_mutual_info_score
-            pairs.append(('adj_nmi_score', adjusted_mutual_info_score(*cluster_data)))
+            pairs.append(('adj_rand_score', cm.adjusted_rand_index()))
 
 
 def add_roc_metrics(args, clusters, pairs):
