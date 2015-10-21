@@ -7,10 +7,14 @@ TARGET_DIRS=study/exp-*
 make -r extras
 make -r build_ext
 
-find $TARGET_DIRS -type f -name $TARGET -print0 | \
-    while IFS= read -r -d '' target_path; do
+IDX=1
+TOTAL=`find $TARGET_DIRS -type f -name $TARGET | wc -l | sed 's/ *//g'`
+
+find $TARGET_DIRS -type f -name $TARGET | \
+    while read target_path; do
         experiment=`dirname "$target_path"`
-        echo "replicating '$experiment'"
+        echo "replicating '$experiment' using $NUM_PROCS processes ($IDX / $TOTAL)"
         touch "$experiment/$TARGET"
         EXPERIMENT="$experiment" time make -r -j$NUM_PROCS experiment
+        IDX=$(($IDX+1))
     done
