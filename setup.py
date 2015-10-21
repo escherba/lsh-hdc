@@ -149,12 +149,15 @@ setup(
     ext_modules=[Extension(
         "lsh_hdc.ext",
         [
+            "lsh_hdc/binom.cc",
             "lsh_hdc/ext.pyx"
         ],
-        depends=[],
+        depends=[
+            "include/binom.h"
+        ],
         language="c++",
         extra_compile_args=CXXFLAGS,
-        include_dirs=[])
+        include_dirs=["include"])
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

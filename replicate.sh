@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NUM_PROCS=16
+NUM_PROCS=32
 TARGET=config.mk
 TARGET_DIRS=study/exp-*
 

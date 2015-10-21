@@ -1,7 +1,7 @@
 from math import log as logn
 from collections import defaultdict, Counter, Mapping
 from itertools import izip
-from scipy.special import binom
+from lsh_hdc.ext import binom
 
 
 def cond_entropy(counts, N):
@@ -87,7 +87,7 @@ class ClusteringMetrics(ContingencyTable):
         sum_n = sum(binom(cell, 2) for cell in self.iter_cells())
         sum_a = sum(binom(a, 2) for a in self.iter_col_totals())
         sum_b = sum(binom(b, 2) for b in self.iter_row_totals())
-        n_choose_2 = binom(self.grand_total, 2)
+        n_choose_2 = float(binom(self.grand_total, 2))
         sum_a_sum_b__n_choose_2 = (sum_a / n_choose_2) * sum_b
         numerator = sum_n - sum_a_sum_b__n_choose_2
         denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b__n_choose_2

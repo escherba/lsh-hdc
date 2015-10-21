@@ -61,7 +61,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	@# archive the whole directory where the target lives.
 	@if [ -e $@ ]; then \
 		tar czf ` \
-			i=0; while [ -e $(@D)-$$i.tgz ]; do let i++; done; \
+			i=0; while [ -e $(@D)-$$i.tgz ]; do i=$$(($$i+1)); done; \
 			echo $(@D)-$$i.tgz; \
 		` $(@D); \
 	fi

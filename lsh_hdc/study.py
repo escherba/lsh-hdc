@@ -260,6 +260,7 @@ ROC_METRICS = ['roc_auc']
 LEGEND_METRIC_KWARGS = {
     'homogeneity': dict(loc='lower right'),
     'roc_auc': dict(loc='lower right'),
+    'adj_rand_score': dict(loc='lower right'),
     'time_wall': dict(loc='upper left'),
     'time_cpu': dict(loc='upper left'),
 }
