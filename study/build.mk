@@ -26,7 +26,7 @@ STUDY_ARGS := --sim_size 60000 --metrics nmi_score roc_auc adj_rand_score time_c
 GROUP_FIELD := hashfun
 GROUPS := metrohash md5 builtin cityhash
 
-PARAM_FIELD := p_err
+PARAM_FIELD := pos_ratio
 PARAMS := $(shell for i in `seq 1 6`; do python -c "print 0.5 ** $$i"; done)
 
 TRIAL_FIELD := seed
