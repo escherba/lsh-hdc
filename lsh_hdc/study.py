@@ -326,9 +326,6 @@ def perform_clustering(args, data):
 def perform_analysis(args, clusters):
     clusters = list(clusters)
     pairs = []
-    #pairs.append((args.group_by, getattr(args, args.group_by)))
-    #pairs.append((args.x_axis, getattr(args, args.x_axis)))
-    #pairs.append((args.trial, getattr(args, args.trial)))
     add_cluster_metrics(args, clusters, pairs)
     add_roc_metrics(args, clusters, pairs)
     return dict(pairs)
@@ -371,9 +368,10 @@ def create_plots(args, df, metrics):
             fig, ax = plt.subplots()
             for color, (label, dfel) in izip(colors, groups):
                 try:
-                    dfel.plot(ax=ax, label=label, x=args.x_axis, linewidth='1.3',
-                            y=metric, kind="scatter", logx=True, title=args.fig_title,
-                            facecolors='none', edgecolors=color)
+                    dfel.plot(
+                        ax=ax, label=label, x=args.x_axis, linewidth='1.3',
+                        y=metric, kind="scatter", logx=True, title=args.fig_title,
+                        facecolors='none', edgecolors=color)
                 except Exception:
                     logging.exception("Exception thrown when plotting %s:%s", metric, label)
             fig_filename = "fig_%s.%s" % (metric, args.fig_format)
