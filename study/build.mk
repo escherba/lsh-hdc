@@ -21,7 +21,7 @@ endif
 
 # TODO: create a separate Make include file for study-specific parameters
 #
-STUDY_ARGS := --lsh_cheme a0 --sim_size 100000 --metrics nmi_score roc_auc adj_rand_score time_cpu
+STUDY_ARGS := --lsh_scheme a0 --sim_size 100000 --metrics nmi_score roc_auc adj_rand_score time_cpu
 
 GROUP_FIELD := hashfun
 GROUPS := metrohash md5 builtin cityhash
