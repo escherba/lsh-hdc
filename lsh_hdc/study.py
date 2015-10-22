@@ -195,7 +195,12 @@ def get_clusters(args, data):
                       lsh_scheme=args.lsh_scheme,
                       kmin=args.kmin,
                       hashfun=args.hashfun)
-    shingler = Shingler(span=args.shingle_span)
+    shingler = Shingler(
+        span=args.shingle_span,
+        skip=args.shingle_skip,
+        kmin=args.shingle_kmin,
+        unique=bool(args.shingle_uniq)
+    )
     content_dict = dict()
     for label, text in data:
         content_dict[label] = text
@@ -421,7 +426,7 @@ def add_simul_args(p_simul):
         '--c_size_sigma', type=float, default=10,
         help='Std. dev. of cluster size')
     p_simul.add_argument(
-        '--pos_ratio', type=float, default=0.2,
+        '--pos_ratio', type=float, default=0.1,
         help='ratio of positives to all')
     p_simul.add_argument(
         '--p_err', type=float, default=0.05,
@@ -457,6 +462,15 @@ def add_clust_args(p_clust):
     p_clust.add_argument(
         '--shingle_span', type=int, default=4,
         help='shingle length (in tokens)')
+    p_clust.add_argument(
+        '--shingle_skip', type=int, default=1,
+        help='words to skip')
+    p_clust.add_argument(
+        '--shingle_uniq', type=int, default=1,
+        help='whether to unique shingles')
+    p_clust.add_argument(
+        '--shingle_kmin', type=int, default=0,
+        help='minimum expected shingles')
     p_clust.add_argument(
         '--width', type=int, default=3,
         help='length of minhash feature vectors')
@@ -495,7 +509,7 @@ def parse_args(args=None):
         '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
     p_simul.set_defaults(func=do_simulation)
 
-    p_clust = subparsers.add_parser('cluster', help='run clustring')
+    p_clust = subparsers.add_parser('cluster', help='run clustering')
     p_clust.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
     add_clust_args(p_clust)
