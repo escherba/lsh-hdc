@@ -123,9 +123,9 @@ class MarkovChainMutator(object):
 
 def get_simulation(args):
 
-    seq_len_mu = args.seq_len_mu
+    seq_len_mean = args.seq_len_mean
     seq_len_sigma = args.seq_len_sigma
-    c_size_mu = args.c_size_mu
+    c_size_mean = args.c_size_mean
     c_size_sigma = args.c_size_sigma
     seq_len_min = args.seq_len_min
 
@@ -162,11 +162,11 @@ def get_simulation(args):
     for c_id in xrange(num_clusters):
         if args.cluster_size is None:
             cluster_size = gauss_uint_threshold(
-                threshold=2, mu=c_size_mu, sigma=c_size_sigma)
+                threshold=2, mu=c_size_mean, sigma=c_size_sigma)
         else:
             cluster_size = args.cluster_size
         seq_length = gauss_uint_threshold(
-            threshold=seq_len_min, mu=seq_len_mu, sigma=seq_len_sigma)
+            threshold=seq_len_min, mu=seq_len_mean, sigma=seq_len_sigma)
         master = mcg.generate_str(start, seq_length)
         if len(master) > 0:
             start = master[-1]
@@ -177,7 +177,7 @@ def get_simulation(args):
     num_negatives = int(pos_count * ((1.0 - pos_ratio) / pos_ratio))
     for neg_idx in xrange(num_negatives):
         seq_length = gauss_uint_threshold(
-            threshold=seq_len_min, mu=seq_len_mu, sigma=seq_len_sigma)
+            threshold=seq_len_min, mu=seq_len_mean, sigma=seq_len_sigma)
         master = mcg.generate_str(start, seq_length)
         if len(master) > 0:
             start = master[-1]
@@ -278,7 +278,7 @@ def add_cluster_metrics(args, clusters, pairs):
 
 def add_roc_metrics(args, clusters, pairs):
     if (set(ROC_METRICS) & set(args.metrics)):
-        from sklearn.metrics import roc_auc_score
+        from lsh_hdc.metrics import roc_auc_score
         roc_data = cluster_predictions(clusters)
         if 'roc_auc' in args.metrics:
             pairs.append(('roc_auc', roc_auc_score(*roc_data)))
@@ -366,22 +366,22 @@ def add_simul_args(p_simul):
         '--seed', type=int, default=None,
         help='Random number generator seed for reproducibility')
     p_simul.add_argument(
-        '--pos_ratio', type=float, default=0.1,
+        '--pos_ratio', type=float, default=0.05,
         help='ratio of positives')
     p_simul.add_argument(
-        '--p_err', type=float, default=0.10,
+        '--p_err', type=float, default=0.05,
         help='Probability of error at any location in sequence')
     p_simul.add_argument(
-        '--seq_len_min', type=int, default=2,
+        '--seq_len_min', type=int, default=3,
         help='Minimum sequence length')
     p_simul.add_argument(
-        '--seq_len_mu', type=float, default=4,
+        '--seq_len_mean', type=float, default=4,
         help='Mean of sequence length')
     p_simul.add_argument(
         '--seq_len_sigma', type=float, default=10,
         help='Std. dev. of sequence length')
     p_simul.add_argument(
-        '--c_size_mu', type=float, default=2,
+        '--c_size_mean', type=float, default=4,
         help='Mean of cluster size')
     p_simul.add_argument(
         '--c_size_sigma', type=float, default=10,

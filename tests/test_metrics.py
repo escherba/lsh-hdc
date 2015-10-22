@@ -1,5 +1,6 @@
 import numpy as np
-from lsh_hdc.metrics import adjusted_rand_score, homogeneity_completeness_v_measure
+from lsh_hdc.metrics import adjusted_rand_score, \
+    homogeneity_completeness_v_measure, cond_entropy
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal
 
@@ -15,6 +16,16 @@ def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
             labels_b = random_labels(low=0, high=k - 1, size=n_samples)
             scores[i, j] = score_func(labels_a, labels_b)
     return scores
+
+
+def test_cond_entropy_zero():
+    val = cond_entropy([], 0)
+    assert_almost_equal(val, 0.0000, 4)
+
+
+def test_cond_entropy_something():
+    val = cond_entropy([1, 24, 5], 100)
+    assert_almost_equal(val, 0.1772, 4)
 
 
 def test_perfectly_good_clustering():
