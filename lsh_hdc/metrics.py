@@ -1,7 +1,10 @@
+import numpy as np
 from math import log as logn
 from collections import defaultdict, Counter, Mapping
 from itertools import izip
 from scipy.special import binom
+from sklearn.metrics.ranking import auc, roc_curve
+from sklearn.metrics.base import _average_binary_score
 
 
 def cond_entropy(counts, N):
@@ -15,7 +18,10 @@ def cond_entropy(counts, N):
     """
     if isinstance(counts, Mapping):
         counts = counts.values()
-    log_row_total = logn(sum(counts))
+    sum_counts = sum(counts)
+    if sum_counts == 0:
+        return 0.0
+    log_row_total = logn(sum_counts)
     # to avoid loss of precision, calculate 'log(a/b)' as 'log(a) - loh(b)'
     return -sum(c * (logn(c) - log_row_total) for c in counts if c != 0) / N
 
@@ -84,10 +90,13 @@ class ClusteringMetrics(ContingencyTable):
         return homogeneity, completeness, nmi_score
 
     def adjusted_rand_index(self):
+        N = self.grand_total
+        if N <= 1:
+            return float('nan')
         sum_n = sum(binom(cell, 2) for cell in self.iter_cells())
         sum_a = sum(binom(a, 2) for a in self.iter_col_totals())
         sum_b = sum(binom(b, 2) for b in self.iter_row_totals())
-        n_choose_2 = float(binom(self.grand_total, 2))
+        n_choose_2 = float(binom(N, 2))
         sum_a_sum_b__n_choose_2 = (sum_a / n_choose_2) * sum_b
         numerator = sum_n - sum_a_sum_b__n_choose_2
         denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b__n_choose_2
@@ -118,3 +127,18 @@ def adjusted_rand_score(labels_true, labels_pred):
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
     return ct.adjusted_rand_index()
+
+
+def roc_auc_score(y_true, y_score, average="macro", sample_weight=None):
+    """Override Sklearn's method so as not to raise error
+    """
+    def _binary_roc_auc_score(y_true, y_score, sample_weight=None):
+        if len(np.unique(y_true)) != 2:
+            return float('nan')
+        fpr, tpr, tresholds = roc_curve(y_true, y_score,
+                                        sample_weight=sample_weight)
+        return auc(fpr, tpr, reorder=True)
+
+    return _average_binary_score(
+        _binary_roc_auc_score, y_true, y_score, average,
+        sample_weight=sample_weight)
