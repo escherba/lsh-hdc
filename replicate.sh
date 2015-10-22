@@ -15,6 +15,6 @@ find $TARGET_DIRS -type f -name $TARGET | \
         experiment=`dirname "$target_path"`
         echo "Experiment $IDX out of $TOTAL: replicating '$experiment' using $NUM_PROCS processes"
         touch "$experiment/$TARGET"
-        EXPERIMENT="$experiment" time make -r -j$NUM_PROCS experiment
+        EXPERIMENT="$experiment" make -r -j$NUM_PROCS experiment
         IDX=$(($IDX+1))
     done
