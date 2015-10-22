@@ -296,6 +296,8 @@ def perform_clustering(args, data):
         clusters = get_clusters(args, data)
     pairs = []
     pairs.append((args.group_by, getattr(args, args.group_by)))
+    pairs.append((args.x_axis, getattr(args, args.x_axis)))
+    pairs.append((args.trial, getattr(args, args.trial)))
     add_timer_metrics(args, timer, pairs)
     add_cluster_metrics(args, clusters, pairs)
     add_roc_metrics(args, clusters, pairs)
@@ -330,7 +332,7 @@ def create_plots(args, df, metrics):
             colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
             fig, ax = plt.subplots()
             for color, (label, dfel) in izip(colors, groups):
-                dfel.plot(ax=ax, label=label, x="cluster_size", linewidth='1.3',
+                dfel.plot(ax=ax, label=label, x=args.x_axis, linewidth='1.3',
                           y=metric, kind="scatter", logx=True, title=args.fig_title,
                           facecolors='none', edgecolors=color)
             fig_filename = "fig_%s.%s" % (metric, args.fig_format)
@@ -386,10 +388,20 @@ def add_simul_args(p_simul):
         help='Std. dev. of cluster size')
 
 
-def add_clust_args(p_clust):
-    p_clust.add_argument(
+def add_parameterization_args(parser):
+    parser.add_argument(
         '--group_by', type=str, default='hashfun',
         help='Field to group by')
+    parser.add_argument(
+        '--x_axis', type=str, default='cluster_size',
+        help='Which column to plot as X axis')
+    parser.add_argument(
+        '--trial', type=str, default='seed',
+        help='Which column to average')
+
+
+def add_clust_args(p_clust):
+    add_parameterization_args(p_clust)
     p_clust.add_argument(
         '--hashfun', type=str, default='builtin',
         choices=HASH_FUNC_TABLE.keys(),
@@ -444,10 +456,9 @@ def parse_args(args=None):
     p_joint.set_defaults(func=do_joint)
 
     p_summa = subparsers.add_parser('summary', help='summarize analysis results')
+    add_parameterization_args(p_summa)
     p_summa.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
-    p_summa.add_argument(
-        '--group_by', type=str, default='hashfun', help='Field to group by')
     p_summa.add_argument(
         '--fig_title', type=str, default=None, help='Title (for figures generated)')
     p_summa.add_argument(
