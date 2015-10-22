@@ -1,8 +1,27 @@
 from math import log as logn
-from collections import defaultdict, Counter, Mapping
+from collections import defaultdict, Counter, Mapping, Set
 from itertools import izip
 from scipy.special import binom
 from sklearn.metrics.ranking import roc_auc_score as _roc_auc_score
+
+
+def jaccard_similarity(set1, set2):
+    """Return Jaccard similarity between two sets
+
+    :param set1: set 1
+    :param set2: set 2
+    :returns: Jaccard similarity of two sets
+    :rtype: float
+    """
+    if not isinstance(set1, Set):
+        set1 = set(set1)
+    if not isinstance(set2, Set):
+        set2 = set(set2)
+    denominator = len(set1 | set2)
+    if denominator == 0:
+        return float('nan')
+    else:
+        return len(set1 & set2) / float(denominator)
 
 
 def cond_entropy(counts, N):

@@ -7,6 +7,19 @@ from operator import itemgetter
 from pymaptools.iter import isiterable
 
 
+def fill_with_last(lst, k):
+    """
+    extend a list to length k by duplicating last item
+
+    >>> fill_with_last([1, 2, 3], 5)
+    [1, 2, 3, 3, 3]
+    """
+    len_l = len(lst)
+    if len_l < k:
+        lst.extend([lst[-1]] * (k - len_l))
+    return lst
+
+
 def toiter(a):
     """If scalar, convert to tuple"""
     return a if isiterable(a) else (a,)

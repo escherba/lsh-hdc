@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import unittest
 from pymaptools.bitwise import hamming
-from lsh_hdc import MinHashSignature, SimHashSignature, MinHashSketchSignature, \
-    jaccard_sim, Shingler
+from lsh_hdc import MinHashSignature, SimHashSignature, \
+    MinHashSketchSignature, Shingler
+from lsh_hdc.metrics import jaccard_similarity
 from lsh_hdc.utils import randset, sigsim
 from lsh_hdc.preprocess import RegexTokenizer
 
@@ -184,7 +185,7 @@ class TestSig(unittest.TestCase):
             sigs = map(mh.get_signature, sets)
 
             # Calculate true Jaccard similarity, and sim of signatures
-            jsim = jaccard_sim(*sets)
+            jsim = jaccard_similarity(*sets)
             ssim = sigsim(*sigs, dim=100)
 
             # Accumulate error
