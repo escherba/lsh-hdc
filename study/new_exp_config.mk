@@ -1,1 +1,1 @@
-EXPERIMENT_ARGS := --pos_ratio 0.2 --p_err 0.0 --seq_len_min 3
+EXPERIMENT_ARGS := --pos_ratio 0.2 --cluster_size 8 --seq_len_min 3
