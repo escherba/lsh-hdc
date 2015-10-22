@@ -79,7 +79,7 @@ class MarkovChainMutator(object):
 
     delimiter = '-'
 
-    def __init__(self, p_err=0.2, alphabet=ALPHABET):
+    def __init__(self, p_err=0.1, alphabet=ALPHABET):
         self.alphabet = alphabet
         self.chain = MarkovChainMutator.get_markov_chain(alphabet + self.delimiter, p_err=p_err)
 
@@ -192,6 +192,7 @@ def get_clusters(args, data):
     cluster = Cluster(width=args.width,
                       bandwidth=args.bandwidth,
                       lsh_scheme=args.lsh_scheme,
+                      kmin=args.kmin,
                       hashfun=args.hashfun)
     shingler = Shingler(span=args.shingle_span)
     content_dict = dict()
@@ -366,8 +367,8 @@ def add_simul_args(p_simul):
         '--seed', type=int, default=None,
         help='Random number generator seed for reproducibility')
     p_simul.add_argument(
-        '--pos_ratio', type=float, default=0.05,
-        help='ratio of positives')
+        '--pos_ratio', type=float, default=0.2,
+        help='ratio of positives to all')
     p_simul.add_argument(
         '--p_err', type=float, default=0.05,
         help='Probability of error at any location in sequence')
@@ -415,6 +416,9 @@ def add_clust_args(p_clust):
     p_clust.add_argument(
         '--bandwidth', type=int, default=3,
         help='rows per band')
+    p_clust.add_argument(
+        '--kmin', type=int, default=3,
+        help='number of minhashes to sample')
     p_clust.add_argument(
         '--lsh_scheme', type=str, default="a0",
         help='LSH binning scheme')
