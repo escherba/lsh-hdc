@@ -2,8 +2,7 @@ import unittest
 from functools import reduce
 from lsh_hdc.ext import PHashCombiner, \
     hash_combine_murmur as hash_combine_1, \
-    hash_combine_boost as hash_combine_2, \
-    binom as binomial
+    hash_combine_boost as hash_combine_2
 
 
 class TestCombiners(unittest.TestCase):
@@ -45,21 +44,3 @@ class TestCombiners(unittest.TestCase):
     def test_hash_combine_2(self):
         """hash_combine_2 should work"""
         self._check_combiner(hash_combine_2)
-
-    def test_binomial(self):
-        """Test binomial coefficient function
-        These tests are from mpmath library
-        """
-        self.assertEqual(binomial(0, 0), 1)
-        self.assertEqual(binomial(1, 0), 1)
-        # self.assertEqual(binomial(0, -1), 0)
-        self.assertEqual(binomial(3, 2), 3)
-        self.assertEqual(binomial(5, 2), 10)
-        self.assertEqual(binomial(5, 3), 10)
-        self.assertEqual(binomial(5, 5), 1)
-        # self.assertEqual(binomial(-1, 0), 1)
-        # self.assertEqual(binomial(-2, -4), 3)
-        # self.assertEqual(binomial(4.5, 1.5), 6.5625)
-        self.assertEqual(binomial(1100, 1), 1100)
-        self.assertEqual(binomial(1100, 2), 604450)
-        self.assertEqual(binomial(10**9, 2), 499999999500000000)

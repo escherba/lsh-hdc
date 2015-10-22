@@ -1,6 +1,8 @@
 virtualenv
 cython
 regex
+numpy
+scipy
 metrohash>=0.0.11
 cityhash>=0.1.3
 xxh==0.1.1
