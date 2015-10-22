@@ -1,10 +1,8 @@
-import numpy as np
 from math import log as logn
 from collections import defaultdict, Counter, Mapping
 from itertools import izip
 from scipy.special import binom
-from sklearn.metrics.ranking import auc, roc_curve
-from sklearn.metrics.base import _average_binary_score
+from sklearn.metrics.ranking import roc_auc_score as _roc_auc_score
 
 
 def cond_entropy(counts, N):
@@ -129,16 +127,11 @@ def adjusted_rand_score(labels_true, labels_pred):
     return ct.adjusted_rand_index()
 
 
-def roc_auc_score(y_true, y_score, average="macro", sample_weight=None):
+def roc_auc_score(*args, **kwargs):
     """Override Sklearn's method so as not to raise error
     """
-    def _binary_roc_auc_score(y_true, y_score, sample_weight=None):
-        if len(np.unique(y_true)) != 2:
-            return float('nan')
-        fpr, tpr, tresholds = roc_curve(y_true, y_score,
-                                        sample_weight=sample_weight)
-        return auc(fpr, tpr, reorder=True)
-
-    return _average_binary_score(
-        _binary_roc_auc_score, y_true, y_score, average,
-        sample_weight=sample_weight)
+    try:
+        result = _roc_auc_score(*args, **kwargs)
+    except ValueError:
+        result = float('nan')
+    return result
