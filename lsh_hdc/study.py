@@ -375,7 +375,7 @@ def add_simul_args(p_simul):
         '--seq_len_min', type=int, default=3,
         help='Minimum sequence length')
     p_simul.add_argument(
-        '--seq_len_mean', type=float, default=4,
+        '--seq_len_mean', type=float, default=8,
         help='Mean of sequence length')
     p_simul.add_argument(
         '--seq_len_sigma', type=float, default=10,
@@ -405,9 +405,9 @@ def add_clust_args(p_clust):
     p_clust.add_argument(
         '--hashfun', type=str, default='builtin',
         choices=HASH_FUNC_TABLE.keys(),
-        help='Minimum sequence length')
+        help='Hash function to use')
     p_clust.add_argument(
-        '--shingle_span', type=int, default=3,
+        '--shingle_span', type=int, default=4,
         help='shingle length (in tokens)')
     p_clust.add_argument(
         '--width', type=int, default=3,

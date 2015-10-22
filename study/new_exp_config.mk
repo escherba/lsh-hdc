@@ -1,10 +1,19 @@
-EXPERIMENT_ARGS := --pos_ratio 0.05 --p_err 0.05 --cluster_size 8 --seq_len_mean 4
+EXPERIMENT_ARGS := --lsh_scheme a0 --cluster_size 8 --sim_size 60000
 
 GROUP_FIELD := hashfun
-GROUPS := metrohash md5 builtin cityhash
+GROUPS := metrohash builtin cityhash xxh
 
-PARAM_FIELD := sim_size
-PARAMS := $(shell for i in `seq 2 7`; do python -c "import math; print int(100 * 100 ** math.log($$i,3))"; done)
+#GROUP_FIELD := hashfun
+#GROUPS := metrohash md5 builtin cityhash
 
-#PARAM_FIELD := seq_len_mean
-#PARAMS := $(shell for i in `seq 0 6`; do python -c "print int(2 ** $$i)"; done)
+#PARAM_FIELD := sim_size
+#PARAMS := $(shell for i in `seq 3 8`; do python -c "import math; print int(10 * 4 ** $$i)"; done)
+
+PARAM_FIELD := seq_len_mean
+PARAMS := $(shell for i in `seq 0 6`; do python -c "print int(2 ** $$i)"; done)
+
+#PARAM_FIELD := cluster_size
+#PARAMS := $(shell for i in `seq 1 7`; do python -c "print int(2 ** $$i)"; done)
+
+TRIAL_FIELD := seed
+TRIALS := $(shell seq 10 15)

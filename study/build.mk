@@ -23,9 +23,6 @@ endif
 #
 STUDY_ARGS := --metrics nmi_score roc_auc adj_rand_score time_cpu
 
-TRIAL_FIELD := seed
-TRIALS := $(shell seq 0 5)
-
 # create array of intermediate file names
 TRIAL_RESULTS := $(shell \
 	for group in $(GROUPS); do \
