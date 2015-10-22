@@ -1,7 +1,7 @@
-EXPERIMENT_ARGS := --lsh_scheme a0 --cluster_size 8 --sim_size 60000
+EXPERIMENT_ARGS := --sim_size 500000 --cluster_size 8 --hashfun cityhash
 
-GROUP_FIELD := hashfun
-GROUPS := metrohash builtin cityhash xxh
+GROUP_FIELD := kmin
+GROUPS := 1 3
 
 #GROUP_FIELD := hashfun
 #GROUPS := metrohash md5 builtin cityhash
