@@ -40,7 +40,7 @@ def cond_entropy(counts, N):
         return 0.0
     log_row_total = logn(sum_counts)
     # to avoid loss of precision, calculate 'log(a/b)' as 'log(a) - loh(b)'
-    return -sum(c * (logn(c) - log_row_total) for c in counts if c != 0) / N
+    return sum(c * (log_row_total - logn(c)) for c in counts if c != 0) / N
 
 
 def harmonic_mean(x, y):
