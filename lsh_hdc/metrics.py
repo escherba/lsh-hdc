@@ -47,7 +47,7 @@ def harmonic_mean(x, y):
     """Harmonic mean of two numbers. Returns a float
     """
     # the condition below is only for numeric safety when x and y are small
-    return x if x == y else (2.0 * x * y) / (x + y)
+    return float(x) if x == y else (2.0 * x * y) / (x + y)
 
 
 class ContingencyTable(object):
