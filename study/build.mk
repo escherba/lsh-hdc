@@ -26,8 +26,8 @@ STUDY_ARGS := --sim_size 60000 --metrics nmi_score roc_auc adj_rand_score time_c
 GROUP_FIELD := hashfun
 GROUPS := metrohash md5 builtin cityhash
 
-PARAM_FIELD := cluster_size
-PARAMS := $(shell for i in `seq 1 6`; do python -c "print 2 ** $$i"; done)
+PARAM_FIELD := p_err
+PARAMS := $(shell for i in `seq 1 6`; do python -c "print 0.5 ** $$i"; done)
 
 TRIAL_FIELD := seed
 TRIALS := $(shell seq 0 5)
@@ -49,6 +49,7 @@ $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 		--$(PARAM_FIELD) $(word 2,$(subst -, ,$*)) \
 		--$(TRIAL_FIELD) $(word 3,$(subst -, ,$*)) \
 		--group_by $(GROUP_FIELD) \
+		--x_axis $(PARAM_FIELD) \
 		--output $@
 
 # Secondary files will be kept
@@ -76,6 +77,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	@echo "writing 'summary.csv' under $(@D)"
 	@$(PYTHON) -m lsh_hdc.study summary \
 		--group_by $(GROUP_FIELD) \
+		--x_axis $(PARAM_FIELD) \
 		--fig_title "$(EXPERIMENT_ARGS)" \
 		--input $< --output $(@D)
 
