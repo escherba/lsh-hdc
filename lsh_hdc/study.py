@@ -404,7 +404,7 @@ def add_clust_args(p_clust):
         '--bandwidth', type=int, default=3,
         help='rows per band')
     p_clust.add_argument(
-        '--lsh_scheme', type=str, default="b2",
+        '--lsh_scheme', type=str, default="a0",
         help='LSH binning scheme')
     p_clust.add_argument(
         '--metrics', type=str, nargs='*', choices=METRICS,
