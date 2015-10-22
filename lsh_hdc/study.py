@@ -361,7 +361,7 @@ def add_simul_args(p_simul):
         help='Simulation size (when number of clusters is not given)')
     p_simul.add_argument(
         '--cluster_size', type=int, default=None,
-        help='cluster size')
+        help='cluster size (overrides cluster mean and sigma)')
     p_simul.add_argument(
         '--seed', type=int, default=None,
         help='Random number generator seed for reproducibility')
