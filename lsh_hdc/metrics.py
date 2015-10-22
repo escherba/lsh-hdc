@@ -46,9 +46,8 @@ def cond_entropy(counts, N):
 def harmonic_mean(x, y):
     """Harmonic mean of two numbers. Returns a float
     """
-    # Since harmonic mean converges to arithmetic mean as x approaches y,
-    # return the latter when x == y, which is numerically safer.
-    return (x + y) / 2.0 if x == y else (2.0 * x * y) / (x + y)
+    # the condition below is only for numeric safety when x and y are small
+    return x if x == y else (2.0 * x * y) / (x + y)
 
 
 class ContingencyTable(object):
