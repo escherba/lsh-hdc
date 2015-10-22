@@ -1,7 +1,7 @@
 from math import log as logn
 from collections import defaultdict, Counter, Mapping
 from itertools import izip
-from lsh_hdc.ext import binom
+from scipy.special import binom
 
 
 def cond_entropy(counts, N):
