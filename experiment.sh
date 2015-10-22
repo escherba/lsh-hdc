@@ -1,7 +1,8 @@
 #!/bin/bash
 
-NUM_PROCS=16
+NUM_PROCS=32
 
 make -r extras
 make -r build_ext
-make -r -j$NUM_PROCS experiment
+echo "Experiment 1 out of 1: building using $NUM_PROCS processes"
+time make -r -j$NUM_PROCS experiment

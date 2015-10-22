@@ -19,43 +19,54 @@ else
 include $(EXPERIMENT)/config.mk
 endif
 
-FILENAMES := $(shell \
-	for c in $(CLUSTER_SIZES); do \
-	for h in $(HASHES); do \
-	for s in $(SEEDS); do \
-		printf "$(EXPERIMENT)/%s-%s-%s.json " $$c $$h $$s; \
-	done; \
-	done; \
-	done)
+# TODO: create a separate Make include file for study-specific parameters
+#
+STUDY_ARGS := --sim_size 600 --metrics nmi_score roc_auc adj_rand_score time_cpu
 
-.INTERMEDIATE: $(FILENAMES)
+GROUP_FIELD := hashfun
+GROUPS := metrohash md5 builtin cityhash
+
+PARAM_FIELD := cluster_size
+PARAMS := $(shell for i in `seq 1 6`; do python -c "print 2 ** $$i"; done)
+
+TRIAL_FIELD := seed
+TRIALS := $(shell seq 0 5)
+
+# create array of intermediate file names
+TRIAL_RESULTS := $(shell \
+	for group in $(GROUPS); do \
+	for param in $(PARAMS); do \
+	for trial in $(TRIALS); do \
+		echo "$(EXPERIMENT)/$$group-$$param-$$trial.json"; \
+	done; done; done)
+
+.INTERMEDIATE: $(TRIAL_RESULTS)
 
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
-	@$(PYTHON) -m lsh_hdc.study joint $(BUILD_ARGS) --output $@ \
-		--metrics nmi_score roc_auc adj_rand_score time_cpu \
-		--cluster_size $(word 1,$(subst -, ,$*)) \
-		--hashfun $(word 2,$(subst -, ,$*)) \
-		--seed $(word 3,$(subst -, ,$*))
-
+	@$(PYTHON) -m lsh_hdc.study joint $(STUDY_ARGS) $(EXPERIMENT_ARGS) \
+		--$(GROUP_FIELD) $(word 1,$(subst -, ,$*)) \
+		--$(PARAM_FIELD) $(word 2,$(subst -, ,$*)) \
+		--$(TRIAL_FIELD) $(word 3,$(subst -, ,$*)) \
+		--group_by $(GROUP_FIELD) \
+		--output $@
 
 # Secondary files will be kept
 .SECONDARY: $(addprefix $(EXPERIMENT)/,config.mk summary.ndjson summary.csv)
 
 $(EXPERIMENT)/config.mk: $(CURRENT_DIR)/new_exp_config.mk
 	@mkdir -p $(@D)
-	@echo "copying $< => $@"
 	@if [ ! -e "$@" ]; then cp -p $< $@; fi
 
-$(EXPERIMENT)/summary.ndjson: $(FILENAMES)
+$(EXPERIMENT)/summary.ndjson: $(TRIAL_RESULTS)
 	@mkdir -p $(@D)
 	@cat $^ > $@
 
+# if a previous version of the target already exists,
+# archive the whole directory where the target lives.
 $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	@mkdir -p $(@D)
 	@echo "archiving $(@D)"
-	@# if a previous version of the target already exists,
-	@# archive the whole directory where the target lives.
 	@if [ -e $@ ]; then \
 		tar czf ` \
 			i=0; while [ -e $(@D)-$$i.tgz ]; do i=$$(($$i+1)); done; \
@@ -64,9 +75,9 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	fi
 	@echo "writing 'summary.csv' under $(@D)"
 	@$(PYTHON) -m lsh_hdc.study summary \
-		--fig_title "$(BUILD_ARGS)" \
-		--input $< \
-		--output $(@D)
+		--group_by $(GROUP_FIELD) \
+		--fig_title "$(EXPERIMENT_ARGS)" \
+		--input $< --output $(@D)
 
 .PHONY: experiment
 experiment: $(EXPERIMENT)/summary.csv

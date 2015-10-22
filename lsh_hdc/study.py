@@ -295,7 +295,7 @@ def perform_clustering(args, data):
     with PMTimer() as timer:
         clusters = get_clusters(args, data)
     pairs = []
-    pairs.append(('hash_function', args.hashfun))
+    pairs.append((args.group_by, getattr(args, args.group_by)))
     add_timer_metrics(args, timer, pairs)
     add_cluster_metrics(args, clusters, pairs)
     add_roc_metrics(args, clusters, pairs)
@@ -323,7 +323,7 @@ def create_plots(args, df, metrics):
     fontP = FontProperties()
     fontP.set_size('small')
 
-    groups = df.groupby(["hash_function"])
+    groups = df.groupby([args.group_by])
     palette_size = min(max(len(groups), 3), 9)
     for metric in metrics:
         if metric in df:
@@ -388,7 +388,10 @@ def add_simul_args(p_simul):
 
 def add_clust_args(p_clust):
     p_clust.add_argument(
-        '--hashfun', type=str, default='metrohash',
+        '--group_by', type=str, default='hashfun',
+        help='Field to group by')
+    p_clust.add_argument(
+        '--hashfun', type=str, default='builtin',
         choices=HASH_FUNC_TABLE.keys(),
         help='Minimum sequence length')
     p_clust.add_argument(
@@ -443,6 +446,8 @@ def parse_args(args=None):
     p_summa = subparsers.add_parser('summary', help='summarize analysis results')
     p_summa.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
+    p_summa.add_argument(
+        '--group_by', type=str, default='hashfun', help='Field to group by')
     p_summa.add_argument(
         '--fig_title', type=str, default=None, help='Title (for figures generated)')
     p_summa.add_argument(
