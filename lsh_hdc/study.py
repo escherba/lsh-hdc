@@ -463,7 +463,7 @@ def add_clust_args(p_clust):
         '--shingle_span', type=int, default=4,
         help='shingle length (in tokens)')
     p_clust.add_argument(
-        '--shingle_skip', type=int, default=1,
+        '--shingle_skip', type=int, default=0,
         help='words to skip')
     p_clust.add_argument(
         '--shingle_uniq', type=int, default=1,
