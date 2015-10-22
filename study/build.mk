@@ -21,7 +21,7 @@ endif
 
 # TODO: create a separate Make include file for study-specific parameters
 #
-STUDY_ARGS := --sim_size 60000 --metrics nmi_score roc_auc adj_rand_score time_cpu
+STUDY_ARGS := --metrics nmi_score roc_auc adj_rand_score time_cpu
 
 TRIAL_FIELD := seed
 TRIALS := $(shell seq 0 5)
