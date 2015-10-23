@@ -1,36 +1,61 @@
+import random
 import numpy as np
+from itertools import chain
 from math import isnan
-from lsh_hdc.metrics import adjusted_rand_score, \
+from pymaptools.sample import discrete_sample, random_seed
+from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, entropy_of_counts, jaccard_similarity
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true
 
 
-def auc(xs, ys, reorder=False):
-    """ Compute area under curve using trapesoidal rule
+def _auc(fpr, tpr, reorder=False):
+    """Compute area under ROC curve
 
-    This is a simple alternative implementation for testing. For production
-    tasks, use Sklearn's implementation
+    This is a simple alternative implementation for testing.
+    For production tasks, use Sklearn's implementation.
     """
-    tuples = zip(xs, ys)
-    if not tuples:
-        return float('nan')
-    if reorder:
-        tuples.sort()
-    a = 0.0
-    x0, y0 = tuples[0]
-    for x1, y1 in tuples[1:]:
-        a += (x1 - x0) * (y1 + y0)
-        x0, y0 = x1, y1
-    return a * 0.5
 
+    def generic_auc(xs, ys, reorder=False):
+        """Compute area under a curve using trapesoidal rule
+        """
+        tuples = zip(xs, ys)
+        if not tuples:
+            return float('nan')
+        if reorder:
+            tuples.sort()
+        a = 0.0
+        x0, y0 = tuples[0]
+        for x1, y1 in tuples[1:]:
+            a += (x1 - x0) * (y1 + y0)
+            x0, y0 = x1, y1
+        return a * 0.5
 
-def roc_auc(fpr, tpr, reorder=False):
-    """ Compute area under ROC curve """
-    return auc(
+    return generic_auc(
         chain([0.0], fpr, [1.0]),
         chain([0.0], tpr, [1.0]),
         reorder=reorder)
+
+
+def simulate_predictions(n=100, seed=None):
+    """simulate classifier predictions for data size of n
+    """
+    if seed is None:
+        seed = random_seed()
+    random.seed(seed)
+    probas = [random.random() for _ in xrange(n)]
+    classes = [discrete_sample({0: (1 - p), 1: p}) for p in probas]
+    return classes, probas
+
+
+def test_roc_curve():
+    # Test Area under Receiver Operating Characteristic (ROC) curve
+    for _ in range(10):
+        y_true, probas_pred = simulate_predictions(1000, seed=random_seed())
+        rc = RocCurve.from_binary(y_true, probas_pred)
+        expected_auc = _auc(rc.fprs, rc.tprs)
+        score = rc.auc_score()
+        assert_almost_equal(expected_auc, score, 2)
 
 
 def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,

@@ -57,7 +57,8 @@ def harmonic_mean(x, y):
 
 class ContingencyTable(object):
 
-    def __init__(self, rows=None, cols=None, row_totals=None, col_totals=None, grand_total=0):
+    def __init__(self, rows=None, cols=None, row_totals=None, col_totals=None,
+                 grand_total=0):
         self.rows = rows or defaultdict(Counter)
         self.cols = cols or defaultdict(Counter)
         self.row_totals = row_totals or Counter()
@@ -65,7 +66,8 @@ class ContingencyTable(object):
         self.grand_total = grand_total
 
     def iter_cells(self):
-        return (cell for row in self.rows.itervalues() for cell in row.itervalues())
+        return (cell for row in self.rows.itervalues()
+                for cell in row.itervalues())
 
     def iter_cols(self):
         return self.cols.itervalues()
@@ -172,10 +174,12 @@ class RocCurve(object):
         self.sample_weight = sample_weight
 
     @classmethod
-    def from_labels(cls, y_true, y_score, pos_label=None, sample_weight=None):
+    def from_binary(cls, y_true, y_score, sample_weight=None):
+        """Convenience constructor which assumes 1 to be the positive label
+        """
         fprs, tprs, thresholds = roc_curve(
-            y_true, y_score, pos_label=pos_label, sample_weight=sample_weight)
-        return cls(fprs, tprs, thresholds=thresholds)
+            y_true, y_score, pos_label=1, sample_weight=sample_weight)
+        return cls(fprs, tprs, thresholds=thresholds, sample_weight=sample_weight)
 
     def auc_score(self):
         """Override Sklearn's method so as not to raise error
@@ -190,27 +194,42 @@ class RocCurve(object):
 
         Example:
 
-        >>> import numpy as np
-        >>> y_true = np.array([0, 0, 1, 1])
-        >>> y_scores = np.array([0.1, 0.4, 0.35, 0.8])
-        >>> rc = RocCurve.from_labels(y_true, y_scores)
+        >>> rc = RocCurve.from_binary([0, 0, 1, 1],
+        ...                           [0.1, 0.4, 0.35, 0.8])
         >>> rc.auc_score()
         0.75
+        >>> rc.max_deltap()
+        0.5
         """
         return auc(self.fprs, self.tprs, reorder=False)
 
-    def informedness(self):
-        """Calculates Informedness (Youden's Index)
+    def optimal_cutoff(self, method):
+        """Calculate optimal cutoff point according to a method lambda
+        """
+        max_index = float('-inf')
+        opt_pair = (float('nan'), float('nan'))
+        for pair in izip(self.fprs, self.tprs):
+            index = method(*pair)
+            if index > max_index:
+                opt_pair = pair
+                max_index = index
+        return opt_pair, max_index
+
+    @staticmethod
+    def _informedness(fpr, tpr):
+        return tpr - fpr
+
+    def max_deltap(self):
+        """Calculates Maximum DeltaP value Informedness (Youden's Index)
         https://en.wikipedia.org/wiki/Youden%27s_J_statistic
         """
-        pos_result = 0.0
-        neg_result = 0.0
-        for fpr, tpr in izip(self.fprs, self.tprs):
-            diff = fpr - tpr
-            pos_result = max(pos_result, diff)
-            neg_result = min(neg_result, diff)
-        return pos_result if pos_result >= abs(neg_result) else neg_result
+        return self.optimal_cutoff(self._informedness)[1]
 
-    def markedness(self):
-        """Calculates Markedness
-        """
+
+def roc_auc_score(y_true, y_score, sample_weight=None):
+    """Replaces Scikit Learn implementation (for binary y_true vectors only)
+    >>> roc_auc_score([0, 0, 1, 1],
+    ...               [0.1, 0.4, 0.35, 0.8])
+    0.75
+    """
+    return RocCurve.from_binary(y_true, y_score).auc_score()
