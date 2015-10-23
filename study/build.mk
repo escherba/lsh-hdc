@@ -21,7 +21,7 @@ endif
 
 # TODO: create a separate Make include file for study-specific parameters
 #
-STUDY_ARGS := --metrics nmi_score roc_auc adj_rand_score time_cpu
+STUDY_ARGS := --metrics nmi_score adj_rand_score roc_auc roc_max_info time_cpu
 
 # create array of intermediate file names
 TRIAL_RESULTS := $(shell \

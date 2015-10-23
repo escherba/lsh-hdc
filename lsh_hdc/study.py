@@ -288,16 +288,17 @@ def do_simulation(args):
 
 METRICS = [
     'homogeneity', 'completeness', 'nmi_score', 'adj_rand_score',
-    'roc_auc', 'time_cpu'
+    'roc_max_info', 'roc_auc', 'time_cpu'
 ]
 
 CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_score']
 CLUSTER_METRICS = ['homogeneity', 'completeness', 'nmi_score']
-ROC_METRICS = ['roc_auc']
+ROC_METRICS = ['roc_max_info', 'roc_auc']
 
 LEGEND_METRIC_KWARGS = {
     'homogeneity': dict(loc='lower right'),
     'roc_auc': dict(loc='lower right'),
+    'roc_max_info': dict(loc='lower right'),
     'adj_rand_score': dict(loc='lower right'),
     'time_wall': dict(loc='upper left'),
     'time_cpu': dict(loc='upper left'),
@@ -316,10 +317,12 @@ def add_cluster_metrics(args, clusters, pairs):
 
 def add_roc_metrics(args, clusters, pairs):
     if (set(ROC_METRICS) & set(args.metrics)):
-        from lsh_hdc.metrics import roc_auc_score
-        roc_data = cluster_predictions(clusters)
+        from lsh_hdc.metrics import RocCurve
+        rc = RocCurve.from_binary(*cluster_predictions(clusters))
         if 'roc_auc' in args.metrics:
-            pairs.append(('roc_auc', roc_auc_score(*roc_data)))
+            pairs.append(('roc_auc', rc.auc_score()))
+        if 'roc_max_info' in args.metrics:
+            pairs.append(('roc_max_info', rc.max_deltap()))
 
 
 def perform_clustering(args, data):

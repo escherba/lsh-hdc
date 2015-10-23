@@ -1,3 +1,4 @@
+import numpy as np
 from math import log as logn
 from collections import defaultdict, Counter, Mapping, Set
 from itertools import izip
@@ -19,7 +20,7 @@ def jaccard_similarity(set1, set2):
         set2 = set(set2)
     denominator = len(set1 | set2)
     if denominator == 0:
-        return float('nan')
+        return np.nan
     else:
         return len(set1 & set2) / float(denominator)
 
@@ -138,7 +139,7 @@ class ClusteringMetrics(ContingencyTable):
         """
         N = self.grand_total
         if N <= 1:
-            return float('nan')
+            return np.nan
         sum_n = sum(binom(cell, 2) for cell in self.iter_cells())
         sum_a = sum(binom(a, 2) for a in self.iter_col_totals())
         sum_b = sum(binom(b, 2) for b in self.iter_row_totals())
@@ -178,7 +179,7 @@ class RocCurve(object):
         """Convenience constructor which assumes 1 to be the positive label
         """
         fprs, tprs, thresholds = roc_curve(
-            y_true, y_score, pos_label=1, sample_weight=sample_weight)
+            y_true, y_score, pos_label=True, sample_weight=sample_weight)
         return cls(fprs, tprs, thresholds=thresholds, sample_weight=sample_weight)
 
     def auc_score(self):
@@ -206,8 +207,8 @@ class RocCurve(object):
     def optimal_cutoff(self, method):
         """Calculate optimal cutoff point according to a method lambda
         """
-        max_index = float('-inf')
-        opt_pair = (float('nan'), float('nan'))
+        max_index = np.NINF
+        opt_pair = (np.nan, np.nan)
         for pair in izip(self.fprs, self.tprs):
             index = method(*pair)
             if index > max_index:
