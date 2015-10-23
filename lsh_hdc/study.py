@@ -112,22 +112,22 @@ class MarkovChainMutator(object):
         :rtype: str
         """
         delimiter = self.delimiter
-        seq_list = list(intersperse(delimiter, seq)) + [delimiter]
-        mutation_site = random.randint(0, len(seq_list) - 1)
-        from_letter = seq_list[mutation_site]
+        doc_list = list(intersperse(delimiter, seq)) + [delimiter]
+        mutation_site = random.randint(0, len(doc_list) - 1)
+        from_letter = doc_list[mutation_site]
         prob_dist = self.chain[from_letter]
         to_letter = discrete_sample(prob_dist)
-        seq_list[mutation_site] = to_letter
-        return ''.join(el for el in seq_list if el != delimiter)
+        doc_list[mutation_site] = to_letter
+        return ''.join(el for el in doc_list if el != delimiter)
 
 
 def perform_simulation(args):
 
-    seq_len_mean = args.seq_len_mean
-    seq_len_sigma = args.seq_len_sigma
+    doc_len_mean = args.doc_len_mean
+    doc_len_sigma = args.doc_len_sigma
     c_size_mean = args.c_size_mean
     c_size_sigma = args.c_size_sigma
-    seq_len_min = args.seq_len_min
+    doc_len_min = args.doc_len_min
 
     pos_count = 0
     mcg = MarkovChainGenerator()
@@ -166,20 +166,20 @@ def perform_simulation(args):
     stats['num_clusters'] = num_clusters
 
     for c_id, cluster_size in enumerate(cluster_sizes):
-        seq_length = gauss_uint_threshold(
-            threshold=seq_len_min, mu=seq_len_mean, sigma=seq_len_sigma)
-        master = mcg.generate_str(start, seq_length)
+        doc_length = gauss_uint_threshold(
+            threshold=doc_len_min, mu=doc_len_mean, sigma=doc_len_sigma)
+        master = mcg.generate_str(start, doc_length)
         if len(master) > 0:
             start = master[-1]
-        for seq_id in xrange(cluster_size):
-            data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
+        for doc_id in xrange(cluster_size):
+            data.append(("{}:{}".format(c_id + 1, doc_id), mcm.mutate(master)))
             pos_count += 1
     stats['num_positives'] = pos_count
     num_negatives = max(0, simulation_size - pos_count)
     for neg_idx in xrange(num_negatives):
-        seq_length = gauss_uint_threshold(
-            threshold=seq_len_min, mu=seq_len_mean, sigma=seq_len_sigma)
-        master = mcg.generate_str(start, seq_length)
+        doc_length = gauss_uint_threshold(
+            threshold=doc_len_min, mu=doc_len_mean, sigma=doc_len_sigma)
+        master = mcg.generate_str(start, doc_length)
         if len(master) > 0:
             start = master[-1]
         data.append(("{}".format(neg_idx), master))
@@ -288,7 +288,7 @@ def do_simulation(args):
 
 METRICS = [
     'homogeneity', 'completeness', 'nmi_score', 'adj_rand_score',
-    'roc_auc', 'time_wall', 'time_cpu'
+    'roc_auc', 'time_cpu'
 ]
 
 CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_score']
@@ -432,13 +432,13 @@ def add_simul_args(p_simul):
         '--p_err', type=float, default=0.05,
         help='Probability of error at any location in sequence')
     p_simul.add_argument(
-        '--seq_len_min', type=int, default=3,
+        '--doc_len_min', type=int, default=3,
         help='Minimum sequence length')
     p_simul.add_argument(
-        '--seq_len_mean', type=float, default=8,
+        '--doc_len_mean', type=float, default=8,
         help='Mean of sequence length')
     p_simul.add_argument(
-        '--seq_len_sigma', type=float, default=10,
+        '--doc_len_sigma', type=float, default=10,
         help='Std. dev. of sequence length')
 
 
