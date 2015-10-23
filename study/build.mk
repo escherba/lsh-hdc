@@ -35,12 +35,11 @@ TRIAL_RESULTS := $(shell \
 
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
-	@$(PYTHON) -m lsh_hdc.study joint $(STUDY_ARGS) $(EXPERIMENT_ARGS) \
+	@$(PYTHON) -m lsh_hdc.study simul_clust_analy \
+		$(STUDY_ARGS) $(EXPERIMENT_ARGS) \
 		--$(GROUP_FIELD) $(word 1,$(subst -, ,$*)) \
 		--$(PARAM_FIELD) $(word 2,$(subst -, ,$*)) \
 		--$(TRIAL_FIELD) $(word 3,$(subst -, ,$*)) \
-		--group_by $(GROUP_FIELD) \
-		--x_axis $(PARAM_FIELD) \
 		--output $@
 
 # Secondary files will be kept
@@ -66,7 +65,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 		` $(@D); \
 	fi
 	@echo "writing 'summary.csv' under $(@D)"
-	@$(PYTHON) -m lsh_hdc.study summary \
+	@$(PYTHON) -m lsh_hdc.study summarize \
 		--group_by $(GROUP_FIELD) \
 		--x_axis $(PARAM_FIELD) \
 		--fig_title "$(EXPERIMENT_ARGS)" \

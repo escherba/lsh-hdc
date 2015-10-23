@@ -15,7 +15,7 @@ from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from abc import abstractmethod
 from pymaptools.iter import cycle, take, shinglify, isiterable
-from lsh_hdc.utils import toiter, tsorted
+from lsh_hdc.utils import toiter, tsorted, fill_with_last
 from lsh_hdc.ext import hashable, VarlenHash, PHashCombiner as HashCombiner
 
 # Various hash functions
@@ -196,7 +196,7 @@ def lsh_combinations(width, bandwidth, ramp):
     return sorted(set(tsorted(k + v[0]) for k, v in mapping.iteritems()))
 
 
-def lsh_bands(width, bandwidth):
+def create_lsh_bands(width, bandwidth):
     """Generate indices for non-overlapping LSH band selectors
 
     :param width: expected signature length
@@ -207,9 +207,9 @@ def lsh_bands(width, bandwidth):
              signature vector
     :rtype: list
 
-    >>> lsh_bands(6, 2)
+    >>> create_lsh_bands(6, 2)
     [(0, 1), (2, 3), (4, 5)]
-    >>> lsh_bands(6, 3)
+    >>> create_lsh_bands(6, 3)
     [(0, 1, 2), (3, 4, 5)]
 
     """
@@ -239,7 +239,7 @@ def create_sig_selectors(width, bandwidth, scheme):
         if ramp == 0:
             if width % bandwidth != 0:
                 raise ValueError("when ramp is zero, width must be a multiple of bandwidth")
-            bands = lsh_bands(width, bandwidth)
+            bands = create_lsh_bands(width, bandwidth)
         elif ramp == 1:
             bands = cntuples(width, bandwidth)
         elif ramp > 0:
@@ -326,22 +326,6 @@ class Shingler(object):
         return result
 
 
-def jaccard_sim(set1, set2):
-    """Return Jaccard similarity between two sets
-
-    :param set1: set 1
-    :type set1: collections.Iterable
-    :param set2: set 2
-    :type set2: collections.Iterable
-    :returns: Jaccard similarity of two sets
-    :rtype: float
-    :raises ZeroDivisionError:
-    """
-    set_x = set(set1) if type(set1) != set else set1
-    set_y = set(set2) if type(set2) != set else set2
-    return float(len(set_x & set_y)) / float(len(set_x | set_y))
-
-
 def get_bandwidth(width, threshold):
     """Approximates the bandwidth needed to achieve a threshold.
 
@@ -395,19 +379,6 @@ class Signature(object):
         :type vec: collections.Iterable
         :rtype : list
         """
-
-
-def extend(lst, k):
-    """
-    extend a list to length k by duplicating last item
-
-    >>> extend([1, 2, 3], 5)
-    [1, 2, 3, 3, 3]
-    """
-    len_l = len(lst)
-    if len_l < k:
-        lst.extend([lst[-1]] * (k - len_l))
-    return lst
 
 
 class MinHashSignature(Signature):
@@ -505,10 +476,10 @@ class MinHashSignature(Signature):
         kmin = self.kmin
         # Choose k smallest hashes
         if len(vec) > 0:
-            sig_fun = lambda f: extend(nsmallest(kmin, imap(f, vec)), kmin)
+            sig_fun = lambda f: fill_with_last(nsmallest(kmin, imap(f, vec)), kmin)
         else:
             # support empty sets by treating them as empty strings
-            sig_fun = lambda f: extend([f("")], kmin)
+            sig_fun = lambda f: fill_with_last([f("")], kmin)
 
         # flatten list of lists
         return sum(imap(sig_fun, self.hashes), [])

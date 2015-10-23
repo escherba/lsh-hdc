@@ -1,6 +1,7 @@
 import unittest
 from lsh_hdc.utils import randset
-from lsh_hdc import jaccard_sim, get_bandwidth
+from lsh_hdc import get_bandwidth
+from lsh_hdc.metrics import jaccard_similarity
 from lsh_hdc.cluster import MinHashCluster as Cluster
 
 
@@ -48,7 +49,7 @@ class TestCluster(unittest.TestCase):
         for test in range(n_tests):
             # Get some sets and their similarities
             sets = (randset(), randset())
-            jsim = jaccard_sim(*sets)
+            jsim = jaccard_similarity(*sets)
 
             # Find the threshold at which they cluster together
             for threshold in range(1, 100, 5):

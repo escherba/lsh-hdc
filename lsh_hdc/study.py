@@ -11,7 +11,7 @@ from lsh_hdc import Shingler, HASH_FUNC_TABLE
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string
 from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
-    PathArgumentParser
+    PathArgumentParser, write_json_line
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 from pymaptools.benchmark import PMTimer
@@ -79,7 +79,7 @@ class MarkovChainMutator(object):
 
     delimiter = '-'
 
-    def __init__(self, p_err=0.2, alphabet=ALPHABET):
+    def __init__(self, p_err=0.1, alphabet=ALPHABET):
         self.alphabet = alphabet
         self.chain = MarkovChainMutator.get_markov_chain(alphabet + self.delimiter, p_err=p_err)
 
@@ -112,22 +112,22 @@ class MarkovChainMutator(object):
         :rtype: str
         """
         delimiter = self.delimiter
-        seq_list = list(intersperse(delimiter, seq)) + [delimiter]
-        mutation_site = random.randint(0, len(seq_list) - 1)
-        from_letter = seq_list[mutation_site]
+        doc_list = list(intersperse(delimiter, seq)) + [delimiter]
+        mutation_site = random.randint(0, len(doc_list) - 1)
+        from_letter = doc_list[mutation_site]
         prob_dist = self.chain[from_letter]
         to_letter = discrete_sample(prob_dist)
-        seq_list[mutation_site] = to_letter
-        return ''.join(el for el in seq_list if el != delimiter)
+        doc_list[mutation_site] = to_letter
+        return ''.join(el for el in doc_list if el != delimiter)
 
 
-def get_simulation(args):
+def perform_simulation(args):
 
-    seq_len_mean = args.seq_len_mean
-    seq_len_sigma = args.seq_len_sigma
+    doc_len_mean = args.doc_len_mean
+    doc_len_sigma = args.doc_len_sigma
     c_size_mean = args.c_size_mean
     c_size_sigma = args.c_size_sigma
-    seq_len_min = args.seq_len_min
+    doc_len_min = args.doc_len_min
 
     pos_count = 0
     mcg = MarkovChainGenerator()
@@ -139,46 +139,47 @@ def get_simulation(args):
     # pick first letter at random
     start = random_string(length=1, alphabet=mcg.alphabet)
 
-    if (args.num_clusters is not None) and (args.pos_ratio is not None):
-        num_clusters = args.num_clusters
-        stats['num_clusters'] = num_clusters
-        pos_ratio = args.pos_ratio
-    elif (args.num_clusters is not None) and (args.sim_size is not None) and (args.cluster_size is not None) and (args.pos_ratio is None):
-        num_clusters = args.num_clusters
-        stats['num_clusters'] = num_clusters
-        stats['cluster_size'] = args.cluster_size
-        pos_ratio = int(args.num_clusters * args.cluster_size / float(args.sim_size))
-        logging.info("Setting positive/total ratio to %.3f", pos_ratio)
-    elif (args.num_clusters is None) and (args.sim_size is not None) and (args.cluster_size is not None) and (args.pos_ratio is not None):
-        # calculate from simulation size
-        stats['cluster_size'] = args.cluster_size
-        num_clusters = int(args.sim_size * args.pos_ratio / float(args.cluster_size))
-        stats['num_clusters'] = num_clusters
-        logging.info("Creating %d clusters of size %d", num_clusters, args.cluster_size)
-        pos_ratio = args.pos_ratio
-    else:
-        raise RuntimeError("Could not compute num_clusters and pos_ratio")
+    positive_ratio = args.pos_ratio
+    cluster_size = args.cluster_size
+    simulation_size = args.sim_size
 
-    for c_id in xrange(num_clusters):
-        if args.cluster_size is None:
+    if cluster_size is None:
+        # generate some cluster sizes until we approximately reach pos_ratio
+        current_pos = 0
+        expected_pos = positive_ratio * simulation_size
+        cluster_sizes = []
+        num_clusters = 0
+        while current_pos < expected_pos:
             cluster_size = gauss_uint_threshold(
                 threshold=2, mu=c_size_mean, sigma=c_size_sigma)
-        else:
-            cluster_size = args.cluster_size
-        seq_length = gauss_uint_threshold(
-            threshold=seq_len_min, mu=seq_len_mean, sigma=seq_len_sigma)
-        master = mcg.generate_str(start, seq_length)
+            cluster_sizes.append(cluster_size)
+            current_pos += cluster_size
+            num_clusters += 1
+        logging.info("Creating %d variable-length clusters", num_clusters)
+    else:
+        # calculate from simulation size
+        stats['cluster_size'] = cluster_size
+        num_clusters = int(simulation_size * positive_ratio / float(cluster_size))
+        cluster_sizes = [cluster_size] * num_clusters
+        logging.info("Creating %d clusters of size %d", num_clusters, cluster_size)
+
+    stats['num_clusters'] = num_clusters
+
+    for c_id, cluster_size in enumerate(cluster_sizes):
+        doc_length = gauss_uint_threshold(
+            threshold=doc_len_min, mu=doc_len_mean, sigma=doc_len_sigma)
+        master = mcg.generate_str(start, doc_length)
         if len(master) > 0:
             start = master[-1]
-        for seq_id in xrange(cluster_size):
-            data.append(("{}:{}".format(c_id + 1, seq_id), mcm.mutate(master)))
+        for doc_id in xrange(cluster_size):
+            data.append(("{}:{}".format(c_id + 1, doc_id), mcm.mutate(master)))
             pos_count += 1
     stats['num_positives'] = pos_count
-    num_negatives = int(pos_count * ((1.0 - pos_ratio) / pos_ratio))
+    num_negatives = max(0, simulation_size - pos_count)
     for neg_idx in xrange(num_negatives):
-        seq_length = gauss_uint_threshold(
-            threshold=seq_len_min, mu=seq_len_mean, sigma=seq_len_sigma)
-        master = mcg.generate_str(start, seq_length)
+        doc_length = gauss_uint_threshold(
+            threshold=doc_len_min, mu=doc_len_mean, sigma=doc_len_sigma)
+        master = mcg.generate_str(start, doc_length)
         if len(master) > 0:
             start = master[-1]
         data.append(("{}".format(neg_idx), master))
@@ -192,8 +193,14 @@ def get_clusters(args, data):
     cluster = Cluster(width=args.width,
                       bandwidth=args.bandwidth,
                       lsh_scheme=args.lsh_scheme,
+                      kmin=args.kmin,
                       hashfun=args.hashfun)
-    shingler = Shingler(span=args.shingle_span)
+    shingler = Shingler(
+        span=args.shingle_span,
+        skip=args.shingle_skip,
+        kmin=args.shingle_kmin,
+        unique=bool(args.shingle_uniq)
+    )
     content_dict = dict()
     for label, text in data:
         content_dict[label] = text
@@ -203,9 +210,26 @@ def get_clusters(args, data):
 
 
 def load_simulation(args):
-    for line in args.input:
-        label, text = line.split(" ")
-        yield (label, text.strip())
+
+    def iter_simulation(sim_iter):
+        for line in sim_iter:
+            label, text = line.split(" ")
+            yield (label, text.strip())
+
+    iterator = args.input
+    namespace = json.loads(iterator.next())
+    return namespace, iter_simulation(iterator)
+
+
+def load_clustering(args):
+
+    def iter_clustering(clust_iter):
+        for line in clust_iter:
+            yield json.loads(line)
+
+    iterator = args.input
+    namespace = json.loads(iterator.next())
+    return namespace, iter_clustering(iterator)
 
 
 def clusters_to_labels(cluster_iter):
@@ -239,18 +263,32 @@ def cluster_predictions(cluster_iter):
     return y_true, y_score
 
 
+def serialize_args(args):
+    namespace = dict(args.__dict__)
+    fields_to_delete = ["input", "output", "func", "logging"]
+    for field in fields_to_delete:
+        try:
+            del namespace[field]
+        except KeyError:
+            pass
+    return namespace
+
+
 def do_simulation(args):
     if args.seed is not None:
         random.seed(args.seed)
-    data, _ = get_simulation(args)
+    data, stats = perform_simulation(args)
+    namespace = serialize_args(args)
+    namespace.update(stats)
     output = args.output
+    write_json_line(output, namespace)
     for i, seq in data:
         output.write("%s %s\n" % (i, seq))
 
 
 METRICS = [
     'homogeneity', 'completeness', 'nmi_score', 'adj_rand_score',
-    'roc_auc', 'time_wall', 'time_cpu'
+    'roc_auc', 'time_cpu'
 ]
 
 CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_score']
@@ -284,38 +322,40 @@ def add_roc_metrics(args, clusters, pairs):
             pairs.append(('roc_auc', roc_auc_score(*roc_data)))
 
 
-def add_timer_metrics(args, timer, pairs):
-    if 'time_wall' in args.metrics:
-        pairs.append(('time_wall', timer.wall_interval))
-    if 'time_cpu' in args.metrics:
-        pairs.append(('time_cpu', timer.clock_interval))
-
-
 def perform_clustering(args, data):
     with PMTimer() as timer:
         clusters = get_clusters(args, data)
+    return clusters, timer.to_dict()
+
+
+def perform_analysis(args, clusters):
+    clusters = list(clusters)
     pairs = []
-    pairs.append((args.group_by, getattr(args, args.group_by)))
-    pairs.append((args.x_axis, getattr(args, args.x_axis)))
-    pairs.append((args.trial, getattr(args, args.trial)))
-    add_timer_metrics(args, timer, pairs)
     add_cluster_metrics(args, clusters, pairs)
     add_roc_metrics(args, clusters, pairs)
     return dict(pairs)
 
 
 def do_cluster(args):
-    results = perform_clustering(args, load_simulation(args))
-    args.output.write("%s\n" % json.dumps(results))
+    namespace = {}
+    sim_namespace, simulation = load_simulation(args)
+    namespace.update(sim_namespace)
+    clustering_results, clustering_stats = perform_clustering(args, simulation)
+    clustering_namespace = serialize_args(args)
+    namespace.update(clustering_namespace)
+    namespace.update(clustering_stats)
+    write_json_line(args.output, namespace)
+    for cluster in clustering_results:
+        write_json_line(args.output, cluster)
 
 
-def do_joint(args):
-    if args.seed is not None:
-        random.seed(args.seed)
-    data, stats = get_simulation(args)
-    results = perform_clustering(args, data)
-    stats.update(results)
-    args.output.write("%s\n" % json.dumps(stats))
+def do_analyze(args):
+    namespace = {}
+    clustering_namespace, clustering = load_clustering(args)
+    namespace.update(clustering_namespace)
+    analysis_stats = perform_analysis(args, clustering)
+    namespace.update(analysis_stats)
+    write_json_line(args.output, namespace)
 
 
 def create_plots(args, df, metrics):
@@ -332,13 +372,30 @@ def create_plots(args, df, metrics):
             colors = cycle(colorbrewer.get_map('Set1', 'qualitative', palette_size).mpl_colors)
             fig, ax = plt.subplots()
             for color, (label, dfel) in izip(colors, groups):
-                dfel.plot(ax=ax, label=label, x=args.x_axis, linewidth='1.3',
-                          y=metric, kind="scatter", logx=True, title=args.fig_title,
-                          facecolors='none', edgecolors=color)
+                try:
+                    dfel.plot(
+                        ax=ax, label=label, x=args.x_axis, linewidth='1.3',
+                        y=metric, kind="scatter", logx=True, title=args.fig_title,
+                        facecolors='none', edgecolors=color)
+                except Exception:
+                    logging.exception("Exception thrown when plotting %s:%s", metric, label)
             fig_filename = "fig_%s.%s" % (metric, args.fig_format)
             fig_path = os.path.join(args.output, fig_filename)
             ax.legend(prop=fontP, **LEGEND_METRIC_KWARGS.get(metric, {}))
             fig.savefig(fig_path)
+
+
+def do_simul_clust_analy(args):
+    if args.seed is not None:
+        random.seed(args.seed)
+    namespace = serialize_args(args)
+    simulation, simulation_stats = perform_simulation(args)
+    namespace.update(simulation_stats)
+    clustering, clustering_stats = perform_clustering(args, simulation)
+    namespace.update(clustering_stats)
+    analysis_stats = perform_analysis(args, clustering)
+    namespace.update(analysis_stats)
+    args.output.write("%s\n" % json.dumps(namespace))
 
 
 def do_summa(args):
@@ -354,38 +411,35 @@ def do_summa(args):
 
 def add_simul_args(p_simul):
     p_simul.add_argument(
-        '--num_clusters', type=int, default=None,
-        help='Number of clusters to create')
+        '--seed', type=int, default=None,
+        help='Random number generator seed for reproducibility')
     p_simul.add_argument(
-        '--sim_size', type=int, default=None,
+        '--sim_size', type=int, default=1000,
         help='Simulation size (when number of clusters is not given)')
     p_simul.add_argument(
         '--cluster_size', type=int, default=None,
         help='cluster size (overrides cluster mean and sigma)')
-    p_simul.add_argument(
-        '--seed', type=int, default=None,
-        help='Random number generator seed for reproducibility')
-    p_simul.add_argument(
-        '--pos_ratio', type=float, default=0.05,
-        help='ratio of positives')
-    p_simul.add_argument(
-        '--p_err', type=float, default=0.05,
-        help='Probability of error at any location in sequence')
-    p_simul.add_argument(
-        '--seq_len_min', type=int, default=3,
-        help='Minimum sequence length')
-    p_simul.add_argument(
-        '--seq_len_mean', type=float, default=8,
-        help='Mean of sequence length')
-    p_simul.add_argument(
-        '--seq_len_sigma', type=float, default=10,
-        help='Std. dev. of sequence length')
     p_simul.add_argument(
         '--c_size_mean', type=float, default=4,
         help='Mean of cluster size')
     p_simul.add_argument(
         '--c_size_sigma', type=float, default=10,
         help='Std. dev. of cluster size')
+    p_simul.add_argument(
+        '--pos_ratio', type=float, default=0.1,
+        help='ratio of positives to all')
+    p_simul.add_argument(
+        '--p_err', type=float, default=0.05,
+        help='Probability of error at any location in sequence')
+    p_simul.add_argument(
+        '--doc_len_min', type=int, default=3,
+        help='Minimum sequence length')
+    p_simul.add_argument(
+        '--doc_len_mean', type=float, default=8,
+        help='Mean of sequence length')
+    p_simul.add_argument(
+        '--doc_len_sigma', type=float, default=10,
+        help='Std. dev. of sequence length')
 
 
 def add_parameterization_args(parser):
@@ -401,7 +455,6 @@ def add_parameterization_args(parser):
 
 
 def add_clust_args(p_clust):
-    add_parameterization_args(p_clust)
     p_clust.add_argument(
         '--hashfun', type=str, default='builtin',
         choices=HASH_FUNC_TABLE.keys(),
@@ -410,14 +463,30 @@ def add_clust_args(p_clust):
         '--shingle_span', type=int, default=4,
         help='shingle length (in tokens)')
     p_clust.add_argument(
+        '--shingle_skip', type=int, default=0,
+        help='words to skip')
+    p_clust.add_argument(
+        '--shingle_uniq', type=int, default=1,
+        help='whether to unique shingles')
+    p_clust.add_argument(
+        '--shingle_kmin', type=int, default=0,
+        help='minimum expected shingles')
+    p_clust.add_argument(
         '--width', type=int, default=3,
         help='length of minhash feature vectors')
     p_clust.add_argument(
         '--bandwidth', type=int, default=3,
         help='rows per band')
     p_clust.add_argument(
+        '--kmin', type=int, default=3,
+        help='number of minhashes to sample')
+    p_clust.add_argument(
         '--lsh_scheme', type=str, default="a0",
         help='LSH binning scheme')
+
+
+def add_analy_args(p_clust):
+    add_parameterization_args(p_clust)
     p_clust.add_argument(
         '--metrics', type=str, nargs='*', choices=METRICS,
         default=('roc_auc', 'nmi_score', 'time_cpu'),
@@ -440,7 +509,7 @@ def parse_args(args=None):
         '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
     p_simul.set_defaults(func=do_simulation)
 
-    p_clust = subparsers.add_parser('analyze', help='run analysis')
+    p_clust = subparsers.add_parser('cluster', help='run clustering')
     p_clust.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
     add_clust_args(p_clust)
@@ -448,14 +517,24 @@ def parse_args(args=None):
         '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
     p_clust.set_defaults(func=do_cluster)
 
-    p_joint = subparsers.add_parser('joint', help='generate simulation and analyze')
-    add_simul_args(p_joint)
-    add_clust_args(p_joint)
-    p_joint.add_argument(
+    p_analy = subparsers.add_parser('analyze', help='run analysis')
+    p_analy.add_argument(
+        '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
+    add_analy_args(p_analy)
+    p_analy.add_argument(
         '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
-    p_joint.set_defaults(func=do_joint)
+    p_analy.set_defaults(func=do_analyze)
 
-    p_summa = subparsers.add_parser('summary', help='summarize analysis results')
+    p_simul_clust_analy = subparsers.add_parser(
+        'simul_clust_analy', help='Perform multiple steps')
+    add_simul_args(p_simul_clust_analy)
+    add_clust_args(p_simul_clust_analy)
+    add_analy_args(p_simul_clust_analy)
+    p_simul_clust_analy.add_argument(
+        '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
+    p_simul_clust_analy.set_defaults(func=do_simul_clust_analy)
+
+    p_summa = subparsers.add_parser('summarize', help='summarize analysis results')
     add_parameterization_args(p_summa)
     p_summa.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')

@@ -1,8 +1,27 @@
 from math import log as logn
-from collections import defaultdict, Counter, Mapping
+from collections import defaultdict, Counter, Mapping, Set
 from itertools import izip
 from scipy.special import binom
 from sklearn.metrics.ranking import roc_auc_score as _roc_auc_score
+
+
+def jaccard_similarity(set1, set2):
+    """Return Jaccard similarity between two sets
+
+    :param set1: set 1
+    :param set2: set 2
+    :returns: Jaccard similarity of two sets
+    :rtype: float
+    """
+    if not isinstance(set1, Set):
+        set1 = set(set1)
+    if not isinstance(set2, Set):
+        set2 = set(set2)
+    denominator = len(set1 | set2)
+    if denominator == 0:
+        return float('nan')
+    else:
+        return len(set1 & set2) / float(denominator)
 
 
 def cond_entropy(counts, N):
@@ -21,15 +40,14 @@ def cond_entropy(counts, N):
         return 0.0
     log_row_total = logn(sum_counts)
     # to avoid loss of precision, calculate 'log(a/b)' as 'log(a) - loh(b)'
-    return -sum(c * (logn(c) - log_row_total) for c in counts if c != 0) / N
+    return sum(c * (log_row_total - logn(c)) for c in counts if c != 0) / N
 
 
 def harmonic_mean(x, y):
     """Harmonic mean of two numbers. Returns a float
     """
-    # Since harmonic mean converges to arithmetic mean as x approaches y,
-    # return the latter when x == y, which is numerically safer.
-    return (x + y) / 2.0 if x == y else (2.0 * x * y) / (x + y)
+    # the condition below is only for numeric safety when x and y are small
+    return float(x) if x == y else (2.0 * x * y) / (x + y)
 
 
 class ContingencyTable(object):
