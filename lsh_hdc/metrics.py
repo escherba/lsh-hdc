@@ -2,7 +2,7 @@ from math import log as logn
 from collections import defaultdict, Counter, Mapping, Set
 from itertools import izip
 from scipy.special import binom
-from sklearn.metrics.ranking import roc_auc_score as _roc_auc_score
+from sklearn.metrics.ranking import roc_curve, auc
 
 
 def jaccard_similarity(set1, set2):
@@ -24,12 +24,17 @@ def jaccard_similarity(set1, set2):
         return len(set1 & set2) / float(denominator)
 
 
-def cond_entropy(counts, N):
-    """Returns conditional entropy
+def entropy_of_counts(counts):
+    """Returns entropy of a list of counts
+
+    Assumes every entry in the list belongs to a different class.
 
     The parameter `counts` is expected to be an list or tuple-like iterable.
     For convenience, it can also be a dict/mapping type, in which case
-    its values will be used to calculate entropy
+    its values will be used to calculate entropy.
+
+    The entropy is calculated using natural base, which may not be what
+    you want, so caveat emptor.
 
     TODO: Cythonize this using NumPy's buffer interface for arrays
     """
@@ -38,9 +43,9 @@ def cond_entropy(counts, N):
     sum_counts = sum(counts)
     if sum_counts == 0:
         return 0.0
+    # to avoid loss of precision, calculate 'log(a/b)' as 'log(a) - log(b)'
     log_row_total = logn(sum_counts)
-    # to avoid loss of precision, calculate 'log(a/b)' as 'log(a) - loh(b)'
-    return sum(c * (log_row_total - logn(c)) for c in counts if c != 0) / N
+    return sum(c * (log_row_total - logn(c)) for c in counts if c != 0)
 
 
 def harmonic_mean(x, y):
@@ -92,20 +97,43 @@ class ContingencyTable(object):
 
 class ClusteringMetrics(ContingencyTable):
 
-    def clustering_metrics(self):
-        N = self.grand_total
-        H_C = cond_entropy(self.row_totals, N)
-        H_K = cond_entropy(self.col_totals, N)
-        H_CK = sum(cond_entropy(col, N) for col in self.iter_cols())
-        H_KC = sum(cond_entropy(row, N) for row in self.iter_rows())
+    def entropy_metrics(self):
+        """Calculate three entropy metrics used for clustering evaluation
+
+        The metrics are: Homogeneity, Completeness, and V-measure
+
+        The V-measure metric is also known as Normalized Mutual Informmation,
+        and is the harmonic mean of Homogeneity and Completeness. The latter
+        two metrics are complementary of each other (dual).
+
+        This code is replaces an equivalent function in Scikit-Learn known as
+        `homogeneity_completeness_v_measure`, which alas takes up O(n^2)
+        space because it creates a dense contingency matrix during calculation.
+        Here we use sparse dict-based methods to achieve the same result while
+        using much less RAM.
+
+        The entropy variables used in the code here are improperly defined
+        because they ought to be divided by N (the grand total for the
+        contigency table). However, numerically it is more efficient not to
+        perform the division.
+        """
+        H_C = entropy_of_counts(self.row_totals)
+        H_K = entropy_of_counts(self.col_totals)
+        H_CK = sum(entropy_of_counts(col) for col in self.iter_cols())
+        H_KC = sum(entropy_of_counts(row) for row in self.iter_rows())
         # The '<=' comparisons below both prevent division by zero errors
         # and ensure that the scores are non-negative.
-        homogeneity = 0.0 if H_C <= H_CK else 1.0 - H_CK / H_C
-        completeness = 0.0 if H_K <= H_KC else 1.0 - H_KC / H_K
+        homogeneity = 0.0 if H_C <= H_CK else (H_C - H_CK) / H_C
+        completeness = 0.0 if H_K <= H_KC else (H_K - H_KC) / H_K
         nmi_score = harmonic_mean(homogeneity, completeness)
         return homogeneity, completeness, nmi_score
 
     def adjusted_rand_index(self):
+        """Calculate Adjusted Rand Index in a memory-efficient way
+
+        Adjusted Rand index is Rand index adjusted for chance, which makes
+        the resulting measure independent of cluster size.
+        """
         N = self.grand_total
         if N <= 1:
             return float('nan')
@@ -120,36 +148,69 @@ class ClusteringMetrics(ContingencyTable):
 
 
 def homogeneity_completeness_v_measure(labels_true, labels_pred):
-    """Calculate three common clustering metrics at once
-
-    The metrics are: Homogeneity, Completeness, and V-measure
-
-    The V-measure metric is also known as Normalized Mutual Informmation,
-    and is the harmonic mean of Homogeneity and Completeness. The latter
-    two metrics are symmetric (one is a complement of another).
-
-    This code is replaces an equivalent function in Scikit-Learn known as
-    `homogeneity_completeness_v_measure`, which alas takes up O(n^2)
-    space because it creates a dense contingency matrix during calculation.
-    Here we use sparse dict-based methods to achieve the same result while
-    using much less RAM.
+    """Memory-efficient replacement for equivalently named Sklearn function
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return ct.clustering_metrics()
+    return ct.entropy_metrics()
 
 
 def adjusted_rand_score(labels_true, labels_pred):
-    """Calculate Adjusted Rand Index in a memory-efficient way
+    """Memory-efficient replacement for equivalently named Sklearn function
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
     return ct.adjusted_rand_index()
 
 
-def roc_auc_score(*args, **kwargs):
-    """Override Sklearn's method so as not to raise error
-    """
-    try:
-        result = _roc_auc_score(*args, **kwargs)
-    except ValueError:
-        result = float('nan')
-    return result
+class RocCurve(object):
+
+    def __init__(self, fprs, tprs, thresholds=None, pos_label=None,
+                 sample_weight=None):
+        self.fprs = fprs
+        self.tprs = tprs
+        self.thresholds = thresholds
+        self.pos_label = pos_label
+        self.sample_weight = sample_weight
+
+    @classmethod
+    def from_labels(cls, y_true, y_score, pos_label=None, sample_weight=None):
+        fprs, tprs, thresholds = roc_curve(
+            y_true, y_score, pos_label=pos_label, sample_weight=sample_weight)
+        return cls(fprs, tprs, thresholds=thresholds)
+
+    def auc_score(self):
+        """Override Sklearn's method so as not to raise error
+
+        If number of Y classes is other than two, a warning will be triggered
+        but no exception thrown (the return value will be a NaN). This differes
+        from the import behavior of Scikit-Learn's roc_auc_score method
+        (it always raises an exception) taht I find annoying!
+
+        Also, we don't reorder arrays during ROC calculation since they
+        are assumed to be in order.
+
+        Example:
+
+        >>> import numpy as np
+        >>> y_true = np.array([0, 0, 1, 1])
+        >>> y_scores = np.array([0.1, 0.4, 0.35, 0.8])
+        >>> rc = RocCurve.from_labels(y_true, y_scores)
+        >>> rc.auc_score()
+        0.75
+        """
+        return auc(self.fprs, self.tprs, reorder=False)
+
+    def informedness(self):
+        """Calculates Informedness (Youden's Index)
+        https://en.wikipedia.org/wiki/Youden%27s_J_statistic
+        """
+        pos_result = 0.0
+        neg_result = 0.0
+        for fpr, tpr in izip(self.fprs, self.tprs):
+            diff = fpr - tpr
+            pos_result = max(pos_result, diff)
+            neg_result = min(neg_result, diff)
+        return pos_result if pos_result >= abs(neg_result) else neg_result
+
+    def markedness(self):
+        """Calculates Markedness
+        """

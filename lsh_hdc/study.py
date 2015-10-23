@@ -309,7 +309,7 @@ def add_cluster_metrics(args, clusters, pairs):
         from lsh_hdc.metrics import ClusteringMetrics
         cm = ClusteringMetrics.from_labels(*clusters_to_labels(clusters))
         if (set(CLUSTER_METRICS) & set(args.metrics)):
-            pairs.extend(zip(CLUSTER_METRICS, cm.clustering_metrics()))
+            pairs.extend(zip(CLUSTER_METRICS, cm.entropy_metrics()))
         if 'adj_rand_score' in args.metrics:
             pairs.append(('adj_rand_score', cm.adjusted_rand_index()))
 

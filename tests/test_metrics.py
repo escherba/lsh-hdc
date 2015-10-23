@@ -1,8 +1,36 @@
 import numpy as np
+from math import isnan
 from lsh_hdc.metrics import adjusted_rand_score, \
-    homogeneity_completeness_v_measure, cond_entropy
+    homogeneity_completeness_v_measure, entropy_of_counts, jaccard_similarity
 from numpy.testing import assert_array_almost_equal
-from nose.tools import assert_almost_equal
+from nose.tools import assert_almost_equal, assert_true
+
+
+def auc(xs, ys, reorder=False):
+    """ Compute area under curve using trapesoidal rule
+
+    This is a simple alternative implementation for testing. For production
+    tasks, use Sklearn's implementation
+    """
+    tuples = zip(xs, ys)
+    if not tuples:
+        return float('nan')
+    if reorder:
+        tuples.sort()
+    a = 0.0
+    x0, y0 = tuples[0]
+    for x1, y1 in tuples[1:]:
+        a += (x1 - x0) * (y1 + y0)
+        x0, y0 = x1, y1
+    return a * 0.5
+
+
+def roc_auc(fpr, tpr, reorder=False):
+    """ Compute area under ROC curve """
+    return auc(
+        chain([0.0], fpr, [1.0]),
+        chain([0.0], tpr, [1.0]),
+        reorder=reorder)
 
 
 def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
@@ -18,14 +46,18 @@ def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
     return scores
 
 
-def test_cond_entropy_zero():
-    val = cond_entropy([], 0)
+def test_jaccard_nan():
+    """Returns NaN for empty set
+    """
+    sim = jaccard_similarity([], [])
+    assert_true(isnan(sim))
+
+
+def test_entropy_of_counts_zero():
+    """Returns zero for empty set
+    """
+    val = entropy_of_counts([])
     assert_almost_equal(val, 0.0000, 4)
-
-
-def test_cond_entropy_something():
-    val = cond_entropy([1, 24, 5], 100)
-    assert_almost_equal(val, 0.1772, 4)
 
 
 def test_perfectly_good_clustering():
@@ -97,6 +129,13 @@ def test_non_consecutive_labels_std():
     assert_almost_equal(v, 0.52, 2)
 
 
+def test_ari_nan():
+    """Returns NaN for empty lists
+    """
+    ari = adjusted_rand_score([], [])
+    assert_true(isnan(ari))
+
+
 def test_non_consecutive_labels_ari():
     """regression tests for labels with gaps
     """
@@ -121,7 +160,8 @@ def test_ir_example():
 
 
 def test_adjustment_for_chance():
-    # Check that adjusted scores are almost zero on random labels
+    """Check that adjusted scores are almost zero on random labels
+    """
     n_clusters_range = [2, 10, 50, 90]
     n_samples = 100
     n_runs = 10
