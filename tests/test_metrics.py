@@ -1,10 +1,10 @@
 import random
 import numpy as np
 from itertools import chain
-from math import isnan
 from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
-    homogeneity_completeness_v_measure, entropy_of_counts, jaccard_similarity
+    homogeneity_completeness_v_measure, entropy_of_counts, \
+    jaccard_similarity, clustering_aul_score
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true
 
@@ -75,7 +75,7 @@ def test_jaccard_nan():
     """Returns NaN for empty set
     """
     sim = jaccard_similarity([], [])
-    assert_true(isnan(sim))
+    assert_true(np.isnan(sim))
 
 
 def test_entropy_of_counts_zero():
@@ -158,7 +158,7 @@ def test_ari_nan():
     """Returns NaN for empty lists
     """
     ari = adjusted_rand_score([], [])
-    assert_true(isnan(ari))
+    assert_true(np.isnan(ari))
 
 
 def test_non_consecutive_labels_ari():
@@ -196,3 +196,26 @@ def test_adjustment_for_chance():
 
     max_abs_scores = np.abs(scores).max(axis=1)
     assert_array_almost_equal(max_abs_scores, [0.02, 0.03, 0.03, 0.02], 2)
+
+
+def test_clustering_aul_empty():
+    """Test empty clustering first
+    """
+    score = clustering_aul_score([], bool)
+    assert_true(np.isnan(score))
+
+
+def test_clustering_aul_perfect():
+    """Test empty clustering first
+    """
+    clusters = [[1, 1, 1, 1, 1], [0], [0]]
+    score = clustering_aul_score(clusters, bool)
+    assert_almost_equal(score, 1.0, 4)
+
+
+def test_clustering_aul_precalculated():
+    """Test empty clustering first
+    """
+    clusters = [[1, 1, 1], [1, 1], [0], [0]]
+    score = clustering_aul_score(clusters, bool)
+    assert_almost_equal(score, 0.8286, 4)

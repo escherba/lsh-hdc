@@ -2,8 +2,10 @@ import numpy as np
 from math import log as logn
 from collections import defaultdict, Counter, Mapping, Set
 from itertools import izip
+from operator import itemgetter
 from scipy.special import binom
 from sklearn.metrics.ranking import roc_curve, auc
+from pymaptools.iter import aggregate_tuples
 
 
 def jaccard_similarity(set1, set2):
@@ -234,3 +236,72 @@ def roc_auc_score(y_true, y_score, sample_weight=None):
     0.75
     """
     return RocCurve.from_binary(y_true, y_score).auc_score()
+
+
+def _plot_lift(xs, ys):
+    """Shortcut to plot a lift chart (for clustering_aul_score debugging)
+    """
+    from matplotlib import pyplot
+    pyplot.plot(xs, ys, marker="o", linestyle='-')
+    pyplot.xlim(xmin=0.0, xmax=1.0)
+    pyplot.ylim(ymin=0.0, ymax=1.0)
+    pyplot.show()
+
+
+def clustering_aul_score(clusters, is_pos):
+    """Area under lift curve for clusters of a binary class distribution
+
+    The AUL score calculated is very similar to the Gini index of inequality
+    (area between equality and the Lorenz curve) except we do not subtract
+    0.5. Note that it can be lower than 0.5 because, in a very bad clustering,
+    small clusters of size 1 will be sorted by negative of the number of
+    positives.
+
+    Useful when primary criterion of clustering quality is bigger clusters
+    containing more data in the positive class, while unassigned data (or
+    clusters of size one) ought to belong to the negative class
+    """
+    def count_pos(cluster):
+        # count negatives
+        return sum(is_pos(point) for point in cluster)
+
+    def make_sortable(cluster):
+        return len(cluster), count_pos(cluster)
+
+    sortable = [make_sortable(cluster) for cluster in clusters]
+    # sort just by cluster size
+    data = sorted(sortable, key=itemgetter(0), reverse=True)
+    data = list(aggregate_tuples(data))
+
+    # in first pass, calculate some totals and cumulatives
+    total_pos = 0
+    total_any = 0
+    for cluster_size, pos_counts in data:
+        num_clusters = len(pos_counts)
+        total_pos += sum(pos_counts)
+        total_any += cluster_size * num_clusters
+
+    assert total_any >= total_pos
+    if total_pos == 0:
+        return np.nan
+
+    # in the second pass, calculate the AUL metric
+    aul_score = 0.0
+    bin_height = 0.0
+    bin_right_edge = 0
+
+    # for each group of clusters of the same size...
+    for cluster_size, pos_counts in data:
+        avg_pos_count = sum(pos_counts) / float(len(pos_counts))
+
+        for _ in pos_counts:
+            bin_width = cluster_size
+            bin_height += avg_pos_count
+            bin_right_edge += bin_width
+            aul_score += bin_height * bin_width
+
+    assert total_any == bin_right_edge
+
+    aul_score /= (bin_height * bin_right_edge)
+
+    return aul_score
