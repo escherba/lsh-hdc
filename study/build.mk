@@ -1,6 +1,13 @@
 # disable built-in rules
 .SUFFIXES:
 
+# Experiment-independent defaults
+STUDY_ARGS := --sim_size 100000 --metrics nmi_score adj_rand_score aul_score roc_auc roc_max_info time_cpu
+TRIAL_FIELD := seed
+TRIALS := $(shell seq 10 15)
+
+# Include experiment
+#
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 CURRENT_DIR := $(notdir $(patsubst %/,%,$(dir $(MKFILE_PATH))))
 
@@ -18,10 +25,6 @@ else
 #
 include $(EXPERIMENT)/config.mk
 endif
-
-# TODO: create a separate Make include file for study-specific parameters
-#
-STUDY_ARGS := --metrics nmi_score adj_rand_score aul_score roc_auc roc_max_info time_cpu
 
 # create array of intermediate file names
 TRIAL_RESULTS := $(shell \
@@ -68,7 +71,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	@$(PYTHON) -m lsh_hdc.study summarize \
 		--group_by $(GROUP_FIELD) \
 		--x_axis $(PARAM_FIELD) \
-		--fig_title "$(EXPERIMENT_ARGS)" \
+		--fig_title "$(GROUP_FIELD)" \
 		--input $< --output $(@D)
 
 .PHONY: experiment
