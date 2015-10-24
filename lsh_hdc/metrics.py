@@ -275,14 +275,23 @@ def clustering_aul_score(clusters, is_pos):
 
     # in first pass, calculate some totals and cumulatives
     total_pos = 0
-    total_any = 0
+    max_horizontal = 0
+    max_vertical = 0
+
     for cluster_size, pos_counts in data:
         num_clusters = len(pos_counts)
         total_pos += sum(pos_counts)
-        total_any += cluster_size * num_clusters
+        total_in_group = cluster_size * num_clusters
+        max_horizontal += total_in_group
 
-    assert total_any >= total_pos
-    if total_pos == 0:
+        if cluster_size > 1:
+            max_vertical += total_in_group
+        else:
+            max_vertical += sum(pos_counts)
+
+    assert max_horizontal >= total_pos
+
+    if max_vertical == 0:
         return np.nan
 
     # in the second pass, calculate the AUL metric
@@ -290,18 +299,26 @@ def clustering_aul_score(clusters, is_pos):
     bin_height = 0.0
     bin_right_edge = 0
 
+    # xs = []
+    # ys = []
+
     # for each group of clusters of the same size...
     for cluster_size, pos_counts in data:
         avg_pos_count = sum(pos_counts) / float(len(pos_counts))
 
         for _ in pos_counts:
+
+            # xs.append(bin_right_edge / float(max_horizontal))
+
             bin_width = cluster_size
             bin_height += avg_pos_count
             bin_right_edge += bin_width
             aul_score += bin_height * bin_width
 
-    assert total_any == bin_right_edge
+            # ys.append(bin_height / float(max_vertical))
+            # xs.append(bin_right_edge / float(max_horizontal))
+            # ys.append(bin_height / float(max_vertical))
 
-    aul_score /= (bin_height * bin_right_edge)
-
+    assert max_horizontal == bin_right_edge
+    aul_score /= (max_vertical * max_horizontal)
     return aul_score
