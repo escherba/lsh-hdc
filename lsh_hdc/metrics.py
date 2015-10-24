@@ -161,6 +161,15 @@ def homogeneity_completeness_v_measure(labels_true, labels_pred):
 
 def adjusted_rand_score(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Sklearn function
+
+    Example (given in supplement to "An empirical study on Principal
+    Component Analysis for clustering gene expression data" by K.Y. Yeung,
+    W. L. Ruzzo (2001)
+
+    >>> classes = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
+    >>> clusters = [1, 2, 1, 2, 2, 3, 3, 3, 3, 3]
+    >>> round(adjusted_rand_score(classes, clusters), 3)
+    0.313
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
     return ct.adjusted_rand_index()
