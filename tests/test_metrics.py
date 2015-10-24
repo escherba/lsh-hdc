@@ -1,8 +1,61 @@
+import random
 import numpy as np
-from lsh_hdc.metrics import adjusted_rand_score, \
-    homogeneity_completeness_v_measure, cond_entropy
+from itertools import chain
+from pymaptools.sample import discrete_sample, random_seed
+from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
+    homogeneity_completeness_v_measure, entropy_of_counts, \
+    jaccard_similarity, clustering_aul_score
 from numpy.testing import assert_array_almost_equal
-from nose.tools import assert_almost_equal
+from nose.tools import assert_almost_equal, assert_true
+
+
+def _auc(fpr, tpr, reorder=False):
+    """Compute area under ROC curve
+
+    This is a simple alternative implementation for testing.
+    For production tasks, use Sklearn's implementation.
+    """
+
+    def generic_auc(xs, ys, reorder=False):
+        """Compute area under a curve using trapesoidal rule
+        """
+        tuples = zip(xs, ys)
+        if not tuples:
+            return float('nan')
+        if reorder:
+            tuples.sort()
+        a = 0.0
+        x0, y0 = tuples[0]
+        for x1, y1 in tuples[1:]:
+            a += (x1 - x0) * (y1 + y0)
+            x0, y0 = x1, y1
+        return a * 0.5
+
+    return generic_auc(
+        chain([0.0], fpr, [1.0]),
+        chain([0.0], tpr, [1.0]),
+        reorder=reorder)
+
+
+def simulate_predictions(n=100, seed=None):
+    """simulate classifier predictions for data size of n
+    """
+    if seed is None:
+        seed = random_seed()
+    random.seed(seed)
+    probas = [random.random() for _ in xrange(n)]
+    classes = [discrete_sample({0: (1 - p), 1: p}) for p in probas]
+    return classes, probas
+
+
+def test_roc_curve():
+    # Test Area under Receiver Operating Characteristic (ROC) curve
+    for _ in range(10):
+        y_true, probas_pred = simulate_predictions(1000, seed=random_seed())
+        rc = RocCurve.from_binary(y_true, probas_pred)
+        expected_auc = _auc(rc.fprs, rc.tprs)
+        score = rc.auc_score()
+        assert_almost_equal(expected_auc, score, 2)
 
 
 def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
@@ -18,14 +71,18 @@ def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
     return scores
 
 
-def test_cond_entropy_zero():
-    val = cond_entropy([], 0)
+def test_jaccard_nan():
+    """Returns NaN for empty set
+    """
+    sim = jaccard_similarity([], [])
+    assert_true(np.isnan(sim))
+
+
+def test_entropy_of_counts_zero():
+    """Returns zero for empty set
+    """
+    val = entropy_of_counts([])
     assert_almost_equal(val, 0.0000, 4)
-
-
-def test_cond_entropy_something():
-    val = cond_entropy([1, 24, 5], 100)
-    assert_almost_equal(val, 0.1772, 4)
 
 
 def test_perfectly_good_clustering():
@@ -97,6 +154,13 @@ def test_non_consecutive_labels_std():
     assert_almost_equal(v, 0.52, 2)
 
 
+def test_ari_nan():
+    """Returns NaN for empty lists
+    """
+    ari = adjusted_rand_score([], [])
+    assert_true(np.isnan(ari))
+
+
 def test_non_consecutive_labels_ari():
     """regression tests for labels with gaps
     """
@@ -121,7 +185,8 @@ def test_ir_example():
 
 
 def test_adjustment_for_chance():
-    # Check that adjusted scores are almost zero on random labels
+    """Check that adjusted scores are almost zero on random labels
+    """
     n_clusters_range = [2, 10, 50, 90]
     n_samples = 100
     n_runs = 10
@@ -131,3 +196,26 @@ def test_adjustment_for_chance():
 
     max_abs_scores = np.abs(scores).max(axis=1)
     assert_array_almost_equal(max_abs_scores, [0.02, 0.03, 0.03, 0.02], 2)
+
+
+def test_clustering_aul_empty():
+    """Test empty clustering first
+    """
+    score = clustering_aul_score([], bool)
+    assert_true(np.isnan(score))
+
+
+def test_clustering_aul_perfect():
+    """Test empty clustering first
+    """
+    clusters = [[1, 1, 1, 1, 1], [0], [0]]
+    score = clustering_aul_score(clusters, bool)
+    assert_almost_equal(score, 1.0, 4)
+
+
+def test_clustering_aul_precalculated():
+    """Test empty clustering first
+    """
+    clusters = [[1, 1, 1], [1, 1], [0], [0]]
+    score = clustering_aul_score(clusters, bool)
+    assert_almost_equal(score, 0.8286, 4)

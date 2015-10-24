@@ -232,6 +232,10 @@ def load_clustering(args):
     return namespace, iter_clustering(iterator)
 
 
+def is_pos(x):
+    return ':' in x
+
+
 def clusters_to_labels(cluster_iter):
     labels_true = []
     labels_pred = []
@@ -241,7 +245,7 @@ def clusters_to_labels(cluster_iter):
         else:
             pred_cluster = idx
         for point in cluster:
-            if ':' in point:
+            if is_pos(point):
                 true_cluster, _ = point.split(':')
                 true_cluster = int(true_cluster)
             else:
@@ -257,7 +261,7 @@ def cluster_predictions(cluster_iter):
     for idx, cluster in enumerate(cluster_iter):
         pred_cluster = len(cluster)
         for point in cluster:
-            true_cluster = ':' in point
+            true_cluster = is_pos(point)
             y_true.append(true_cluster)
             y_score.append(pred_cluster)
     return y_true, y_score
@@ -288,16 +292,19 @@ def do_simulation(args):
 
 METRICS = [
     'homogeneity', 'completeness', 'nmi_score', 'adj_rand_score',
-    'roc_auc', 'time_cpu'
+    'roc_max_info', 'roc_auc', 'aul_score', 'time_cpu'
 ]
 
 CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_score']
-CLUSTER_METRICS = ['homogeneity', 'completeness', 'nmi_score']
-ROC_METRICS = ['roc_auc']
+ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
+ROC_METRICS = ['roc_max_info', 'roc_auc']
+LIFT_METRICS = ['aul_score']
 
 LEGEND_METRIC_KWARGS = {
     'homogeneity': dict(loc='lower right'),
     'roc_auc': dict(loc='lower right'),
+    'roc_max_info': dict(loc='lower right'),
+    'aul_score': dict(loc='lower right'),
     'adj_rand_score': dict(loc='lower right'),
     'time_wall': dict(loc='upper left'),
     'time_cpu': dict(loc='upper left'),
@@ -308,18 +315,27 @@ def add_cluster_metrics(args, clusters, pairs):
     if (set(CLUSTER_METRICS_ALL) & set(args.metrics)):
         from lsh_hdc.metrics import ClusteringMetrics
         cm = ClusteringMetrics.from_labels(*clusters_to_labels(clusters))
-        if (set(CLUSTER_METRICS) & set(args.metrics)):
-            pairs.extend(zip(CLUSTER_METRICS, cm.clustering_metrics()))
+        if (set(ENTROPY_METRICS) & set(args.metrics)):
+            pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
         if 'adj_rand_score' in args.metrics:
             pairs.append(('adj_rand_score', cm.adjusted_rand_index()))
 
 
 def add_roc_metrics(args, clusters, pairs):
     if (set(ROC_METRICS) & set(args.metrics)):
-        from lsh_hdc.metrics import roc_auc_score
-        roc_data = cluster_predictions(clusters)
+        from lsh_hdc.metrics import RocCurve
+        rc = RocCurve.from_binary(*cluster_predictions(clusters))
         if 'roc_auc' in args.metrics:
-            pairs.append(('roc_auc', roc_auc_score(*roc_data)))
+            pairs.append(('roc_auc', rc.auc_score()))
+        if 'roc_max_info' in args.metrics:
+            pairs.append(('roc_max_info', rc.max_deltap()))
+
+
+def add_lift_metrics(args, clusters, pairs):
+    if (set(LIFT_METRICS) & set(args.metrics)):
+        from lsh_hdc.metrics import clustering_aul_score as aul_score
+        if 'aul_score' in args.metrics:
+            pairs.append(('aul_score', aul_score(clusters, is_pos)))
 
 
 def perform_clustering(args, data):
@@ -331,6 +347,7 @@ def perform_clustering(args, data):
 def perform_analysis(args, clusters):
     clusters = list(clusters)
     pairs = []
+    add_lift_metrics(args, clusters, pairs)
     add_cluster_metrics(args, clusters, pairs)
     add_roc_metrics(args, clusters, pairs)
     return dict(pairs)
