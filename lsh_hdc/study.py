@@ -395,7 +395,7 @@ def create_plots(args, df, metrics):
                         y=metric, kind="scatter", logx=True, title=args.fig_title,
                         facecolors='none', edgecolors=color)
                 except Exception:
-                    logging.exception("Exception thrown when plotting %s:%s", metric, label)
+                    logging.exception("Exception caught plotting %s:%s", metric, label)
             fig_filename = "fig_%s.%s" % (metric, args.fig_format)
             fig_path = os.path.join(args.output, fig_filename)
             ax.legend(prop=fontP, **LEGEND_METRIC_KWARGS.get(metric, {}))
@@ -415,15 +415,22 @@ def do_simul_clust_analy(args):
     args.output.write("%s\n" % json.dumps(namespace))
 
 
+def create_df_subset(df, fields):
+    subset_fields = [field for field in fields if field in df]
+    return df[subset_fields]
+
+
 def do_summa(args):
     import pandas as pd
 
     obj = ndjson2col(read_json_lines(args.input))
     df = pd.DataFrame.from_dict(obj)
+    subset = create_df_subset(
+        df, [args.group_by, args.x_axis, args.trial] + METRICS)
     csv_path = os.path.join(args.output, "summary.csv")
-    logging.info("Writing output summary to %s", csv_path)
-    df.to_csv(csv_path)
-    create_plots(args, df, METRICS)
+    logging.info("Writing brief summary to %s", csv_path)
+    subset.to_csv(csv_path)
+    create_plots(args, subset, METRICS)
 
 
 def add_simul_args(p_simul):
