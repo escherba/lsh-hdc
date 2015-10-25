@@ -1,7 +1,7 @@
-EXPERIMENT_ARGS := --kmin 1 --width 12 --doc_len_mean 6 --p_err 0.0
+EXPERIMENT_ARGS := --doc_len_mean 12 --p_err 0.2
 
-GROUP_FIELD := bandwidth
-GROUPS := 2 3 4 6
+GROUP_FIELD := shingle_skip
+GROUPS := 0 1 2
 
 #GROUP_FIELD := hashfun
 #GROUPS := metrohash md5 builtin cityhash

@@ -3,8 +3,9 @@ import numpy as np
 from itertools import chain
 from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
-    homogeneity_completeness_v_measure, entropy_of_counts, \
-    jaccard_similarity, clustering_aul_score, ClusteringMetrics
+    homogeneity_completeness_v_measure, centropy, \
+    jaccard_similarity, clustering_aul_score, ClusteringMetrics, \
+    ConfMatBinary
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true
 
@@ -81,7 +82,7 @@ def test_jaccard_nan():
 def test_entropy_of_counts_zero():
     """Returns zero for empty set
     """
-    val = entropy_of_counts([])
+    val = centropy([])
     assert_almost_equal(val, 0.0000, 4)
 
 
@@ -180,7 +181,7 @@ def test_IR_example():
     lpred = (0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 2, 2, 1, 2, 2, 2)
     cm = ClusteringMetrics.from_labels(ltrue, lpred)
 
-    # test entropy metrics
+    # test centropy metrics
     h, c, v = cm.entropy_metrics()
     assert_almost_equal(h, 0.371468, 6)
     assert_almost_equal(c, 0.357908, 6)
@@ -229,3 +230,23 @@ def test_clustering_aul_precalculated():
     clusters = [[1, 1, 1], [1, 1], [0], [0]]
     score = clustering_aul_score(clusters, bool)
     assert_almost_equal(score, 0.8286, 4)
+
+
+def test_twoway_confusion_ll():
+    """Example from McDonald's G-test for independence
+    http://www.biostathandbook.com/gtestind.html
+    """
+    cm = ConfMatBinary.from_cells_ccw(4758, 8840, 76, 30)
+    assert_almost_equal(cm.g_score(), 2.14, 2)
+    assert_almost_equal(cm.g_corr(), 0.0125, 4)
+
+
+def test_twoway_confusion_phi():
+    cm = ConfMatBinary.from_cells_ccw(116, 21, 18, 21)
+    assert_almost_equal(cm.matthews_corr(), 0.31, 2)
+    assert_almost_equal(cm.yule_coeff(), 0.65, 2)
+
+
+def test_kappa():
+    cm = ConfMatBinary.from_cells_ccw(22, 4, 11, 2)
+    assert_almost_equal(cm.kappa(), 0.67, 2)

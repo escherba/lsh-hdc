@@ -298,15 +298,18 @@ def do_simulation(args):
         output.write("%s %s\n" % (i, seq))
 
 
-METRICS = [
-    'homogeneity', 'completeness', 'nmi_score', 'adj_rand_score',
-    'roc_max_info', 'roc_auc', 'aul_score', 'time_cpu'
-]
+BENCHMARKS = ['time_cpu']
 
-CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_score']
+CONFUSION_METRICS = ['adj_rand_score',
+                     'yule_coeff', 'g_corr', 'g_corr_left', 'matthews_corr',
+                     'jaccard_coeff', 'fscore', 'accuracy']
 ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
+INCIDENCE_METRICS = CONFUSION_METRICS + ENTROPY_METRICS
+
 ROC_METRICS = ['roc_max_info', 'roc_auc']
 LIFT_METRICS = ['aul_score']
+
+METRICS = ROC_METRICS + LIFT_METRICS + INCIDENCE_METRICS + BENCHMARKS
 
 LEGEND_METRIC_KWARGS = {
     'homogeneity': dict(loc='lower right'),
@@ -319,17 +322,38 @@ LEGEND_METRIC_KWARGS = {
 }
 
 
-def add_cluster_metrics(args, clusters, pairs):
-    if (set(CLUSTER_METRICS_ALL) & set(args.metrics)):
+def add_incidence_metrics(args, clusters, pairs):
+    """Add metrics based on incidence matrix of classes and clusters
+    """
+    args_metrics = INCIDENCE_METRICS  # args.metrics
+    if (set(INCIDENCE_METRICS) & set(args_metrics)):
         from lsh_hdc.metrics import ClusteringMetrics
         cm = ClusteringMetrics.from_labels(*clusters_to_labels(clusters))
-        if (set(ENTROPY_METRICS) & set(args.metrics)):
+        if (set(ENTROPY_METRICS) & set(args_metrics)):
             pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
-        if 'adj_rand_score' in args.metrics:
-            pairs.append(('adj_rand_score', cm.adjusted_rand_index()))
+        if (set(CONFUSION_METRICS) & set(args_metrics)):
+            conf = cm.confusion_matrix_
+            if 'adj_rand_score' in args_metrics:
+                pairs.append(('adj_rand_score', cm.adjusted_rand_index()))
+            if 'yule_coeff' in args_metrics:
+                pairs.append(('yule_coeff', conf.yule_coeff()))
+            if 'g_corr' in args_metrics:
+                pairs.append(('g_corr', conf.g_corr()))
+            if 'g_corr_left' in args_metrics:
+                pairs.append(('g_corr_left', conf.g_corr_left()))
+            if 'matthews_corr' in args_metrics:
+                pairs.append(('matthews_corr', conf.matthews_corr()))
+            if 'jaccard_coeff' in args_metrics:
+                pairs.append(('jaccard_coeff', conf.jaccard_coeff()))
+            if 'fscore' in args_metrics:
+                pairs.append(('fscore', conf.fscore()))
+            if 'accuracy' in args_metrics:
+                pairs.append(('accuracy', conf.accuracy()))
 
 
 def add_roc_metrics(args, clusters, pairs):
+    """Add metrics based on ROC Curve
+    """
     if (set(ROC_METRICS) & set(args.metrics)):
         from lsh_hdc.metrics import RocCurve
         rc = RocCurve.from_binary(*cluster_predictions(clusters))
@@ -340,6 +364,8 @@ def add_roc_metrics(args, clusters, pairs):
 
 
 def add_lift_metrics(args, clusters, pairs):
+    """Add metrics based on Lift Curve
+    """
     if (set(LIFT_METRICS) & set(args.metrics)):
         from lsh_hdc.metrics import clustering_aul_score as aul_score
         if 'aul_score' in args.metrics:
@@ -356,7 +382,7 @@ def perform_analysis(args, clusters):
     clusters = list(clusters)
     pairs = []
     add_lift_metrics(args, clusters, pairs)
-    add_cluster_metrics(args, clusters, pairs)
+    add_incidence_metrics(args, clusters, pairs)
     add_roc_metrics(args, clusters, pairs)
     return dict(pairs)
 
@@ -430,7 +456,6 @@ def create_df_subset(df, fields):
 
 def do_summa(args):
     import pandas as pd
-
     obj = ndjson2col(read_json_lines(args.input))
     df = pd.DataFrame.from_dict(obj)
     subset = create_df_subset(

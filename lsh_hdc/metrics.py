@@ -1,8 +1,8 @@
 import numpy as np
-from math import log as logn
+from math import log as logn, sqrt
 from collections import defaultdict, Counter, Mapping, Set
-from itertools import izip
-from operator import itemgetter
+from itertools import izip, chain
+from operator import mul, itemgetter
 from scipy.special import binom
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples
@@ -27,28 +27,30 @@ def jaccard_similarity(set1, set2):
         return len(set1 & set2) / float(denominator)
 
 
-def entropy_of_counts(counts):
-    """Returns entropy of a list of counts
+def centropy(counts):
+    """Returns centropy of an iterable of counts
 
     Assumes every entry in the list belongs to a different class.
 
     The parameter `counts` is expected to be an list or tuple-like iterable.
     For convenience, it can also be a dict/mapping type, in which case
-    its values will be used to calculate entropy.
+    its values will be used to calculate centropy.
 
-    The entropy is calculated using natural base, which may not be what
+    The centropy is calculated using natural base, which may not be what
     you want, so caveat emptor.
 
     TODO: Cythonize this using NumPy's buffer interface for arrays
     """
     if isinstance(counts, Mapping):
-        counts = counts.values()
-    sum_counts = sum(counts)
-    if sum_counts == 0:
-        return 0.0
-    # to avoid loss of precision, calculate 'log(a/b)' as 'log(a) - log(b)'
-    log_row_total = logn(sum_counts)
-    return sum(c * (log_row_total - logn(c)) for c in counts if c != 0)
+        counts = counts.itervalues()
+
+    n = 0
+    sum_c_logn_c = 0.0
+    for c in counts:
+        if c != 0:
+            n += c
+            sum_c_logn_c += c * logn(c)
+    return 0.0 if n == 0 else n * logn(n) - sum_c_logn_c
 
 
 def harmonic_mean(x, y):
@@ -80,21 +82,37 @@ class ContingencyTable(object):
         self.grand_total = grand_total
 
     def iter_cells(self):
-        for row in self.rows.itervalues():
-            for cell in row.itervalues():
+        for row in self.iter_rows():
+            for cell in row:
                 yield cell
 
     def iter_cols(self):
-        return self.cols.itervalues()
+        if isinstance(self.cols, Mapping):
+            for col in self.cols.itervalues():
+                yield col.values() if isinstance(col, Mapping) else col
+        else:
+            for col in self.cols:
+                yield col
 
     def iter_rows(self):
-        return self.rows.itervalues()
+        if isinstance(self.rows, Mapping):
+            for col in self.rows.itervalues():
+                yield col.values() if isinstance(col, Mapping) else col
+        else:
+            for row in self.rows:
+                yield row
 
     def iter_col_totals(self):
-        return self.col_totals.itervalues()
+        if isinstance(self.col_totals, Mapping):
+            return self.col_totals.itervalues()
+        else:
+            return iter(self.col_totals)
 
     def iter_row_totals(self):
-        return self.row_totals.itervalues()
+        if isinstance(self.row_totals, Mapping):
+            return self.row_totals.itervalues()
+        else:
+            return iter(self.row_totals)
 
     @classmethod
     def from_labels(cls, labels_true, labels_pred):
@@ -112,32 +130,130 @@ class ContingencyTable(object):
         return cls(rows=classes, cols=klusters, row_totals=class_total,
                    col_totals=kluster_total, grand_total=grand_total)
 
+    def g_score(self):
+        """Returns G-statistic for a 2x2 table
 
-class ConfMatBinary(object):
+        G is a likelihood-ratio statistic and therefore should be superior
+        to chi-squre based statistics which rely on Taylor approximation of
+        likelihood. One direct benefit is that G statistic is additive while
+        chi-square is not. Simulation studies by Dunning showed that G score
+        outperforms Chi-square on highly skewed tables used for word bigram
+        collocations.
+
+        There's also a Williams' correction that is used in conjunction with
+        this statistic (not calculated here).
+
+        References
+        ----------
+
+        Dunning, T. Accurate methods for the statisitcs of surprise and
+        coincidence. 1993. Computational Linguistics 19 (1). 61-74.
+        http://dl.acm.org/citation.cfm?id=972454
+
+        Also see Dunning's pithy observations on the unexpected impact of his
+        paper:
+        http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html
+        """
+        return 2.0 * (centropy(self.iter_row_totals()) +
+                      centropy(self.iter_col_totals()) -
+                      centropy(self.iter_cells()))
+
+    def g_corr_left(self):
+        """A transformation of G-score for fixed left margin tables
+
+        Divides G-score by the maximum value it could achieve if row counts
+        were fixed
+        """
+        max_achievable = max(0.0, 2.0 * centropy(self.row_totals))
+        return sqrt(max(0.0, self.g_score()) / max_achievable)
+
+    def g_corr_right(self):
+        """A transformation of G-score for fixed right margin tables
+
+        Divides G-score by the maximum value it could achieve if column counts
+        were fixed
+        """
+        max_achievable = max(0.0, 2.0 * centropy(self.col_totals))
+        return sqrt(max(0.0, self.g_score()) / max_achievable)
+
+    def g_corr(self):
+        """Returns G-statistic transformed to association measure
+
+        This is an ad-hoc measure based on G statistic for conditional
+        independence. The G score (which has a broadly similar distribution
+        properties to that of Chi-square) is transformed to an association
+        measure using formula given for Phi coefficient of association.
+        The transformation should be good enough for most cases but note that
+        the resulting index no longer has 1.0 as the maximum value.
+        """
+        return sqrt(max(0.0, self.g_score()) / self.grand_total)
+
+    def entropy_metrics(self):
+        """Calculate three centropy metrics used for clustering evaluation
+
+        The metrics are: Homogeneity, Completeness, and V-measure
+
+        The V-measure metric is also known as Normalized Mutual Informmation,
+        and is the harmonic mean of Homogeneity and Completeness. The latter
+        two metrics are complementary of each other (dual).
+
+        This code is replaces an equivalent function in Scikit-Learn known as
+        `homogeneity_completeness_v_measure`, which alas takes up O(n^2)
+        space because it creates a dense contingency matrix during calculation.
+        Here we use sparse dict-based methods to achieve the same result while
+        using much less RAM.
+
+        The centropy variables used in the code here are improperly defined
+        because they ought to be divided by N (the grand total for the
+        contigency table). However, numerically it is more efficient not to
+        perform the division.
+
+        For a symmetric matrix, all three scores should be the same.
+        """
+        H_C = centropy(self.row_totals)
+        H_K = centropy(self.col_totals)
+        H_CK = sum(centropy(col) for col in self.iter_cols())
+        H_KC = sum(centropy(row) for row in self.iter_rows())
+        # The '<=' comparisons below both prevent division by zero errors
+        # and ensure that the scores are non-negative.
+        homogeneity = 0.0 if H_C <= H_CK else (H_C - H_CK) / H_C
+        completeness = 0.0 if H_K <= H_KC else (H_K - H_KC) / H_K
+        nmi_score = harmonic_mean(homogeneity, completeness)
+        return homogeneity, completeness, nmi_score
+
+
+class ConfMatBinary(ContingencyTable):
     """A binary confusion matrix
     """
 
-    def __init__(self, TP, FP, TN, FN):
-        self.TP = TP
-        self.FP = FP
-        self.TN = TN
-        self.FN = FN
-        self.N = TP + FP + TN + FN
+    @classmethod
+    def from_cells_ccw(cls, TP, FP, TN, FN):
+        rows = ((TP, FN),
+                (FP, TN))
+        cols = ((TP, FP),
+                (FN, TN))
+        row_totals = (TP + FN, FP + TN)
+        col_totals = (TP + FP, FN + TN)
+        grand_total = TP + FP + TN + FN
 
-    def kappa(self):
-        """Calculate Cohen's kappa of a binary confusion matrix
-        """
-        n_choose_2 = self.N        # (grand_total choose 2)
-        if n_choose_2 == 0:
-            return np.nan
-        sum_n = self.TP            # Sum{(n choose 2) over all cells}
-        sum_a = self.TP + self.FP  # Sum{(n choose 2) over column totals}
-        sum_b = self.TP + self.FN  # Sum{(n choose 2) over row totals}
+        return cls(rows=rows, cols=cols, row_totals=row_totals,
+                   col_totals=col_totals, grand_total=grand_total)
 
-        sum_a_sum_b__n_choose_2 = (sum_a * sum_b) / n_choose_2
-        numerator = sum_n - sum_a_sum_b__n_choose_2
-        denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b__n_choose_2
-        return numerator / denominator
+    @property
+    def TP(self):
+        return self.rows[0][0]
+
+    @property
+    def FN(self):
+        return self.rows[0][1]
+
+    @property
+    def FP(self):
+        return self.rows[1][0]
+
+    @property
+    def TN(self):
+        return self.rows[1][1]
 
     def accuracy(self):
         """Accuracy (also known as Rand Index)
@@ -146,7 +262,7 @@ class ConfMatBinary(object):
         precision, recall, F-score, or a chance-corrected version of accuracy
         known as Cohen's kappa (see kappa() method).
         """
-        denominator = self.N
+        denominator = self.grand_total
         return np.nan if denominator == 0 else float(self.TP + self.TN) / denominator
 
     def precision(self):
@@ -178,6 +294,54 @@ class ConfMatBinary(object):
         denominator = self.TP + self.FP + self.FN
         return np.nan if denominator == 0 else float(self.TP) / denominator
 
+    def kappa(self):
+        """Calculate Cohen's kappa of a binary confusion matrix
+        """
+        n_choose_2 = self.grand_total        # (grand_total choose 2)
+        if n_choose_2 == 0:
+            return np.nan
+        sum_n = self.TP            # Sum{(n choose 2) over all cells}
+        sum_a = self.TP + self.FP  # Sum{(n choose 2) over column totals}
+        sum_b = self.TP + self.FN  # Sum{(n choose 2) over row totals}
+
+        sum_a_sum_b__n_choose_2 = (sum_a * sum_b) / n_choose_2
+        numerator = sum_n - sum_a_sum_b__n_choose_2
+        denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b__n_choose_2
+        return numerator / denominator
+
+    def matthews_corr(self):
+        """Calculate Matthews Correlation Coefficient
+
+        For a table of shape
+
+        a b
+        c d
+
+        MCC is (ad - bc) / sqrt((a + b)(c + d)(a + c)(b + d))
+
+        Note that MCC is directly related to Chi-square statitstic on a 2x2
+        contingency table. Some studies (TODO: find references) report this
+        metric to be less biased than Cohen's kappa.
+        """
+        denominator = reduce(mul, chain(self.iter_row_totals(),
+                                        self.iter_col_totals()))
+        numerator = self.TP * self.TN - self.FP * self.FN
+        return np.nan if denominator == 0 else numerator / sqrt(denominator)
+
+    def yule_coeff(self):
+        """
+        For a table of shape
+
+        a b
+        c d
+
+        Yule's index is (ad - bc) / (ad + bc)
+        """
+        ad = self.TP * self.TN
+        bc = self.FP * self.FN
+        denominator = ad + bc
+        return np.nan if denominator == 0 else float(ad - bc) / denominator
+
 
 class ClusteringMetrics(ContingencyTable):
 
@@ -198,7 +362,7 @@ class ClusteringMetrics(ContingencyTable):
 
     def __init__(self, *args, **kwargs):
         super(ClusteringMetrics, self).__init__(*args, **kwargs)
-        self.confusion_matrix_ = self.confusion_matrix()
+        self.confusion_matrix_ = self.pairwise_confusion_matrix()
 
     def precision(self):
         return self.confusion_matrix_.precision()
@@ -215,7 +379,7 @@ class ClusteringMetrics(ContingencyTable):
     def jaccard_coeff(self):
         return self.confusion_matrix_.jaccard_coeff()
 
-    def confusion_matrix(self):
+    def pairwise_confusion_matrix(self):
         """Calculate a binary confusion matrix from object pair distribution
 
         Order of objects returned: TP, FP, TN, FN
@@ -226,38 +390,7 @@ class ClusteringMetrics(ContingencyTable):
         FP = TP_plus_FP - TP
         FN = TP_plus_FN - TP
         TN = binom(self.grand_total, 2) - TP - FP - FN
-        return ConfMatBinary(TP, FP, TN, FN)
-
-    def entropy_metrics(self):
-        """Calculate three entropy metrics used for clustering evaluation
-
-        The metrics are: Homogeneity, Completeness, and V-measure
-
-        The V-measure metric is also known as Normalized Mutual Informmation,
-        and is the harmonic mean of Homogeneity and Completeness. The latter
-        two metrics are complementary of each other (dual).
-
-        This code is replaces an equivalent function in Scikit-Learn known as
-        `homogeneity_completeness_v_measure`, which alas takes up O(n^2)
-        space because it creates a dense contingency matrix during calculation.
-        Here we use sparse dict-based methods to achieve the same result while
-        using much less RAM.
-
-        The entropy variables used in the code here are improperly defined
-        because they ought to be divided by N (the grand total for the
-        contigency table). However, numerically it is more efficient not to
-        perform the division.
-        """
-        H_C = entropy_of_counts(self.row_totals)
-        H_K = entropy_of_counts(self.col_totals)
-        H_CK = sum(entropy_of_counts(col) for col in self.iter_cols())
-        H_KC = sum(entropy_of_counts(row) for row in self.iter_rows())
-        # The '<=' comparisons below both prevent division by zero errors
-        # and ensure that the scores are non-negative.
-        homogeneity = 0.0 if H_C <= H_CK else (H_C - H_CK) / H_C
-        completeness = 0.0 if H_K <= H_KC else (H_K - H_KC) / H_K
-        nmi_score = harmonic_mean(homogeneity, completeness)
-        return homogeneity, completeness, nmi_score
+        return ConfMatBinary.from_cells_ccw(TP, FP, TN, FN)
 
     def adjusted_rand_index(self):
         """Calculate Adjusted Rand Index in a memory-efficient way
