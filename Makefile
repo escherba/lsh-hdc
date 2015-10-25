@@ -32,6 +32,9 @@ test: env build_ext
 	$(PYENV) nosetests $(NOSEARGS)
 	$(PYENV) py.test README.rst
 
+shell: extras build_ext
+	$(PYENV) $(ENV_EXTRA) ipython
+
 extras: env/make.extras
 env/make.extras: $(EXTRAS_REQS) | env
 	rm -rf env/build
