@@ -1,3 +1,84 @@
+"""
+
+Motivation
+----------
+
+The motivation behind re-implementating some clustering metrics in this module
+was to avoid the high memory usage of equivalent methods in Scikit-Learn.
+The Scikit-Learn implementations create an incidence matrix for computation
+of these metrics resulting in O(n^2) memory usage, something that is
+felt particularly on large data sets and in multiprocessing environment.
+The given implementation uses sparse methods on dictionary maps instead
+of building incidence matrices.
+
+Validation vs Replication Studies, ARI, and Kappa
+-------------------------------------------------
+
+ARI has an equivalence to Cohen's Kappa described in [1].
+Milligan [2] suggested that the two measures (ARI and Kappa) be used in
+replication studies when relevant. Note that replication studies like
+the ones proposed in [2] correspond to Model I test for independence
+as described in [3]. In a Model I study, random sampling occurs
+both row- and column-wise, and only the grand total is fixed.
+In a Model II study, one side (either row or column totals) is fixed.
+Simulation-based clustering evaluations that fix the number and size
+of ground truth classes belong to Model II category. Finally, in a
+Model III study, both rows and column totals are fixed. Model III
+studies require careful experimental design but have potentially more
+discriminative power. An example of a Model III study would be a tea
+tasting party (to follow Fisher's classic example) where both the
+true class totals (the portion and number of tea cups with milk poured
+first) are known and the respondees are told ahead of time, that,
+for example, 50% of cups they will encounter have had milk poured first.
+
+To sum up the above, in a replication study where two clusterings are
+compared that were both created by the same algorithm, the Kappa
+score seems to be an appropriate metric (it is symmetric,
+i.e. independent of row/column assignemnts). The same applies to
+Matthew's Correlation Coefficient. However it seems that a better
+chance-corrected metric should exist that would be appropriate for
+Model II studies where the true class portions are fixed.
+
+To be exhaustive, a Model O study would be one where even the grand
+total is not fixed. An example would be an astronomy study that,
+for example, tests a hypothesis about a generalizable property
+such as dark matter content by looking at all galaxies in the
+Local Group, and the researchers obviously don't get to choose ahead
+of time how many galaxies there are near Milky Way.
+
+Why G-score
+------------
+G is a likelihood-ratio statistic and therefore should be superior
+to chi-squre based statistics which rely on Taylor approximation of
+likelihood. One direct benefit is that G statistic is additive while
+chi-square is not. Simulation studies showed [4, 5] that G score
+outperforms Chi-square on highly skewed tables used for word bigram
+collocations.
+
+References
+----------
+
+[1] Warrens, M. J. On the equivalence of Cohen's Kappa and the
+Hubert-Arabie Adjusted Rand Index. 2008. J. Classif. 25: 177-183.
+https://doi.org/10.1007/s00357-008-9023-7
+
+[2] Milligan, G.W. Clustering validation: results and
+implications for applied analysis. In Arabie P., de Soete, G. (ed)
+Clustering and Classification, 1996: 358-369.
+https://doi.org/10.1142/9789812832153_0010
+
+[3] Sokal, R.R. Rohlf, F.J. Biometry. W.H. Freeman & Co. New York, 2012.
+4th ed. pp 742-744.
+
+[4] Dunning, T. Accurate methods for the statisitcs of surprise and
+coincidence. 1993. Computational Linguistics 19 (1). 61-74.
+http://dl.acm.org/citation.cfm?id=972454
+
+[5] Ted Dunning's personal blog
+http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html
+
+"""
+
 import numpy as np
 from math import log as logn, sqrt
 from collections import defaultdict, Counter, Mapping, Set
@@ -5,7 +86,7 @@ from itertools import izip, chain
 from operator import mul, itemgetter
 from scipy.special import binom
 from sklearn.metrics.ranking import roc_curve, auc
-from pymaptools.iter import aggregate_tuples
+from pymaptools.iter import aggregate_tuples, iter_vals
 
 
 def jaccard_similarity(set1, set2):
@@ -87,75 +168,43 @@ class ContingencyTable(object):
                 yield cell
 
     def iter_cols(self):
-        if isinstance(self.cols, Mapping):
-            for col in self.cols.itervalues():
-                yield col.values() if isinstance(col, Mapping) else col
-        else:
-            for col in self.cols:
-                yield col
+        for col in iter_vals(self.cols):
+            yield iter_vals(col)
 
     def iter_rows(self):
-        if isinstance(self.rows, Mapping):
-            for col in self.rows.itervalues():
-                yield col.values() if isinstance(col, Mapping) else col
-        else:
-            for row in self.rows:
-                yield row
+        for row in iter_vals(self.rows):
+            yield iter_vals(row)
 
     def iter_col_totals(self):
-        if isinstance(self.col_totals, Mapping):
-            return self.col_totals.itervalues()
-        else:
-            return iter(self.col_totals)
+        return iter_vals(self.col_totals)
 
     def iter_row_totals(self):
-        if isinstance(self.row_totals, Mapping):
-            return self.row_totals.itervalues()
-        else:
-            return iter(self.row_totals)
+        return iter_vals(self.row_totals)
 
     @classmethod
     def from_labels(cls, labels_true, labels_pred):
-        classes = defaultdict(Counter)
-        klusters = defaultdict(Counter)
-        class_total = Counter()
-        kluster_total = Counter()
+        rows = defaultdict(Counter)
+        cols = defaultdict(Counter)
+        row_totals = Counter()
+        col_totals = Counter()
         grand_total = 0
         for c, k in izip(labels_true, labels_pred):
-            classes[c][k] += 1
-            klusters[k][c] += 1
-            class_total[c] += 1
-            kluster_total[k] += 1
+            rows[c][k] += 1
+            cols[k][c] += 1
+            row_totals[c] += 1
+            col_totals[k] += 1
             grand_total += 1
-        return cls(rows=classes, cols=klusters, row_totals=class_total,
-                   col_totals=kluster_total, grand_total=grand_total)
+        return cls(rows=rows, cols=cols, row_totals=row_totals,
+                   col_totals=col_totals, grand_total=grand_total)
 
     def g_score(self):
         """Returns G-statistic for a 2x2 table
 
-        G is a likelihood-ratio statistic and therefore should be superior
-        to chi-squre based statistics which rely on Taylor approximation of
-        likelihood. One direct benefit is that G statistic is additive while
-        chi-square is not. Simulation studies by Dunning showed that G score
-        outperforms Chi-square on highly skewed tables used for word bigram
-        collocations.
-
-        There's also a Williams' correction that is used in conjunction with
-        this statistic (not calculated here).
-
-        References
-        ----------
-
-        Dunning, T. Accurate methods for the statisitcs of surprise and
-        coincidence. 1993. Computational Linguistics 19 (1). 61-74.
-        http://dl.acm.org/citation.cfm?id=972454
-
-        Also see Dunning's pithy observations on the unexpected impact of his
-        paper:
-        http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html
+        Note that this doesn't calculate any corrections to this statistic
+        (e.g. Williams', Yates' corrections).
         """
-        return 2.0 * (centropy(self.iter_row_totals()) +
-                      centropy(self.iter_col_totals()) -
+        return 2.0 * (centropy(self.row_totals) +
+                      centropy(self.col_totals) -
                       centropy(self.iter_cells()))
 
     def g_corr_left(self):
@@ -180,8 +229,8 @@ class ContingencyTable(object):
         """Returns G-statistic transformed to association measure
 
         This is an ad-hoc measure based on G statistic for conditional
-        independence. The G score (which has a broadly similar distribution
-        properties to that of Chi-square) is transformed to an association
+        independence. The G score (whose distribution is asymptotically
+        equivalent to that of Chi-square) is transformed to an association
         measure using formula given for Phi coefficient of association.
         The transformation should be good enough for most cases but note that
         the resulting index no longer has 1.0 as the maximum value.
@@ -203,7 +252,7 @@ class ContingencyTable(object):
         Here we use sparse dict-based methods to achieve the same result while
         using much less RAM.
 
-        The centropy variables used in the code here are improperly defined
+        The entropy variables used in the code here are improperly defined
         because they ought to be divided by N (the grand total for the
         contigency table). However, numerically it is more efficient not to
         perform the division.
@@ -224,20 +273,23 @@ class ContingencyTable(object):
 
 class ConfMatBinary(ContingencyTable):
     """A binary confusion matrix
+
+    A confusion matrix where the ground truth levels are rows looks like:
+
+        TP  FN
+        FP  TN
+
     """
 
     @classmethod
     def from_cells_ccw(cls, TP, FP, TN, FN):
-        rows = ((TP, FN),
-                (FP, TN))
-        cols = ((TP, FP),
-                (FN, TN))
-        row_totals = (TP + FN, FP + TN)
-        col_totals = (TP + FP, FN + TN)
-        grand_total = TP + FP + TN + FN
-
-        return cls(rows=rows, cols=cols, row_totals=row_totals,
-                   col_totals=col_totals, grand_total=grand_total)
+        return cls(
+            rows=((TP, FN), (FP, TN)),
+            cols=((TP, FP), (FN, TN)),
+            row_totals=(TP + FN, FP + TN),
+            col_totals=(TP + FP, FN + TN),
+            grand_total=(TP + FP + TN + FN)
+        )
 
     @property
     def TP(self):
@@ -350,14 +402,6 @@ class ClusteringMetrics(ContingencyTable):
     A subclass of ContingencyTable that provides four external clustering
     evaluation metrics: homogeneity, completeness, V-measure, and adjusted
     Rand index.
-
-    The motivation behind this implementation was to avoid the high memory
-    usage of equivalent methods in Scikit-Learn. The Scikit-Learn
-    implementations create an incidence matrix for computation
-    of these metrics resulting in O(n^2) memory usage, something that is
-    felt particularly on large data sets and in multiprocessing environment.
-    The given implementation uses sparse methods on dictionary maps instead
-    of building incidence matrices.
     """
 
     def __init__(self, *args, **kwargs):
@@ -398,22 +442,6 @@ class ClusteringMetrics(ContingencyTable):
         Adjusted Rand Index measures overall agreement between two clusterings.
         It is Rand index adjusted for chance, and has the property that
         the resulting metric is independent of cluster size.
-
-        The index has an equivalence to Cohen's Kappa described in [1].
-        Milligan [2] suggests that the two measures (ARI and Kappa) be
-        used in replication studies when relevant.
-
-        References
-        ----------
-
-        [1] Warrens, M. J. On the equivalence of Cohen's Kappa and the
-        Hubert-Arabie Adjusted Rand Index. 2008. J. Classif. 25: 177-183.
-        https://doi.org/10.1007/s00357-008-9023-7
-
-        [2] Milligan, G.W. Clustering validation: results and
-        implications for applied analysis. In Arabie P., de Soete, G. (ed)
-        Clustering and Classification, 1996: 358-369.
-        https://doi.org/10.1142/9789812832153_0010
         """
         return self.confusion_matrix_.kappa()
 
