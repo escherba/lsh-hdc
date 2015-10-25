@@ -4,7 +4,7 @@ from itertools import chain
 from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, entropy_of_counts, \
-    jaccard_similarity, clustering_aul_score
+    jaccard_similarity, clustering_aul_score, ClusteringMetrics
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true
 
@@ -170,18 +170,28 @@ def test_non_consecutive_labels_ari():
     assert_almost_equal(ari_2, 0.24, 2)
 
 
-def test_ir_example():
+def test_IR_example():
     """Test example from IR book by Manning et al.
 
     The example gives 3 clusters and 17 points total. It is described on
     http://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-clustering-1.html
     """
-    ltrue = (1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3)
-    lpred = (1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 3, 3, 2, 3, 3, 3)
-    h, c, v = homogeneity_completeness_v_measure(ltrue, lpred)
-    assert_almost_equal(h, 0.3715, 4)
-    assert_almost_equal(c, 0.3579, 4)
-    assert_almost_equal(v, 0.3646, 4)
+    ltrue = (0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2)
+    lpred = (0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 2, 2, 1, 2, 2, 2)
+    cm = ClusteringMetrics.from_labels(ltrue, lpred)
+
+    # test entropy metrics
+    h, c, v = cm.entropy_metrics()
+    assert_almost_equal(h, 0.371468, 6)
+    assert_almost_equal(c, 0.357908, 6)
+    assert_almost_equal(v, 0.364562, 6)
+
+    # test confusion matrix-based metrics
+    assert_almost_equal(cm.jaccard_coeff(), 0.312500, 6)
+    assert_almost_equal(cm.rand_index(),    0.676471, 6)
+    assert_almost_equal(cm.precision(),     0.500000, 6)
+    assert_almost_equal(cm.recall(),        0.454545, 6)
+    assert_almost_equal(cm.fscore(),        0.476190, 6)
 
 
 def test_adjustment_for_chance():

@@ -55,10 +55,21 @@ def harmonic_mean(x, y):
     """Harmonic mean of two numbers. Returns a float
     """
     # the condition below is only for numeric safety when x and y are small
-    return float(x) if x == y else (2.0 * x * y) / (x + y)
+    return float(x) if x == y else 2.0 * (x * y) / (x + y)
+
+
+def harmonic_mean_weighted(x, y, beta=1.0):
+    """Harmonic mean of two numbers. Returns a float
+    """
+    # the condition below is only for numeric safety when x and y are small
+    beta **= 2.0
+    return float(x) if x == y else (1.0 + beta) * (x * y) / (beta * x + y)
 
 
 class ContingencyTable(object):
+
+    # TODO: use one of Scipy's sparse matrix representations instead of
+    # a dict of dicts
 
     def __init__(self, rows=None, cols=None, row_totals=None, col_totals=None,
                  grand_total=0):
@@ -69,8 +80,9 @@ class ContingencyTable(object):
         self.grand_total = grand_total
 
     def iter_cells(self):
-        return (cell for row in self.rows.itervalues()
-                for cell in row.itervalues())
+        for row in self.rows.itervalues():
+            for cell in row.itervalues():
+                yield cell
 
     def iter_cols(self):
         return self.cols.itervalues()
@@ -90,17 +102,131 @@ class ContingencyTable(object):
         klusters = defaultdict(Counter)
         class_total = Counter()
         kluster_total = Counter()
-        N = 0
+        grand_total = 0
         for c, k in izip(labels_true, labels_pred):
             classes[c][k] += 1
             klusters[k][c] += 1
             class_total[c] += 1
             kluster_total[k] += 1
-            N += 1
-        return cls(classes, klusters, class_total, kluster_total, N)
+            grand_total += 1
+        return cls(rows=classes, cols=klusters, row_totals=class_total,
+                   col_totals=kluster_total, grand_total=grand_total)
+
+
+class ConfMatBinary(object):
+    """A binary confusion matrix
+    """
+
+    def __init__(self, TP, FP, TN, FN):
+        self.TP = TP
+        self.FP = FP
+        self.TN = TN
+        self.FN = FN
+        self.N = TP + FP + TN + FN
+
+    def kappa(self):
+        """Calculate Cohen's kappa of a binary confusion matrix
+        """
+        n_choose_2 = self.N        # (grand_total choose 2)
+        if n_choose_2 == 0:
+            return np.nan
+        sum_n = self.TP            # Sum{(n choose 2) over all cells}
+        sum_a = self.TP + self.FP  # Sum{(n choose 2) over column totals}
+        sum_b = self.TP + self.FN  # Sum{(n choose 2) over row totals}
+
+        sum_a_sum_b__n_choose_2 = (sum_a * sum_b) / n_choose_2
+        numerator = sum_n - sum_a_sum_b__n_choose_2
+        denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b__n_choose_2
+        return numerator / denominator
+
+    def accuracy(self):
+        """Accuracy (also known as Rand Index)
+
+        This is generally the wrong metric to use. You probably want either
+        precision, recall, F-score, or a chance-corrected version of accuracy
+        known as Cohen's kappa (see kappa() method).
+        """
+        denominator = self.N
+        return np.nan if denominator == 0 else float(self.TP + self.TN) / denominator
+
+    def precision(self):
+        """Calculate precision from the pairwise confusion matrix
+        """
+        denominator = self.TP + self.FP
+        return np.nan if denominator == 0 else float(self.TP) / denominator
+
+    def recall(self):
+        """Calculate recall from the pairwise confusion matrix
+        """
+        denominator = self.TP + self.FN
+        return np.nan if denominator == 0 else float(self.TP) / denominator
+
+    def fscore(self, beta=1.0):
+        """Calculate F-score from the pairwise confusion metric
+
+        As beta tends to infinity, F-score will approach recall
+        As beta tends to zero, F-score will approach precision
+        """
+        return harmonic_mean_weighted(self.precision(), self.recall(), beta)
+
+    def jaccard_coeff(self):
+        """Calculate Jaccard coefficient of clustering performance
+
+        This metric is similar to accuracy except it ignores true negatives
+        (of which there can be very many)
+        """
+        denominator = self.TP + self.FP + self.FN
+        return np.nan if denominator == 0 else float(self.TP) / denominator
 
 
 class ClusteringMetrics(ContingencyTable):
+
+    """Provides external clustering evaluation metrics
+
+    A subclass of ContingencyTable that provides four external clustering
+    evaluation metrics: homogeneity, completeness, V-measure, and adjusted
+    Rand index.
+
+    The motivation behind this implementation was to avoid the high memory
+    usage of equivalent methods in Scikit-Learn. The Scikit-Learn
+    implementations create an incidence matrix for computation
+    of these metrics resulting in O(n^2) memory usage, something that is
+    felt particularly on large data sets and in multiprocessing environment.
+    The given implementation uses sparse methods on dictionary maps instead
+    of building incidence matrices.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(ClusteringMetrics, self).__init__(*args, **kwargs)
+        self.confusion_matrix_ = self.confusion_matrix()
+
+    def precision(self):
+        return self.confusion_matrix_.precision()
+
+    def recall(self):
+        return self.confusion_matrix_.recall()
+
+    def fscore(self, beta=1.0):
+        return self.confusion_matrix_.fscore(beta)
+
+    def rand_index(self):
+        return self.confusion_matrix_.accuracy()
+
+    def jaccard_coeff(self):
+        return self.confusion_matrix_.jaccard_coeff()
+
+    def confusion_matrix(self):
+        """Calculate a binary confusion matrix from object pair distribution
+
+        Order of objects returned: TP, FP, TN, FN
+        """
+        TP_plus_FP = sum(binom(a, 2) for a in self.iter_col_totals())
+        TP_plus_FN = sum(binom(b, 2) for b in self.iter_row_totals())
+        TP = sum(binom(cell, 2) for cell in self.iter_cells())
+        FP = TP_plus_FP - TP
+        FN = TP_plus_FN - TP
+        TN = binom(self.grand_total, 2) - TP - FP - FN
+        return ConfMatBinary(TP, FP, TN, FN)
 
     def entropy_metrics(self):
         """Calculate three entropy metrics used for clustering evaluation
@@ -136,20 +262,27 @@ class ClusteringMetrics(ContingencyTable):
     def adjusted_rand_index(self):
         """Calculate Adjusted Rand Index in a memory-efficient way
 
-        Adjusted Rand index is Rand index adjusted for chance, which makes
-        the resulting measure independent of cluster size.
+        Adjusted Rand Index measures overall agreement between two clusterings.
+        It is Rand index adjusted for chance, and has the property that
+        the resulting metric is independent of cluster size.
+
+        The index has an equivalence to Cohen's Kappa described in [1].
+        Milligan [2] suggests that the two measures (ARI and Kappa) be
+        used in replication studies when relevant.
+
+        References
+        ----------
+
+        [1] Warrens, M. J. On the equivalence of Cohen's Kappa and the
+        Hubert-Arabie Adjusted Rand Index. 2008. J. Classif. 25: 177-183.
+        https://doi.org/10.1007/s00357-008-9023-7
+
+        [2] Milligan, G.W. Clustering validation: results and
+        implications for applied analysis. In Arabie P., de Soete, G. (ed)
+        Clustering and Classification, 1996: 358-369.
+        https://doi.org/10.1142/9789812832153_0010
         """
-        N = self.grand_total
-        if N <= 1:
-            return np.nan
-        sum_n = sum(binom(cell, 2) for cell in self.iter_cells())
-        sum_a = sum(binom(a, 2) for a in self.iter_col_totals())
-        sum_b = sum(binom(b, 2) for b in self.iter_row_totals())
-        n_choose_2 = float(binom(N, 2))
-        sum_a_sum_b__n_choose_2 = (sum_a / n_choose_2) * sum_b
-        numerator = sum_n - sum_a_sum_b__n_choose_2
-        denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b__n_choose_2
-        return numerator / denominator
+        return self.confusion_matrix_.kappa()
 
 
 def homogeneity_completeness_v_measure(labels_true, labels_pred):
@@ -247,7 +380,7 @@ def roc_auc_score(y_true, y_score, sample_weight=None):
     return RocCurve.from_binary(y_true, y_score).auc_score()
 
 
-def _plot_lift(xs, ys):
+def _plot_lift(xs, ys):  # pragma: no cover
     """Shortcut to plot a lift chart (for clustering_aul_score debugging)
     """
     from matplotlib import pyplot

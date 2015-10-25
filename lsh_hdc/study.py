@@ -1,3 +1,11 @@
+"""
+Simulation-generated data can provide an external criterion to validate
+clustering methods. This module contains a set of command-line tools for
+performing simulations, clustering their output, and producing analaysis
+reports.
+"""
+
+
 import random
 import os
 import sys
