@@ -478,10 +478,10 @@ class ConfMatBinary(ContingencyTable):
             self.disequilibrium(),
             sqrt(reduce(mul, chain(self.row_totals, self.col_totals))))
 
-    def mutinf_metrics(self):
+    def mutinf_signed(self):
         """Assigns a sign to mututal information-based metrics
         """
-        info, mark, corr = super(ConfMatBinary, self).mutinf_metrics()
+        info, mark, corr = self.mutinf_metrics()
         sgn = copysign(1, self.disequilibrium())
         return (sgn * info, sgn * mark, sgn * corr)
 

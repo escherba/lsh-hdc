@@ -368,7 +368,7 @@ def add_incidence_metrics(args, clusters, pairs):
                 pairs.append(('markedness', conf.markedness()))
 
             if (set(MI_CORR_METRICS) & set(args_metrics)):
-                pairs.extend(zip(MI_CORR_METRICS, conf.mutinf_metrics()))
+                pairs.extend(zip(MI_CORR_METRICS, conf.mutinf_signed()))
 
             # coefficients below are not corrected for chance
             if 'accuracy' in args_metrics:

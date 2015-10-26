@@ -252,7 +252,7 @@ def test_twoway_confusion_ll():
     """
     cm = ConfMatBinary.from_tuple_ccw(4758, 8840, 76, 30)
     assert_almost_equal(cm.g_score(),       2.14, 2)
-    mi_info, mi_mark, mi_corr = cm.mutinf_metrics()
+    mi_info, mi_mark, mi_corr = cm.mutinf_signed()
     assert_almost_equal(mi_corr,            0.0150, 4)
     assert_almost_equal(mi_info,            0.0110, 4)
     assert_almost_equal(mi_mark,            0.0415, 4)
@@ -268,7 +268,7 @@ def test_negative_correlation():
     """
     cm = ConfMatBinary.from_tuple_ccw(10, 120, 8, 300)
     assert_almost_equal(cm.g_score(),        384.52, 2)
-    mi_info, mi_mark, mi_corr = cm.mutinf_metrics()
+    mi_info, mi_mark, mi_corr = cm.mutinf_signed()
     assert_almost_equal(mi_corr,            -0.8510, 4)
     assert_almost_equal(mi_info,            -0.8524, 4)
     assert_almost_equal(mi_mark,            -0.8496, 4)
