@@ -5,7 +5,7 @@
 METRICS := \
 	homogeneity completeness nmi_score \
 	adj_rand_score \
-	g_info g_mark g_corr \
+	mi_info mi_mark mi_corr \
 	informedness markedness matthews_corr \
 	conf_homogeneity conf_completeness conf_nmi_score \
 	roc_max_info aul_score roc_auc \

@@ -250,12 +250,12 @@ def test_twoway_confusion_ll():
     """Example from McDonald's G-test for independence
     http://www.biostathandbook.com/gtestind.html
     """
-    cm = ConfMatBinary.from_cells_ccw(4758, 8840, 76, 30)
+    cm = ConfMatBinary.from_tuple_ccw(4758, 8840, 76, 30)
     assert_almost_equal(cm.g_score(),       2.14, 2)
-    g_info, g_mark, g_corr = cm.g_corr_metrics()
-    assert_almost_equal(g_corr,             0.0214, 4)
-    assert_almost_equal(g_info,             0.0110, 4)
-    assert_almost_equal(g_mark,             0.0415, 4)
+    mi_info, mi_mark, mi_corr = cm.mutinf_metrics()
+    assert_almost_equal(mi_corr,            0.0214, 4)
+    assert_almost_equal(mi_info,            0.0110, 4)
+    assert_almost_equal(mi_mark,            0.0415, 4)
     assert_almost_equal(cm.chisq_score(),   2.07, 2)
     assert_almost_equal(cm.matthews_corr(), 0.0123, 4)
     assert_almost_equal(cm.informedness(),  0.0023, 4)
@@ -266,12 +266,12 @@ def test_twoway_confusion_ll():
 def test_negative_correlation():
     """Some metrics should have negative sign
     """
-    cm = ConfMatBinary.from_cells_ccw(10, 120, 8, 300)
+    cm = ConfMatBinary.from_tuple_ccw(10, 120, 8, 300)
     assert_almost_equal(cm.g_score(),        384.52, 2)
-    g_info, g_mark, g_corr = cm.g_corr_metrics()
-    assert_almost_equal(g_corr,              0.8510, 4)
-    assert_almost_equal(g_info,              0.8524, 4)
-    assert_almost_equal(g_mark,              0.8496, 4)
+    mi_info, mi_mark, mi_corr = cm.mutinf_metrics()
+    assert_almost_equal(mi_corr,            -0.8510, 4)
+    assert_almost_equal(mi_info,            -0.8524, 4)
+    assert_almost_equal(mi_mark,            -0.8496, 4)
     assert_almost_equal(cm.chisq_score(),    355.70, 2)
     assert_almost_equal(cm.matthews_corr(), -0.9012, 4)
     assert_almost_equal(cm.informedness(),  -0.9052, 4)
@@ -283,27 +283,27 @@ def test_negative_correlation():
 
 
 def test_twoway_confusion_phi():
-    cm = ConfMatBinary.from_cells_ccw(116, 21, 18, 21)
+    cm = ConfMatBinary.from_tuple_ccw(116, 21, 18, 21)
     assert_almost_equal(cm.matthews_corr(), 0.31, 2)
     assert_almost_equal(cm.yule_coeff(), 0.65, 2)
-    cm = ConfMatBinary.from_cells_ccw(0, 0, 0, 0)
+    cm = ConfMatBinary.from_tuple_ccw(0, 0, 0, 0)
     assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.chisq_score()))
     assert_true(np.isnan(cm.yule_coeff()))
-    cm = ConfMatBinary.from_cells_ccw(35, 60, 41, 9)
+    cm = ConfMatBinary.from_tuple_ccw(35, 60, 41, 9)
     assert_almost_equal(cm.chisq_score(), 5.50, 2)
 
 
 def test_kappa_precalculated():
     # from literature
-    cm = ConfMatBinary.from_cells_ccw(22, 4, 11, 2)
+    cm = ConfMatBinary.from_tuple_ccw(22, 4, 11, 2)
     assert_almost_equal(cm.kappa(), 0.67, 2)
-    cm = ConfMatBinary.from_cells_ccw(147, 10, 62, 3)
+    cm = ConfMatBinary.from_tuple_ccw(147, 10, 62, 3)
     assert_almost_equal(cm.kappa(), 0.86, 2)
     # numeric stability cases
-    cm = ConfMatBinary.from_cells_ccw(69, 1, 3, 11)
+    cm = ConfMatBinary.from_tuple_ccw(69, 1, 3, 11)
     assert_almost_equal(cm.kappa(), 0.280000, 6)
-    cm = ConfMatBinary.from_cells_ccw(1, 2, 96, 5)
+    cm = ConfMatBinary.from_tuple_ccw(1, 2, 96, 5)
     assert_almost_equal(cm.kappa(), 0.191111, 6)
 
 
@@ -311,5 +311,5 @@ def test_kappa_compare():
     for _ in range(100):
         # sample 100 random 2x2 matrices
         sample = random.sample(range(0, 1000), 4)
-        cm = ConfMatBinary.from_cells_ccw(*sample)
+        cm = ConfMatBinary.from_tuple_ccw(*sample)
         assert_almost_equal(_kappa(*sample), cm.kappa(), 4)

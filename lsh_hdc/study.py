@@ -301,7 +301,7 @@ def do_simulation(args):
 BENCHMARKS = ['time_cpu']
 
 ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
-G_CORR_METRICS = ['g_info', 'g_mark', 'g_corr']
+G_CORR_METRICS = ['mi_info', 'mi_mark', 'mi_corr']
 CONF_ENTROPY_METRICS = ['conf_' + m for m in ENTROPY_METRICS]
 CONFUSION_METRICS = [
     # best
@@ -330,9 +330,9 @@ LEGEND_METRIC_KWARGS = {
     'matthews_corr': dict(loc='lower right'),
     'informedness': dict(loc='lower right'),
     'markedness': dict(loc='lower right'),
-    'g_corr': dict(loc='lower right'),
-    'g_mark': dict(loc='lower right'),
-    'g_info': dict(loc='lower right'),
+    'mi_corr': dict(loc='lower right'),
+    'mi_mark': dict(loc='lower right'),
+    'mi_info': dict(loc='lower right'),
     'time_wall': dict(loc='upper left'),
     'time_cpu': dict(loc='upper left'),
 }
@@ -369,7 +369,7 @@ def add_incidence_metrics(args, clusters, pairs):
                 pairs.append(('markedness', conf.markedness()))
 
             if (set(G_CORR_METRICS) & set(args_metrics)):
-                pairs.extend(zip(G_CORR_METRICS, conf.g_corr_metrics()))
+                pairs.extend(zip(G_CORR_METRICS, conf.mutinf_metrics()))
 
             # coefficients below are not corrected for chance
             if 'accuracy' in args_metrics:
