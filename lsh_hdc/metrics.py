@@ -363,11 +363,17 @@ class ConfMatBinary(ContingencyTable):
 
     def informedness(self):
         """Informedness = Sensitivity + Specificity - 1
+
+        Informedness can be thought of as renormalization of recall after
+        correcting for chance.
         """
         return self.sensitivity() + self.specificity() - 1.0
 
     def markedness(self):
         """Markedness = Precision + NPV - 1
+
+        Informedness can be thought of as renormalization of precision after
+        correcting for chance.
         """
         return self.precision() + self.neg_pred_val() - 1.0
 
@@ -585,7 +591,7 @@ class RocCurve(object):
         return tpr - fpr
 
     def max_informedness(self):
-        """Calculates Maximum DeltaP value Informedness (Youden's Index)
+        """Calculates maximum value of Informedness (Youden's Index)
         https://en.wikipedia.org/wiki/Youden%27s_J_statistic
         """
         return self.optimal_cutoff(self._informedness)[1]

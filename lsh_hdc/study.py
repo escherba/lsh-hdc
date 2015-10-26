@@ -325,7 +325,14 @@ LEGEND_METRIC_KWARGS = {
     'roc_auc': dict(loc='lower right'),
     'roc_max_info': dict(loc='lower right'),
     'aul_score': dict(loc='lower right'),
+    'accuracy': dict(loc='lower right'),
     'adj_rand_score': dict(loc='lower right'),
+    'matthews_corr': dict(loc='lower right'),
+    'informedness': dict(loc='lower right'),
+    'markedness': dict(loc='lower right'),
+    'g_corr': dict(loc='lower right'),
+    'g_corr_col': dict(loc='lower right'),
+    'g_corr_row': dict(loc='lower right'),
     'time_wall': dict(loc='upper left'),
     'time_cpu': dict(loc='upper left'),
 }
@@ -489,7 +496,7 @@ def do_summa(args):
     obj = ndjson2col(read_json_lines(args.input))
     df = pd.DataFrame.from_dict(obj)
     subset = create_df_subset(
-        df, [args.group_by, args.x_axis, args.trial] + METRICS)
+        df, [args.group_by, args.x_axis, args.trial] + args.metrics)
     csv_path = os.path.join(args.output, "summary.csv")
     logging.info("Writing brief summary to %s", csv_path)
     subset.to_csv(csv_path)
