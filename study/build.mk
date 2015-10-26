@@ -2,7 +2,7 @@
 .SUFFIXES:
 
 # Experiment-independent defaults
-STUDY_ARGS := --sim_size 100000 --metrics nmi_score adj_rand_score aul_score roc_auc roc_max_info time_cpu
+STUDY_ARGS := --sim_size 100000 --metrics nmi_score adj_rand_score aul_score roc_auc roc_max_info g_corr_row g_corr_col matthews_corr informedness markedness conf_nmi_score time_cpu
 TRIAL_FIELD := seed
 TRIALS := $(shell seq 10 15)
 

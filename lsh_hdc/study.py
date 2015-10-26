@@ -300,10 +300,19 @@ def do_simulation(args):
 
 BENCHMARKS = ['time_cpu']
 
-CONFUSION_METRICS = ['adj_rand_score',
-                     'yule_coeff', 'g_corr', 'g_corr_left', 'matthews_corr',
-                     'jaccard_coeff', 'fscore', 'accuracy']
 ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
+CONF_ENTROPY_METRICS = ['conf_' + m for m in ENTROPY_METRICS]
+CONFUSION_METRICS = [
+    # best
+    'adj_rand_score',
+    'g_corr', 'g_corr_row', 'g_corr_col',
+    'matthews_corr', 'informedness', 'markedness',
+    # ok
+    'yule_coeff', 'accuracy',
+    # not good
+    'jaccard_coeff', 'fscore'
+] + CONF_ENTROPY_METRICS
+
 INCIDENCE_METRICS = CONFUSION_METRICS + ENTROPY_METRICS
 
 ROC_METRICS = ['roc_max_info', 'roc_auc']
@@ -327,28 +336,49 @@ def add_incidence_metrics(args, clusters, pairs):
     """
     args_metrics = INCIDENCE_METRICS  # args.metrics
     if (set(INCIDENCE_METRICS) & set(args_metrics)):
+
         from lsh_hdc.metrics import ClusteringMetrics
         cm = ClusteringMetrics.from_labels(*clusters_to_labels(clusters))
+
         if (set(ENTROPY_METRICS) & set(args_metrics)):
             pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
+
         if (set(CONFUSION_METRICS) & set(args_metrics)):
             conf = cm.confusion_matrix_
+
+            # the coefficients below are arguably the best
+
+            if (set(CONF_ENTROPY_METRICS) & set(args_metrics)):
+                pairs.extend(zip(CONF_ENTROPY_METRICS, conf.entropy_metrics()))
+
             if 'adj_rand_score' in args_metrics:
-                pairs.append(('adj_rand_score', cm.adjusted_rand_index()))
-            if 'yule_coeff' in args_metrics:
-                pairs.append(('yule_coeff', conf.yule_coeff()))
-            if 'g_corr' in args_metrics:
-                pairs.append(('g_corr', conf.g_corr()))
-            if 'g_corr_left' in args_metrics:
-                pairs.append(('g_corr_left', conf.g_corr_left()))
+                pairs.append(('adj_rand_score', conf.kappa()))
+
             if 'matthews_corr' in args_metrics:
                 pairs.append(('matthews_corr', conf.matthews_corr()))
-            if 'jaccard_coeff' in args_metrics:
-                pairs.append(('jaccard_coeff', conf.jaccard_coeff()))
-            if 'fscore' in args_metrics:
-                pairs.append(('fscore', conf.fscore()))
+            if 'informedness' in args_metrics:
+                pairs.append(('informedness', conf.informedness()))
+            if 'markedness' in args_metrics:
+                pairs.append(('markedness', conf.markedness()))
+
+            if 'g_corr' in args_metrics:
+                pairs.append(('g_corr', conf.g_corr()))
+            if 'g_corr_row' in args_metrics:
+                pairs.append(('g_corr_row', conf.g_corr_row()))
+            if 'g_corr_col' in args_metrics:
+                pairs.append(('g_corr_col', conf.g_corr_col()))
+
+            # coefficients below are not corrected for chance
             if 'accuracy' in args_metrics:
                 pairs.append(('accuracy', conf.accuracy()))
+            if 'yule_coeff' in args_metrics:
+                pairs.append(('yule_coeff', conf.yule_coeff()))
+
+            # coefficients below don't consider true negatives
+            if 'fscore' in args_metrics:
+                pairs.append(('fscore', conf.fscore()))
+            if 'jaccard_coeff' in args_metrics:
+                pairs.append(('jaccard_coeff', conf.jaccard_coeff()))
 
 
 def add_roc_metrics(args, clusters, pairs):

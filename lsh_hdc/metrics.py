@@ -80,10 +80,10 @@ http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html
 """
 
 import numpy as np
-from math import log as logn, sqrt
+from math import log as logn, sqrt, copysign
 from collections import defaultdict, Counter, Mapping, Set
 from itertools import izip, chain
-from operator import mul, itemgetter
+from operator import itemgetter, mul
 from scipy.special import binom
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples, iter_items, iter_vals
@@ -132,6 +132,15 @@ def centropy(counts):
             n += c
             sum_c_logn_c += c * logn(c)
     return 0.0 if n == 0 else n * logn(n) - sum_c_logn_c
+
+
+def geometric_mean(x, y):
+    """Geometric mean of two numbers
+
+    Although geometric mean is defined for negative numbers, Scipy function
+    doesn't allow it... sigh
+    """
+    return copysign(1, x) * sqrt(x * y)
 
 
 def harmonic_mean(x, y):
@@ -233,35 +242,28 @@ class ContingencyTable(object):
                       centropy(self.col_totals) -
                       centropy(self.iter_cells()))
 
-    def g_corr_left(self):
-        """A transformation of G-score for fixed left margin tables
+    def g_corr_row(self):
+        """Log-likelihood correlation coefficient for fixed row margin tables
 
         Divides G-score by the maximum value it could achieve if row counts
-        were fixed
+        were fixed.
         """
         max_achievable = max(0.0, 2.0 * centropy(self.row_totals))
         return sqrt(max(0.0, self.g_score()) / max_achievable)
 
-    def g_corr_right(self):
-        """A transformation of G-score for fixed right margin tables
+    def g_corr_col(self):
+        """Log-likelihood correlation coefficient for fixed column margin tables
 
         Divides G-score by the maximum value it could achieve if column counts
-        were fixed
+        were fixed.
         """
         max_achievable = max(0.0, 2.0 * centropy(self.col_totals))
         return sqrt(max(0.0, self.g_score()) / max_achievable)
 
     def g_corr(self):
-        """Returns G-statistic transformed to association measure
-
-        This is an ad-hoc measure based on G statistic for conditional
-        independence. The G score (whose distribution is asymptotically
-        equivalent to that of Chi-square) is transformed to an association
-        measure using formula given for Phi coefficient of association.
-        The transformation should be good enough for most cases but note that
-        the resulting index no longer has 1.0 as the maximum value.
+        """A correlation coefficient defined after G statistic
         """
-        return sqrt(max(0.0, self.g_score()) / self.grand_total)
+        return geometric_mean(self.g_corr_row(), self.g_corr_col())
 
     def entropy_metrics(self):
         """Calculate three centropy metrics used for clustering evaluation
@@ -355,6 +357,32 @@ class ConfMatBinary(ContingencyTable):
         denominator = self.TP + self.FN
         return np.nan if denominator == 0 else float(self.TP) / denominator
 
+    sensitivity = recall
+
+    def specificity(self):
+        """Specificity (or True Negative Rate)
+        """
+        denominator = self.FP + self.TN
+        return np.nan if denominator == 0 else float(self.TN) / denominator
+
+    def informedness(self):
+        """Informedness = Sensitivity + Specificity - 1
+        """
+        return self.sensitivity() + self.specificity() - 1.0
+
+    def markedness(self):
+        """Markedness = Precision + NPV - 1
+        """
+        return self.precision() + self.neg_pred_val() - 1.0
+
+    pos_pred_val = precision
+
+    def neg_pred_val(self):
+        """Negative predictive value
+        """
+        denominator = self.TN + self.FN
+        return np.nan if denominator == 0 else float(self.TN) / denominator
+
     def fscore(self, beta=1.0):
         """Calculate F-score from the pairwise confusion metric
 
@@ -407,9 +435,15 @@ class ConfMatBinary(ContingencyTable):
         Note that MCC is directly related to Chi-square statitstic on a 2x2
         contingency table. Some studies (TODO: find references) report this
         metric to be less biased than Cohen's kappa.
+
+        Matthews coefficient is a geometric mean of informedness and
+        markedness (the regression coefficients of the problem and its
+        dual).
         """
-        N = self.grand_total
-        return np.nan if N == 0 else sqrt(self.chisq_score() / N)
+        denominator = reduce(mul, chain(self.iter_row_totals(),
+                                        self.iter_col_totals()))
+        numerator = self.TP * self.TN - self.FP * self.FN
+        return np.nan if denominator == 0 else numerator / sqrt(denominator)
 
     def yule_coeff(self):
         """

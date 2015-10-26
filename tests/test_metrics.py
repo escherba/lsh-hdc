@@ -5,7 +5,7 @@ from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
     jaccard_similarity, clustering_aul_score, ClusteringMetrics, \
-    ConfMatBinary
+    ConfMatBinary, geometric_mean, harmonic_mean
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true
 
@@ -204,6 +204,9 @@ def test_IR_example():
     assert_almost_equal(cm.precision(),     0.500000, 6)
     assert_almost_equal(cm.recall(),        0.454545, 6)
     assert_almost_equal(cm.fscore(),        0.476190, 6)
+    prec, recall = cm.precision(), cm.recall()
+    expected_f = harmonic_mean(prec, recall)
+    assert_almost_equal(expected_f, cm.fscore(), 6)
 
 
 def test_adjustment_for_chance():
@@ -248,8 +251,31 @@ def test_twoway_confusion_ll():
     http://www.biostathandbook.com/gtestind.html
     """
     cm = ConfMatBinary.from_cells_ccw(4758, 8840, 76, 30)
-    assert_almost_equal(cm.g_score(), 2.14, 2)
-    assert_almost_equal(cm.g_corr(), 0.0125, 4)
+    assert_almost_equal(cm.g_score(),       2.14, 2)
+    assert_almost_equal(cm.g_corr_row(),    0.0110, 4)
+    assert_almost_equal(cm.g_corr_col(),    0.0415, 4)
+    assert_almost_equal(cm.chisq_score(),   2.07, 2)
+    assert_almost_equal(cm.matthews_corr(), 0.0123, 4)
+    assert_almost_equal(cm.informedness(),  0.0023, 4)
+    assert_almost_equal(cm.markedness(),    0.0669, 4)
+    assert_almost_equal(cm.kappa(),         0.0016, 4)
+
+
+def test_negative_correlation():
+    """Some metrics should have negative sign
+    """
+    cm = ConfMatBinary.from_cells_ccw(10, 120, 8, 300)
+    assert_almost_equal(cm.g_score(),        384.52, 2)
+    assert_almost_equal(cm.g_corr_row(),     0.8524, 4)
+    assert_almost_equal(cm.g_corr_col(),     0.8496, 4)
+    assert_almost_equal(cm.chisq_score(),    355.70, 2)
+    assert_almost_equal(cm.matthews_corr(), -0.9012, 4)
+    assert_almost_equal(cm.informedness(),  -0.9052, 4)
+    assert_almost_equal(cm.markedness(),    -0.8971, 4)
+    assert_almost_equal(cm.kappa(),         -0.6407, 4)
+    inform, marked = cm.informedness(), cm.markedness()
+    expected_matt = geometric_mean(inform, marked)
+    assert_almost_equal(expected_matt, cm.matthews_corr(), 6)
 
 
 def test_twoway_confusion_phi():
