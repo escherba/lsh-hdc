@@ -32,7 +32,8 @@ ConfMatCCW(TP=3.0, FP=24.0, TN=49.0, FN=29.0)
 
 Thridly, an attempt is made to provide a mutual information-based set of
 correlation coefficients that can serve as an alternative to Cohen's Kappa
-or MCC.
+or MCC. The coefficient is similar to the one described in [0], however it is
+normalized to its maximum value and decomposed into two regression components.
 
 
 Why G-score
@@ -79,19 +80,22 @@ choose ahead of time how many galaxies there are near ours.
 References
 ----------
 
-[1] Warrens, M. J. On the equivalence of Cohen's Kappa and the Hubert-Arabie
-Adjusted Rand Index. 2008. J. Classif. 25: 177-183.
+[0] Hasenclever, D., & Scholz, M. (2013). Comparing measures of association in
+2x2 probability tables. arXiv preprint arXiv:1302.6161.
+http://arxiv.org/pdf/1302.6161v1.pdf
+
+[1] Warrens, M. J. (2008). On the equivalence of Cohen's kappa and the
+Hubert-Arabie adjusted Rand index. Journal of Classification, 25(2), 177-183.
 https://doi.org/10.1007/s00357-008-9023-7
 
-[2] Milligan, G.W. Clustering validation: results and implications for applied
-analysis. In Arabie P., de Soete, G. (ed) Clustering and Classification, 1996:
-358-369.  https://doi.org/10.1142/9789812832153_0010
+[2] Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering validation:
+results and implications for applied analyses (p. 341). World Scientific Pub Co
+Inc.  Chicago	https://doi.org/10.1142/9789812832153_0010
 
-[3] Sokal, R.R. Rohlf, F.J. Biometry. W.H. Freeman & Co. New York, 2012.  4th
-ed. pp 742-744.
+[3] Sokal, R. R., & Rohlf, F. J. (2012). Biometry (4th edn). pp 742-744.
 
-[4] Dunning, T. Accurate methods for the statisitcs of surprise and coincidence.
-1993. Computational Linguistics 19 (1). 61-74.
+[4] Dunning, T. (1993). Accurate methods for the statistics of surprise and
+coincidence. Computational linguistics, 19(1), 61-74.
 http://dl.acm.org/citation.cfm?id=972454
 
 [5] Ted Dunning's personal blog
