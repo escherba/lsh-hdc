@@ -300,9 +300,12 @@ def do_simulation(args):
 
 BENCHMARKS = ['time_cpu']
 
+# square of mutual entropy correlation coefficients (for RxC matrices)
 ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
-G_CORR_METRICS = ['mi_info', 'mi_mark', 'mi_corr']
-CONF_ENTROPY_METRICS = ['conf_' + m for m in ENTROPY_METRICS]
+
+# mutual information correlation coefficients (for 2x2 matrices)
+MI_CORR_METRICS = ['mi_info', 'mi_mark', 'mi_corr']
+
 CONFUSION_METRICS = [
     # best
     'adj_rand_score',
@@ -311,7 +314,7 @@ CONFUSION_METRICS = [
     'yule_coeff', 'accuracy',
     # not good
     'jaccard_coeff', 'fscore'
-] + CONF_ENTROPY_METRICS + G_CORR_METRICS
+] + MI_CORR_METRICS
 
 INCIDENCE_METRICS = CONFUSION_METRICS + ENTROPY_METRICS
 
@@ -354,10 +357,6 @@ def add_incidence_metrics(args, clusters, pairs):
             conf = cm.confusion_matrix_
 
             # the coefficients below are arguably the best
-
-            if (set(CONF_ENTROPY_METRICS) & set(args_metrics)):
-                pairs.extend(zip(CONF_ENTROPY_METRICS, conf.entropy_metrics()))
-
             if 'adj_rand_score' in args_metrics:
                 pairs.append(('adj_rand_score', conf.kappa()))
 
@@ -368,8 +367,8 @@ def add_incidence_metrics(args, clusters, pairs):
             if 'markedness' in args_metrics:
                 pairs.append(('markedness', conf.markedness()))
 
-            if (set(G_CORR_METRICS) & set(args_metrics)):
-                pairs.extend(zip(G_CORR_METRICS, conf.mutinf_metrics()))
+            if (set(MI_CORR_METRICS) & set(args_metrics)):
+                pairs.extend(zip(MI_CORR_METRICS, conf.mutinf_metrics()))
 
             # coefficients below are not corrected for chance
             if 'accuracy' in args_metrics:

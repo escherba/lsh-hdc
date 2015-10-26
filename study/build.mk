@@ -7,7 +7,6 @@ METRICS := \
 	adj_rand_score \
 	mi_info mi_mark mi_corr \
 	informedness markedness matthews_corr \
-	conf_homogeneity conf_completeness conf_nmi_score \
 	roc_max_info aul_score roc_auc \
 	time_cpu
 

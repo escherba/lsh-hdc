@@ -256,8 +256,15 @@ class ContingencyTable(object):
             score += (observed - expected) ** 2.0 / expected
         return score
 
+    def mutual_information(self):
+        """Mutual information for expected vs actual contingency table
+        """
+        return (centropy(self.row_totals) +
+                centropy(self.col_totals) -
+                centropy(self.iter_cells()))
+
     def g_score(self):
-        """Returns G-statistic for a 2x2 table
+        """Returns G-statistic for RxC contingency table
 
         Note that this doesn't calculate any corrections to this statistic
         (e.g. Williams', Yates' corrections).
@@ -267,12 +274,10 @@ class ContingencyTable(object):
         the differnce between the information in the table and the
         information in an independent table with the same marginals.
         """
-        return 2.0 * (centropy(self.row_totals) +
-                      centropy(self.col_totals) -
-                      centropy(self.iter_cells()))
+        return 2.0 * self.mutual_information()
 
     def mutinf_metrics(self):
-        """A correlation coefficient defined after G statistic
+        """Metrics based on mutual information
 
         The coefficient decomposes into regression coefficients defined
         according to fixed-margin tables. The `mi_info` coefficient, for
@@ -285,13 +290,8 @@ class ContingencyTable(object):
         Note that G scores directly correspond to mutual information of
         a contingency table.
         """
-        g_score = max(0.0, self.g_score())  # ensure non-negative
-        max_info = max(0.0, 2.0 * centropy(self.row_totals))
-        max_mark = max(0.0, 2.0 * centropy(self.col_totals))
-        info = sqrt(max(0.0, g_score) / max_info)
-        mark = sqrt(max(0.0, g_score) / max_mark)
-        corr = geometric_mean(info, mark)
-        return info, mark, corr
+        h, c, rsquare = self.entropy_metrics()
+        return sqrt(h), sqrt(c), sqrt(rsquare)
 
     def entropy_metrics(self):
         """Calculate three centropy metrics used for clustering evaluation
@@ -315,16 +315,14 @@ class ContingencyTable(object):
 
         For a symmetric matrix, all three scores should be the same.
         """
-        H_C = centropy(self.row_totals)
-        H_K = centropy(self.col_totals)
-        H_CK = sum(centropy(col) for col in self.iter_cols())
-        H_KC = sum(centropy(row) for row in self.iter_rows())
-        # The '<=' comparisons below both prevent division by zero errors
-        # and ensure that the scores are non-negative.
-        homogeneity = 0.0 if H_C <= H_CK else (H_C - H_CK) / H_C
-        completeness = 0.0 if H_K <= H_KC else (H_K - H_KC) / H_K
-        nmi_score = harmonic_mean(homogeneity, completeness)
-        return homogeneity, completeness, nmi_score
+        # ensure non-negative values by taking max of 0 and given value
+        mut_info = max(0.0, self.mutual_information())
+        max_h = max(0.0, centropy(self.row_totals))
+        max_c = max(0.0, centropy(self.col_totals))
+        h = 0.0 if max_h == 0.0 else mut_info / max_h
+        c = 0.0 if max_c == 0.0 else mut_info / max_c
+        rsquare = harmonic_mean(h, c)
+        return h, c, rsquare
 
 
 confmatccw_type = namedtuple("ConfMatCCW", "TP FP TN FN")

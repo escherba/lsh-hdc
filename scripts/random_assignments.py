@@ -1,5 +1,7 @@
+import numpy as np
 import random
 from lsh_hdc.metrics import ClusteringMetrics
+from matplotlib import pyplot as plt
 
 
 class Grid(object):
@@ -28,7 +30,7 @@ class Grid(object):
             clusters = self.draw_sample(population, size)
             grid.append((classes, clusters))
 
-    def test_scoring(self, score='matthews_corr', minimum=True):
+    def best_score(self, score='matthews_corr', minimum=True):
         best_index = -1
         if minimum:
             direction = 1
@@ -45,3 +47,22 @@ class Grid(object):
                 best_index = idx
                 curr_score = new_score
         return (best_index, curr_score)
+
+    def get_scores(self, score='matthews_corr', dim=1):
+        arr1 = np.empty((self.n, dim), dtype=np.float32)
+        for idx, labels in enumerate(self.grid):
+            cm = ClusteringMetrics.from_labels(*labels)
+            conf = cm.confusion_matrix_
+            arr1[idx, :] = getattr(conf, score)()
+        return arr1
+
+    def scatter(self, xs, ys, xlim=None, ylim=None, title=None):
+        fig, ax = plt.subplots()
+        ax.scatter(xs, ys, marker='.', s=1)
+        if xlim is not None:
+            ax.set_xlim(xlim)
+        if ylim is not None:
+            ax.set_xlim(ylim)
+        if title is not None:
+            ax.set_title(title)
+        fig.show()
