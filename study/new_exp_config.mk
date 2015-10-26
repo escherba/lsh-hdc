@@ -1,4 +1,4 @@
-EXPERIMENT_ARGS := --sim_size 100000 --doc_len_mean 12 --p_err 0.2
+EXPERIMENT_ARGS := --doc_len_mean 12 --p_err 0.2
 
 GROUP_FIELD := shingle_skip
 GROUPS := 0 1 2
@@ -13,7 +13,7 @@ PARAM_FIELD := doc_len_mean
 PARAMS := $(shell for i in `seq 0 8`; do python -c "print int(2 ** $$i)"; done)
 
 #PARAM_FIELD := cluster_size
-#PARAMS := 2 3 $(shell for i in `seq 2 9`; do python -c "print int(2 ** $$i)"; done)
+#PARAMS := 2 3 $(shell for i in `seq 2 8`; do python -c "print int(2 ** $$i)"; done)
 
 TRIAL_FIELD := seed
 TRIALS := $(shell seq 10 15)

@@ -3,10 +3,22 @@ import numpy as np
 from itertools import chain
 from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
-    homogeneity_completeness_v_measure, entropy_of_counts, \
-    jaccard_similarity, clustering_aul_score
+    homogeneity_completeness_v_measure, centropy, \
+    jaccard_similarity, clustering_aul_score, ClusteringMetrics, \
+    ConfMatBinary, geometric_mean, harmonic_mean
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true
+
+
+def _kappa(a, c, d, b):
+    """An alternative implementation of Cohen's kappa (for testing)
+    """
+    n = a + b + c + d
+    if n == 0:
+        return np.nan
+    po = a + d
+    pe = ((a + c) * (a + b) + (b + d) * (c + d)) / float(n)
+    return (po - pe) / (n - pe)
 
 
 def _auc(fpr, tpr, reorder=False):
@@ -81,7 +93,7 @@ def test_jaccard_nan():
 def test_entropy_of_counts_zero():
     """Returns zero for empty set
     """
-    val = entropy_of_counts([])
+    val = centropy([])
     assert_almost_equal(val, 0.0000, 4)
 
 
@@ -170,18 +182,31 @@ def test_non_consecutive_labels_ari():
     assert_almost_equal(ari_2, 0.24, 2)
 
 
-def test_ir_example():
+def test_IR_example():
     """Test example from IR book by Manning et al.
 
     The example gives 3 clusters and 17 points total. It is described on
     http://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-clustering-1.html
     """
-    ltrue = (1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3)
-    lpred = (1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 3, 3, 2, 3, 3, 3)
-    h, c, v = homogeneity_completeness_v_measure(ltrue, lpred)
-    assert_almost_equal(h, 0.3715, 4)
-    assert_almost_equal(c, 0.3579, 4)
-    assert_almost_equal(v, 0.3646, 4)
+    ltrue = (0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2)
+    lpred = (0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 2, 2, 1, 2, 2, 2)
+    cm = ClusteringMetrics.from_labels(ltrue, lpred)
+
+    # test centropy metrics
+    h, c, v = cm.entropy_metrics()
+    assert_almost_equal(h, 0.371468, 6)
+    assert_almost_equal(c, 0.357908, 6)
+    assert_almost_equal(v, 0.364562, 6)
+
+    # test confusion matrix-based metrics
+    assert_almost_equal(cm.jaccard_coeff(), 0.312500, 6)
+    assert_almost_equal(cm.rand_index(),    0.676471, 6)
+    assert_almost_equal(cm.precision(),     0.500000, 6)
+    assert_almost_equal(cm.recall(),        0.454545, 6)
+    assert_almost_equal(cm.fscore(),        0.476190, 6)
+    prec, recall = cm.precision(), cm.recall()
+    expected_f = harmonic_mean(prec, recall)
+    assert_almost_equal(expected_f, cm.fscore(), 6)
 
 
 def test_adjustment_for_chance():
@@ -219,3 +244,68 @@ def test_clustering_aul_precalculated():
     clusters = [[1, 1, 1], [1, 1], [0], [0]]
     score = clustering_aul_score(clusters, bool)
     assert_almost_equal(score, 0.8286, 4)
+
+
+def test_twoway_confusion_ll():
+    """Example from McDonald's G-test for independence
+    http://www.biostathandbook.com/gtestind.html
+    """
+    cm = ConfMatBinary.from_cells_ccw(4758, 8840, 76, 30)
+    assert_almost_equal(cm.g_score(),       2.14, 2)
+    assert_almost_equal(cm.g_corr_row(),    0.0110, 4)
+    assert_almost_equal(cm.g_corr_col(),    0.0415, 4)
+    assert_almost_equal(cm.chisq_score(),   2.07, 2)
+    assert_almost_equal(cm.matthews_corr(), 0.0123, 4)
+    assert_almost_equal(cm.informedness(),  0.0023, 4)
+    assert_almost_equal(cm.markedness(),    0.0669, 4)
+    assert_almost_equal(cm.kappa(),         0.0016, 4)
+
+
+def test_negative_correlation():
+    """Some metrics should have negative sign
+    """
+    cm = ConfMatBinary.from_cells_ccw(10, 120, 8, 300)
+    assert_almost_equal(cm.g_score(),        384.52, 2)
+    assert_almost_equal(cm.g_corr_row(),     0.8524, 4)
+    assert_almost_equal(cm.g_corr_col(),     0.8496, 4)
+    assert_almost_equal(cm.chisq_score(),    355.70, 2)
+    assert_almost_equal(cm.matthews_corr(), -0.9012, 4)
+    assert_almost_equal(cm.informedness(),  -0.9052, 4)
+    assert_almost_equal(cm.markedness(),    -0.8971, 4)
+    assert_almost_equal(cm.kappa(),         -0.6407, 4)
+    inform, marked = cm.informedness(), cm.markedness()
+    expected_matt = geometric_mean(inform, marked)
+    assert_almost_equal(expected_matt, cm.matthews_corr(), 6)
+
+
+def test_twoway_confusion_phi():
+    cm = ConfMatBinary.from_cells_ccw(116, 21, 18, 21)
+    assert_almost_equal(cm.matthews_corr(), 0.31, 2)
+    assert_almost_equal(cm.yule_coeff(), 0.65, 2)
+    cm = ConfMatBinary.from_cells_ccw(0, 0, 0, 0)
+    assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.chisq_score()))
+    assert_true(np.isnan(cm.yule_coeff()))
+    cm = ConfMatBinary.from_cells_ccw(35, 60, 41, 9)
+    assert_almost_equal(cm.chisq_score(), 5.50, 2)
+
+
+def test_kappa_precalculated():
+    # from literature
+    cm = ConfMatBinary.from_cells_ccw(22, 4, 11, 2)
+    assert_almost_equal(cm.kappa(), 0.67, 2)
+    cm = ConfMatBinary.from_cells_ccw(147, 10, 62, 3)
+    assert_almost_equal(cm.kappa(), 0.86, 2)
+    # numeric stability cases
+    cm = ConfMatBinary.from_cells_ccw(69, 1, 3, 11)
+    assert_almost_equal(cm.kappa(), 0.280000, 6)
+    cm = ConfMatBinary.from_cells_ccw(1, 2, 96, 5)
+    assert_almost_equal(cm.kappa(), 0.191111, 6)
+
+
+def test_kappa_compare():
+    for _ in range(100):
+        # sample 100 random 2x2 matrices
+        sample = random.sample(range(0, 1000), 4)
+        cm = ConfMatBinary.from_cells_ccw(*sample)
+        assert_almost_equal(_kappa(*sample), cm.kappa(), 4)

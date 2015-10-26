@@ -1,3 +1,11 @@
+"""
+Simulation-generated data can provide an external criterion to validate
+clustering methods. This module contains a set of command-line tools for
+performing simulations, clustering their output, and producing analaysis
+reports.
+"""
+
+
 import random
 import os
 import sys
@@ -290,48 +298,111 @@ def do_simulation(args):
         output.write("%s %s\n" % (i, seq))
 
 
-METRICS = [
-    'homogeneity', 'completeness', 'nmi_score', 'adj_rand_score',
-    'roc_max_info', 'roc_auc', 'aul_score', 'time_cpu'
-]
+BENCHMARKS = ['time_cpu']
 
-CLUSTER_METRICS_ALL = ['homogeneity', 'completeness', 'nmi_score', 'adj_rand_score']
 ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
+CONF_ENTROPY_METRICS = ['conf_' + m for m in ENTROPY_METRICS]
+CONFUSION_METRICS = [
+    # best
+    'adj_rand_score',
+    'g_corr', 'g_corr_row', 'g_corr_col',
+    'matthews_corr', 'informedness', 'markedness',
+    # ok
+    'yule_coeff', 'accuracy',
+    # not good
+    'jaccard_coeff', 'fscore'
+] + CONF_ENTROPY_METRICS
+
+INCIDENCE_METRICS = CONFUSION_METRICS + ENTROPY_METRICS
+
 ROC_METRICS = ['roc_max_info', 'roc_auc']
 LIFT_METRICS = ['aul_score']
+
+METRICS = ROC_METRICS + LIFT_METRICS + INCIDENCE_METRICS + BENCHMARKS
 
 LEGEND_METRIC_KWARGS = {
     'homogeneity': dict(loc='lower right'),
     'roc_auc': dict(loc='lower right'),
     'roc_max_info': dict(loc='lower right'),
     'aul_score': dict(loc='lower right'),
+    'accuracy': dict(loc='lower right'),
     'adj_rand_score': dict(loc='lower right'),
+    'matthews_corr': dict(loc='lower right'),
+    'informedness': dict(loc='lower right'),
+    'markedness': dict(loc='lower right'),
+    'g_corr': dict(loc='lower right'),
+    'g_corr_col': dict(loc='lower right'),
+    'g_corr_row': dict(loc='lower right'),
     'time_wall': dict(loc='upper left'),
     'time_cpu': dict(loc='upper left'),
 }
 
 
-def add_cluster_metrics(args, clusters, pairs):
-    if (set(CLUSTER_METRICS_ALL) & set(args.metrics)):
+def add_incidence_metrics(args, clusters, pairs):
+    """Add metrics based on incidence matrix of classes and clusters
+    """
+    args_metrics = INCIDENCE_METRICS  # args.metrics
+    if (set(INCIDENCE_METRICS) & set(args_metrics)):
+
         from lsh_hdc.metrics import ClusteringMetrics
         cm = ClusteringMetrics.from_labels(*clusters_to_labels(clusters))
-        if (set(ENTROPY_METRICS) & set(args.metrics)):
+
+        if (set(ENTROPY_METRICS) & set(args_metrics)):
             pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
-        if 'adj_rand_score' in args.metrics:
-            pairs.append(('adj_rand_score', cm.adjusted_rand_index()))
+
+        if (set(CONFUSION_METRICS) & set(args_metrics)):
+            conf = cm.confusion_matrix_
+
+            # the coefficients below are arguably the best
+
+            if (set(CONF_ENTROPY_METRICS) & set(args_metrics)):
+                pairs.extend(zip(CONF_ENTROPY_METRICS, conf.entropy_metrics()))
+
+            if 'adj_rand_score' in args_metrics:
+                pairs.append(('adj_rand_score', conf.kappa()))
+
+            if 'matthews_corr' in args_metrics:
+                pairs.append(('matthews_corr', conf.matthews_corr()))
+            if 'informedness' in args_metrics:
+                pairs.append(('informedness', conf.informedness()))
+            if 'markedness' in args_metrics:
+                pairs.append(('markedness', conf.markedness()))
+
+            if 'g_corr' in args_metrics:
+                pairs.append(('g_corr', conf.g_corr()))
+            if 'g_corr_row' in args_metrics:
+                pairs.append(('g_corr_row', conf.g_corr_row()))
+            if 'g_corr_col' in args_metrics:
+                pairs.append(('g_corr_col', conf.g_corr_col()))
+
+            # coefficients below are not corrected for chance
+            if 'accuracy' in args_metrics:
+                pairs.append(('accuracy', conf.accuracy()))
+            if 'yule_coeff' in args_metrics:
+                pairs.append(('yule_coeff', conf.yule_coeff()))
+
+            # coefficients below don't consider true negatives
+            if 'fscore' in args_metrics:
+                pairs.append(('fscore', conf.fscore()))
+            if 'jaccard_coeff' in args_metrics:
+                pairs.append(('jaccard_coeff', conf.jaccard_coeff()))
 
 
 def add_roc_metrics(args, clusters, pairs):
+    """Add metrics based on ROC Curve
+    """
     if (set(ROC_METRICS) & set(args.metrics)):
         from lsh_hdc.metrics import RocCurve
         rc = RocCurve.from_binary(*cluster_predictions(clusters))
         if 'roc_auc' in args.metrics:
             pairs.append(('roc_auc', rc.auc_score()))
         if 'roc_max_info' in args.metrics:
-            pairs.append(('roc_max_info', rc.max_deltap()))
+            pairs.append(('roc_max_info', rc.max_informedness()))
 
 
 def add_lift_metrics(args, clusters, pairs):
+    """Add metrics based on Lift Curve
+    """
     if (set(LIFT_METRICS) & set(args.metrics)):
         from lsh_hdc.metrics import clustering_aul_score as aul_score
         if 'aul_score' in args.metrics:
@@ -348,7 +419,7 @@ def perform_analysis(args, clusters):
     clusters = list(clusters)
     pairs = []
     add_lift_metrics(args, clusters, pairs)
-    add_cluster_metrics(args, clusters, pairs)
+    add_incidence_metrics(args, clusters, pairs)
     add_roc_metrics(args, clusters, pairs)
     return dict(pairs)
 
@@ -395,7 +466,7 @@ def create_plots(args, df, metrics):
                         y=metric, kind="scatter", logx=True, title=args.fig_title,
                         facecolors='none', edgecolors=color)
                 except Exception:
-                    logging.exception("Exception thrown when plotting %s:%s", metric, label)
+                    logging.exception("Exception caught plotting %s:%s", metric, label)
             fig_filename = "fig_%s.%s" % (metric, args.fig_format)
             fig_path = os.path.join(args.output, fig_filename)
             ax.legend(prop=fontP, **LEGEND_METRIC_KWARGS.get(metric, {}))
@@ -415,15 +486,21 @@ def do_simul_clust_analy(args):
     args.output.write("%s\n" % json.dumps(namespace))
 
 
+def create_df_subset(df, fields):
+    subset_fields = [field for field in fields if field in df]
+    return df[subset_fields]
+
+
 def do_summa(args):
     import pandas as pd
-
     obj = ndjson2col(read_json_lines(args.input))
     df = pd.DataFrame.from_dict(obj)
+    subset = create_df_subset(
+        df, [args.group_by, args.x_axis, args.trial] + args.metrics)
     csv_path = os.path.join(args.output, "summary.csv")
-    logging.info("Writing output summary to %s", csv_path)
-    df.to_csv(csv_path)
-    create_plots(args, df, METRICS)
+    logging.info("Writing brief summary to %s", csv_path)
+    subset.to_csv(csv_path)
+    create_plots(args, subset, METRICS)
 
 
 def add_simul_args(p_simul):
@@ -459,18 +536,6 @@ def add_simul_args(p_simul):
         help='Std. dev. of sequence length')
 
 
-def add_parameterization_args(parser):
-    parser.add_argument(
-        '--group_by', type=str, default='hashfun',
-        help='Field to group by')
-    parser.add_argument(
-        '--x_axis', type=str, default='cluster_size',
-        help='Which column to plot as X axis')
-    parser.add_argument(
-        '--trial', type=str, default='seed',
-        help='Which column to average')
-
-
 def add_clust_args(p_clust):
     p_clust.add_argument(
         '--hashfun', type=str, default='builtin',
@@ -502,9 +567,17 @@ def add_clust_args(p_clust):
         help='LSH binning scheme')
 
 
-def add_analy_args(p_clust):
-    add_parameterization_args(p_clust)
-    p_clust.add_argument(
+def add_analy_args(parser):
+    parser.add_argument(
+        '--group_by', type=str, default='hashfun',
+        help='Field to group by')
+    parser.add_argument(
+        '--x_axis', type=str, default='cluster_size',
+        help='Which column to plot as X axis')
+    parser.add_argument(
+        '--trial', type=str, default='seed',
+        help='Which column to average')
+    parser.add_argument(
         '--metrics', type=str, nargs='*', choices=METRICS,
         default=('roc_auc', 'nmi_score', 'time_cpu'),
         help='Which metrics to calculate')
@@ -552,7 +625,7 @@ def parse_args(args=None):
     p_simul_clust_analy.set_defaults(func=do_simul_clust_analy)
 
     p_summa = subparsers.add_parser('summarize', help='summarize analysis results')
-    add_parameterization_args(p_summa)
+    add_analy_args(p_summa)
     p_summa.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
     p_summa.add_argument(
