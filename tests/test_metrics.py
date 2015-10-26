@@ -10,6 +10,17 @@ from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true
 
 
+def _kappa(a, c, d, b):
+    """An alternative implementation of Cohen's kappa (for testing)
+    """
+    n = a + b + c + d
+    if n == 0:
+        return np.nan
+    po = a + d
+    pe = ((a + c) * (a + b) + (b + d) * (c + d)) / float(n)
+    return (po - pe) / (n - pe)
+
+
 def _auc(fpr, tpr, reorder=False):
     """Compute area under ROC curve
 
@@ -247,6 +258,22 @@ def test_twoway_confusion_phi():
     assert_almost_equal(cm.yule_coeff(), 0.65, 2)
 
 
-def test_kappa():
+def test_kappa_precalculated():
+    # from literature
     cm = ConfMatBinary.from_cells_ccw(22, 4, 11, 2)
     assert_almost_equal(cm.kappa(), 0.67, 2)
+    cm = ConfMatBinary.from_cells_ccw(147, 10, 62, 3)
+    assert_almost_equal(cm.kappa(), 0.86, 2)
+    # numeric stability cases
+    cm = ConfMatBinary.from_cells_ccw(69, 1, 3, 11)
+    assert_almost_equal(cm.kappa(), 0.280000, 6)
+    cm = ConfMatBinary.from_cells_ccw(1, 2, 96, 5)
+    assert_almost_equal(cm.kappa(), 0.191111, 6)
+
+
+def test_kappa_compare():
+    for _ in range(100):
+        # sample 100 random 2x2 matrices
+        sample = random.sample(range(0, 1000), 4)
+        cm = ConfMatBinary.from_cells_ccw(*sample)
+        assert_almost_equal(_kappa(*sample), cm.kappa(), 4)

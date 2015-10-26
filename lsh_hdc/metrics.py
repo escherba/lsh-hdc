@@ -349,16 +349,16 @@ class ConfMatBinary(ContingencyTable):
     def kappa(self):
         """Calculate Cohen's kappa of a binary confusion matrix
         """
-        n_choose_2 = self.grand_total        # (grand_total choose 2)
-        if n_choose_2 == 0:
+        N = self.grand_total
+        if N == 0:
             return np.nan
-        sum_n = self.TP            # Sum{(n choose 2) over all cells}
-        sum_a = self.TP + self.FP  # Sum{(n choose 2) over column totals}
-        sum_b = self.TP + self.FN  # Sum{(n choose 2) over row totals}
 
-        sum_a_sum_b__n_choose_2 = (sum_a * sum_b) / n_choose_2
-        numerator = sum_n - sum_a_sum_b__n_choose_2
-        denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b__n_choose_2
+        sum_a = self.TP + self.FP
+        sum_b = self.TP + self.FN
+        sum_a_sum_b_over_N = (sum_a * sum_b) / float(N)
+
+        numerator = self.TP - sum_a_sum_b_over_N
+        denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b_over_N
         return numerator / denominator
 
     def matthews_corr(self):
