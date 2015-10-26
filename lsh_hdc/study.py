@@ -390,7 +390,7 @@ def add_roc_metrics(args, clusters, pairs):
         if 'roc_auc' in args.metrics:
             pairs.append(('roc_auc', rc.auc_score()))
         if 'roc_max_info' in args.metrics:
-            pairs.append(('roc_max_info', rc.max_deltap()))
+            pairs.append(('roc_max_info', rc.max_informedness()))
 
 
 def add_lift_metrics(args, clusters, pairs):

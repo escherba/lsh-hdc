@@ -61,7 +61,7 @@ https://doi.org/10.1007/s00357-008-9023-7
 
 [2] Milligan, G.W. Clustering validation: results and implications for applied
 analysis. In Arabie P., de Soete, G. (ed) Clustering and Classification, 1996:
-    358-369.  https://doi.org/10.1142/9789812832153_0010
+358-369.  https://doi.org/10.1142/9789812832153_0010
 
 [3] Sokal, R.R. Rohlf, F.J. Biometry. W.H. Freeman & Co. New York, 2012.  4th
 ed. pp 742-744.
@@ -563,7 +563,7 @@ class RocCurve(object):
         ...                           [0.1, 0.4, 0.35, 0.8])
         >>> rc.auc_score()
         0.75
-        >>> rc.max_deltap()
+        >>> rc.max_informedness()
         0.5
         """
         return auc(self.fprs, self.tprs, reorder=False)
@@ -584,7 +584,7 @@ class RocCurve(object):
     def _informedness(fpr, tpr):
         return tpr - fpr
 
-    def max_deltap(self):
+    def max_informedness(self):
         """Calculates Maximum DeltaP value Informedness (Youden's Index)
         https://en.wikipedia.org/wiki/Youden%27s_J_statistic
         """
