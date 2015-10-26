@@ -474,9 +474,9 @@ class ConfMatBinary(ContingencyTable):
         Matthews coefficient is a geometric mean of informedness and markedness
         (the regression coefficients of the problem and its dual).
         """
-        ad = self.TP * self.TN
-        bc = self.FP * self.FN
-        return self._div(ad - bc, sqrt(reduce(mul, chain(self.row_totals, self.col_totals))))
+        return self._div(
+            self.disequilibrium(),
+            sqrt(reduce(mul, chain(self.row_totals, self.col_totals))))
 
     def mutinf_metrics(self):
         """Assigns a sign to mututal information-based metrics
@@ -494,16 +494,13 @@ class ConfMatBinary(ContingencyTable):
 
         Yule's index is (ad - bc) / (ad + bc)
         """
-        ad = self.TP * self.TN
-        bc = self.FP * self.FN
-        return self._div(ad - bc, ad + bc)
+        return self._div(self.disequilibrium(),
+                         self.TP * self.TN + self.FP * self.FN)
 
     def disequilibrium(self):
-        """Disequilibrium measure D
+        """Unnormalized disequilibrium measure D
         """
-        ad = self.TP * self.TN
-        bc = self.FP * self.FN
-        return self._div(ad - bc, self.grand_total)
+        return self.TP * self.TN - self.FP * self.FN
 
 
 class ClusteringMetrics(ContingencyTable):
