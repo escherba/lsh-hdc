@@ -3,75 +3,71 @@
 Motivation
 ----------
 
-The motivation behind re-implementating some clustering metrics in this module
-was to avoid the high memory usage of equivalent methods in Scikit-Learn.
-The Scikit-Learn implementations create an incidence matrix for computation
-of these metrics resulting in O(n^2) memory usage, something that is
-felt particularly on large data sets and in multiprocessing environment.
-The given implementation uses sparse methods on dictionary maps instead
-of building incidence matrices.
+The original motivation behind the given re-implementation of some clustering
+metrics was to avoid the high memory usage of equivalent methods in
+Scikit-Learn.  The Scikit-Learn implementations create an incidence matrix for
+computation of these metrics resulting in O(n^2) memory usage, something that is
+felt particularly strongly on large data sets and in multiprocessing environment
+where each child process runnning on a multicore machine tries to allocate
+memory for itself. This implementation uses sparse methods on dictionary maps
+instead of building incidence matrices.
 
 Validation vs Replication Studies, ARI, and Kappa
 -------------------------------------------------
 
-ARI has an equivalence to Cohen's Kappa described in [1].
-Milligan [2] suggested that the two measures (ARI and Kappa) be used in
-replication studies when relevant. Note that replication studies like
-the ones proposed in [2] correspond to Model I test for independence
-as described in [3]. In a Model I study, random sampling occurs
-both row- and column-wise, and only the grand total is fixed.
-In a Model II study, one side (either row or column totals) is fixed.
-Simulation-based clustering evaluations that fix the number and size
-of ground truth classes belong to Model II category. Finally, in a
-Model III study, both rows and column totals are fixed. Model III
-studies require careful experimental design but have potentially more
-discriminative power. An example of a Model III study would be a tea
-tasting party (to follow Fisher's classic example) where both the
-true class totals (the portion and number of tea cups with milk poured
-first) are known and the respondees are told ahead of time, that,
-for example, 50% of cups they will encounter have had milk poured first.
+ARI has an equivalence to Cohen's Kappa described in [1].  Milligan [2]
+suggested that the two measures (ARI and Kappa) be used in replication studies
+when relevant. Note that replication studies like the ones proposed in [2]
+correspond to Model I test for independence as described in [3]. In a Model I
+study, random sampling occurs both row- and column-wise, and only the grand
+total is fixed.  In a Model II study, one side (either row or column totals) is
+fixed.  Simulation-based clustering evaluations that fix the number and size of
+ground truth classes belong to Model II category. Finally, in a Model III study,
+both rows and column totals are fixed. Model III studies require careful
+experimental design but have potentially more discriminative power. An example
+of a Model III study would be a tea tasting party (to follow Fisher's classic
+example) where both the true class totals (the portion and number of tea cups
+with milk poured first) are known and the respondees are told ahead of time,
+that, for example, 50% of cups they will encounter have had milk poured first.
 
-To sum up the above, in a replication study where two clusterings are
-compared that were both created by the same algorithm, the Kappa
-score seems to be an appropriate metric (it is symmetric,
-i.e. independent of row/column assignemnts). The same applies to
-Matthew's Correlation Coefficient. However it seems that a better
-chance-corrected metric should exist that would be appropriate for
-Model II studies where the true class portions are fixed.
+To sum up the above, in a replication study where two clusterings are compared
+that were both created by the same algorithm, the Kappa score seems to be an
+appropriate metric (it is symmetric, i.e. independent of row/column
+assignemnts). The same applies to Matthew's Correlation Coefficient. However it
+seems that a better chance-corrected metric should exist that would be
+appropriate for Model II studies where the true class portions are fixed.
 
-To be exhaustive, a Model O study would be one where even the grand
-total is not fixed. An example would be an astronomy study that,
-for example, tests a hypothesis about a generalizable property
-such as dark matter content by looking at all galaxies in the
-Local Group, and the researchers obviously don't get to choose ahead
-of time how many galaxies there are near Milky Way.
+To be exhaustive, a Model O study would be one where even the grand total is not
+fixed. An example would be an astronomy study that, for example, tests a
+hypothesis about a generalizable property such as dark matter content by looking
+at all galaxies in the Local Group, and the researchers obviously don't get to
+choose ahead of time how many galaxies there are near Milky Way.
 
 Why G-score
 ------------
-G is a likelihood-ratio statistic and therefore should be superior
-to chi-squre based statistics which rely on Taylor approximation of
-likelihood. One direct benefit is that G statistic is additive while
-chi-square is not. Simulation studies showed [4, 5] that G score
-outperforms Chi-square on highly skewed tables used for word bigram
-collocations.
+
+G is a likelihood-ratio statistic and therefore should
+be superior to chi-squre based statistics which rely on Taylor approximation of
+likelihood. One direct benefit is that G statistic is additive while chi-square
+is not. Simulation studies showed [4, 5] that G score outperforms Chi-square on
+highly skewed tables used for word bigram collocations.
 
 References
 ----------
 
-[1] Warrens, M. J. On the equivalence of Cohen's Kappa and the
-Hubert-Arabie Adjusted Rand Index. 2008. J. Classif. 25: 177-183.
+[1] Warrens, M. J. On the equivalence of Cohen's Kappa and the Hubert-Arabie
+Adjusted Rand Index. 2008. J. Classif. 25: 177-183.
 https://doi.org/10.1007/s00357-008-9023-7
 
-[2] Milligan, G.W. Clustering validation: results and
-implications for applied analysis. In Arabie P., de Soete, G. (ed)
-Clustering and Classification, 1996: 358-369.
-https://doi.org/10.1142/9789812832153_0010
+[2] Milligan, G.W. Clustering validation: results and implications for applied
+analysis. In Arabie P., de Soete, G. (ed) Clustering and Classification, 1996:
+    358-369.  https://doi.org/10.1142/9789812832153_0010
 
-[3] Sokal, R.R. Rohlf, F.J. Biometry. W.H. Freeman & Co. New York, 2012.
-4th ed. pp 742-744.
+[3] Sokal, R.R. Rohlf, F.J. Biometry. W.H. Freeman & Co. New York, 2012.  4th
+ed. pp 742-744.
 
-[4] Dunning, T. Accurate methods for the statisitcs of surprise and
-coincidence. 1993. Computational Linguistics 19 (1). 61-74.
+[4] Dunning, T. Accurate methods for the statisitcs of surprise and coincidence.
+1993. Computational Linguistics 19 (1). 61-74.
 http://dl.acm.org/citation.cfm?id=972454
 
 [5] Ted Dunning's personal blog
@@ -114,11 +110,11 @@ def centropy(counts):
     Assumes every entry in the list belongs to a different class.
 
     The parameter `counts` is expected to be an list or tuple-like iterable.
-    For convenience, it can also be a dict/mapping type, in which case
-    its values will be used to calculate centropy.
+    For convenience, it can also be a dict/mapping type, in which case its
+    values will be used to calculate centropy.
 
-    The centropy is calculated using natural base, which may not be what
-    you want, so caveat emptor.
+    The centropy is calculated using natural base, which may not be what you
+    want, so caveat emptor.
 
     TODO: Cythonize this using NumPy's buffer interface for arrays
     """
@@ -245,8 +241,8 @@ class ContingencyTable(object):
     def g_corr_row(self):
         """Log-likelihood correlation coefficient for fixed row margin tables
 
-        Divides G-score by the maximum value it could achieve if row counts
-        were fixed.
+        Divides G-score by the maximum value it could achieve if row counts were
+        fixed.
         """
         max_achievable = max(0.0, 2.0 * centropy(self.row_totals))
         return sqrt(max(0.0, self.g_score()) / max_achievable)
@@ -271,14 +267,14 @@ class ContingencyTable(object):
         The metrics are: Homogeneity, Completeness, and V-measure
 
         The V-measure metric is also known as Normalized Mutual Informmation,
-        and is the harmonic mean of Homogeneity and Completeness. The latter
-        two metrics are complementary of each other (dual).
+        and is the harmonic mean of Homogeneity and Completeness. The latter two
+        metrics are complementary of each other (dual).
 
         This code is replaces an equivalent function in Scikit-Learn known as
-        `homogeneity_completeness_v_measure`, which alas takes up O(n^2)
-        space because it creates a dense contingency matrix during calculation.
-        Here we use sparse dict-based methods to achieve the same result while
-        using much less RAM.
+        `homogeneity_completeness_v_measure`, which alas takes up O(n^2) space
+        because it creates a dense contingency matrix during calculation.  Here
+        we use sparse dict-based methods to achieve the same result while using
+        much less RAM.
 
         The entropy variables used in the code here are improperly defined
         because they ought to be divided by N (the grand total for the
@@ -386,8 +382,8 @@ class ConfMatBinary(ContingencyTable):
     def fscore(self, beta=1.0):
         """Calculate F-score from the pairwise confusion metric
 
-        As beta tends to infinity, F-score will approach recall
-        As beta tends to zero, F-score will approach precision
+        As beta tends to infinity, F-score will approach recall As beta tends to
+        zero, F-score will approach precision
         """
         return harmonic_mean_weighted(self.precision(), self.recall(), beta)
 
@@ -403,12 +399,11 @@ class ConfMatBinary(ContingencyTable):
     def kappa(self):
         """Calculate Cohen's kappa of a binary confusion matrix
 
-        Kappa index comes from psychology and was designed to measure
-        interrater agreement. It is also a proper metric for measuring
-        replication. It forms the basis of Adjusted Rand Index used
-        for evaluation of clustering. However its applicability for
-        evaluating experiments where ground truth vectors are known ahead
-        of time is questionable.
+        Kappa index comes from psychology and was designed to measure interrater
+        agreement. It is also a proper metric for measuring replication. It
+        forms the basis of Adjusted Rand Index used for evaluation of
+        clustering. However its applicability for evaluating experiments where
+        ground truth vectors are known ahead of time is questionable.
         """
         N = self.grand_total
         if N == 0:
@@ -436,9 +431,8 @@ class ConfMatBinary(ContingencyTable):
         contingency table. Some studies (TODO: find references) report this
         metric to be less biased than Cohen's kappa.
 
-        Matthews coefficient is a geometric mean of informedness and
-        markedness (the regression coefficients of the problem and its
-        dual).
+        Matthews coefficient is a geometric mean of informedness and markedness
+        (the regression coefficients of the problem and its dual).
         """
         denominator = reduce(mul, chain(self.iter_row_totals(),
                                         self.iter_col_totals()))
@@ -465,8 +459,8 @@ class ClusteringMetrics(ContingencyTable):
     """Provides external clustering evaluation metrics
 
     A subclass of ContingencyTable that provides four external clustering
-    evaluation metrics: homogeneity, completeness, V-measure, and adjusted
-    Rand index.
+    evaluation metrics: homogeneity, completeness, V-measure, and adjusted Rand
+    index.
     """
 
     def __init__(self, *args, **kwargs):
@@ -505,8 +499,8 @@ class ClusteringMetrics(ContingencyTable):
         """Calculate Adjusted Rand Index in a memory-efficient way
 
         Adjusted Rand Index measures overall agreement between two clusterings.
-        It is Rand index adjusted for chance, and has the property that
-        the resulting metric is independent of cluster size.
+        It is Rand index adjusted for chance, and has the property that the
+        resulting metric is independent of cluster size.
         """
         return self.confusion_matrix_.kappa()
 
@@ -521,9 +515,9 @@ def homogeneity_completeness_v_measure(labels_true, labels_pred):
 def adjusted_rand_score(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Sklearn function
 
-    Example (given in supplement to "An empirical study on Principal
-    Component Analysis for clustering gene expression data" by K.Y. Yeung,
-    W. L. Ruzzo (2001)
+    Example (given in supplement to "An empirical study on Principal Component
+    Analysis for clustering gene expression data" by K.Y. Yeung, W. L. Ruzzo
+    (2001)
 
     >>> classes = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
     >>> clusters = [1, 2, 1, 2, 2, 3, 3, 3, 3, 3]
@@ -557,11 +551,11 @@ class RocCurve(object):
 
         If number of Y classes is other than two, a warning will be triggered
         but no exception thrown (the return value will be a NaN). This differes
-        from the import behavior of Scikit-Learn's roc_auc_score method
-        (it always raises an exception) taht I find annoying!
+        from the import behavior of Scikit-Learn's roc_auc_score method (it
+        always raises an exception) taht I find annoying!
 
-        Also, we don't reorder arrays during ROC calculation since they
-        are assumed to be in order.
+        Also, we don't reorder arrays during ROC calculation since they are
+        assumed to be in order.
 
         Example:
 
@@ -620,10 +614,9 @@ def clustering_aul_score(clusters, is_pos):
     """Area under lift curve for clusters of a binary class distribution
 
     The AUL score calculated is very similar to the Gini index of inequality
-    (area between equality and the Lorenz curve) except we do not subtract
-    0.5. Note that it can be lower than 0.5 because, in a very bad clustering,
-    small clusters of size 1 will be sorted by negative of the number of
-    positives.
+    (area between equality and the Lorenz curve) except we do not subtract 0.5.
+    Note that it can be lower than 0.5 because, in a very bad clustering, small
+    clusters of size 1 will be sorted by negative of the number of positives.
 
     Useful when primary criterion of clustering quality is bigger clusters
     containing more data in the positive class, while unassigned data (or
