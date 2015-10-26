@@ -2,7 +2,7 @@
 .SUFFIXES:
 
 # Experiment-independent defaults
-STUDY_ARGS := --sim_size 100000 --metrics \
+METRICS := \
 	homogeneity completeness nmi_score \
 	adj_rand_score \
 	g_corr g_corr_row g_corr_col \
@@ -10,6 +10,8 @@ STUDY_ARGS := --sim_size 100000 --metrics \
 	conf_homogeneity conf_completeness conf_nmi_score \
 	aul_score roc_auc roc_max_info \
 	time_cpu
+
+SIMUL_CLUST_ANALY_ARGS := --sim_size 100000 --metrics $(METRICS)
 
 TRIAL_FIELD := seed
 TRIALS := $(shell seq 10 15)
@@ -47,7 +49,7 @@ TRIAL_RESULTS := $(shell \
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
 	@$(PYTHON) -m lsh_hdc.study simul_clust_analy \
-		$(STUDY_ARGS) $(EXPERIMENT_ARGS) \
+		$(SIMUL_CLUST_ANALY_ARGS) $(EXPERIMENT_ARGS) \
 		--$(GROUP_FIELD) $(word 1,$(subst -, ,$*)) \
 		--$(PARAM_FIELD) $(word 2,$(subst -, ,$*)) \
 		--$(TRIAL_FIELD) $(word 3,$(subst -, ,$*)) \
@@ -77,6 +79,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 	fi
 	@echo "writing 'summary.csv' under $(@D)"
 	@$(PYTHON) -m lsh_hdc.study summarize \
+		--metrics $(METRICS) \
 		--group_by $(GROUP_FIELD) \
 		--x_axis $(PARAM_FIELD) \
 		--fig_title "$(GROUP_FIELD)" \

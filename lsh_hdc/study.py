@@ -536,18 +536,6 @@ def add_simul_args(p_simul):
         help='Std. dev. of sequence length')
 
 
-def add_parameterization_args(parser):
-    parser.add_argument(
-        '--group_by', type=str, default='hashfun',
-        help='Field to group by')
-    parser.add_argument(
-        '--x_axis', type=str, default='cluster_size',
-        help='Which column to plot as X axis')
-    parser.add_argument(
-        '--trial', type=str, default='seed',
-        help='Which column to average')
-
-
 def add_clust_args(p_clust):
     p_clust.add_argument(
         '--hashfun', type=str, default='builtin',
@@ -579,9 +567,17 @@ def add_clust_args(p_clust):
         help='LSH binning scheme')
 
 
-def add_analy_args(p_clust):
-    add_parameterization_args(p_clust)
-    p_clust.add_argument(
+def add_analy_args(parser):
+    parser.add_argument(
+        '--group_by', type=str, default='hashfun',
+        help='Field to group by')
+    parser.add_argument(
+        '--x_axis', type=str, default='cluster_size',
+        help='Which column to plot as X axis')
+    parser.add_argument(
+        '--trial', type=str, default='seed',
+        help='Which column to average')
+    parser.add_argument(
         '--metrics', type=str, nargs='*', choices=METRICS,
         default=('roc_auc', 'nmi_score', 'time_cpu'),
         help='Which metrics to calculate')
@@ -629,7 +625,7 @@ def parse_args(args=None):
     p_simul_clust_analy.set_defaults(func=do_simul_clust_analy)
 
     p_summa = subparsers.add_parser('summarize', help='summarize analysis results')
-    add_parameterization_args(p_summa)
+    add_analy_args(p_summa)
     p_summa.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
     p_summa.add_argument(
