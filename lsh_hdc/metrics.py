@@ -12,6 +12,56 @@ where each child process runnning on a multicore machine tries to allocate
 memory for itself. This implementation uses sparse methods on dictionary maps
 instead of building incidence matrices.
 
+Second, it was observed the standard pairwise clustering evaluation prodices
+confusion matrices of a specific type. One almost never sees anti-
+correlation type matrices, e.g. something like
+
+     K
+
+  C  2 102
+     89  7
+
+The example matrix above shows anti-correlation because the cells off the
+diagonal sum up to more than diagonal cells. Correlation indices such as
+Cohen's Kappa or Matthew's (MCC) give negative scores. For example, the
+matrix above has MCC = -0.91. As the matrix tends to { (0, 1), (1, 0 },
+both Kappa and MCC will tend to -1.0. However pairwise clustering comparisons
+never produce such matrices. Here is a pathological example (with the
+lowest MCC score) drawn from a import sample of 500,000:
+
+>>> ltrue = [2, 2, 1, 2, 1, 1, 1, 4, 1, 1, 0, 1, 3, 1, 3]
+>>> lpred = [5, 5, 2, 3, 0, 5, 3, 5, 4, 5, 5, 3, 5, 1, 3]
+
+>>> cm = ClusteringMetrics.from_labels(ltrue, lpred)
+>>> cm.confusion_matrix_.as_cells_ccw()
+ConfMatCCW(TP=3.0, FP=24.0, TN=49.0, FN=29.0)
+
+>>> mcc = cm.confusion_matrix_.matthews_corr()
+>>> round(mcc, 4)
+-0.2475
+
+A metric with its range in 0..1 interval hence might be equally
+appropriate. Classic metrics such as Rand Index (accuracy) or information
+retrieval metrics such as the F-score are not appropriate for one reason or
+another (both are not normalized for chance, while F-score also has the issue
+of entirely ignoring true negatives, something that is a plus in retrieval
+but not in our case).
+
+By analogy with the MCC-Chi square relationship, an attempt is made to provide
+one such metric based in log-likelihood ratio statistic (also known as G-score).
+The ConfMatBinary class provides the correlation measure `g_corr` and
+its regression components `g_info` and `g_mark`.
+
+Why G-score
+------------
+
+G is a likelihood-ratio statistic and therefore should
+be superior to chi-squre based statistics which rely on Taylor approximation of
+likelihood. One direct benefit is that G statistic is additive while chi-square
+is not. Simulation studies showed [4, 5] that G score outperforms Chi-square on
+highly skewed tables used for word bigram collocations.
+
+
 Validation vs Replication Studies, ARI, and Kappa
 -------------------------------------------------
 
@@ -41,16 +91,7 @@ To be exhaustive, a Model O study would be one where even the grand total is not
 fixed. An example would be an astronomy study that, for example, tests a
 hypothesis about a generalizable property such as dark matter content by looking
 at all galaxies in the Local Group, and the researchers obviously don't get to
-choose ahead of time how many galaxies there are near Milky Way.
-
-Why G-score
-------------
-
-G is a likelihood-ratio statistic and therefore should
-be superior to chi-squre based statistics which rely on Taylor approximation of
-likelihood. One direct benefit is that G statistic is additive while chi-square
-is not. Simulation studies showed [4, 5] that G score outperforms Chi-square on
-highly skewed tables used for word bigram collocations.
+choose ahead of time how many galaxies there are near ours.
 
 References
 ----------
@@ -77,7 +118,7 @@ http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html
 
 import numpy as np
 from math import log as logn, sqrt, copysign
-from collections import defaultdict, Counter, Mapping, Set
+from collections import defaultdict, Counter, Mapping, Set, namedtuple
 from itertools import izip, chain
 from operator import itemgetter, mul
 from scipy.special import binom
@@ -238,28 +279,24 @@ class ContingencyTable(object):
                       centropy(self.col_totals) -
                       centropy(self.iter_cells()))
 
-    def g_corr_row(self):
-        """Log-likelihood correlation coefficient for fixed row margin tables
-
-        Divides G-score by the maximum value it could achieve if row counts were
-        fixed.
-        """
-        max_achievable = max(0.0, 2.0 * centropy(self.row_totals))
-        return sqrt(max(0.0, self.g_score()) / max_achievable)
-
-    def g_corr_col(self):
-        """Log-likelihood correlation coefficient for fixed column margin tables
-
-        Divides G-score by the maximum value it could achieve if column counts
-        were fixed.
-        """
-        max_achievable = max(0.0, 2.0 * centropy(self.col_totals))
-        return sqrt(max(0.0, self.g_score()) / max_achievable)
-
-    def g_corr(self):
+    def g_corr_metrics(self):
         """A correlation coefficient defined after G statistic
+
+        The coefficient decomposes into regression coefficients defined
+        according to fixed-margin tables. The `g_info` coefficient, for
+        example, is obtained by dividing the G-score by the maximum achievable
+        value on a table with true class counts (in this case, row totals)
+        fixed. the `g_mark` is its dual, defined by dividing the G-score by
+        its maximum achievable value when predicted label counts (in this case,
+        column totals) are fixed.
         """
-        return geometric_mean(self.g_corr_row(), self.g_corr_col())
+        g_score = max(0.0, self.g_score())  # ensure non-negative
+        max_info = max(0.0, 2.0 * centropy(self.row_totals))
+        max_mark = max(0.0, 2.0 * centropy(self.col_totals))
+        g_info = sqrt(max(0.0, g_score) / max_info)
+        g_mark = sqrt(max(0.0, g_score) / max_mark)
+        g_corr = geometric_mean(g_info, g_mark)
+        return g_info, g_mark, g_corr
 
     def entropy_metrics(self):
         """Calculate three centropy metrics used for clustering evaluation
@@ -295,6 +332,9 @@ class ContingencyTable(object):
         return homogeneity, completeness, nmi_score
 
 
+confmatccw_type = namedtuple("ConfMatCCW", "TP FP TN FN")
+
+
 class ConfMatBinary(ContingencyTable):
     """A binary confusion matrix
 
@@ -314,6 +354,9 @@ class ConfMatBinary(ContingencyTable):
             col_totals=(TP + FP, FN + TN),
             grand_total=(TP + FP + TN + FN)
         )
+
+    def as_cells_ccw(self):
+        return confmatccw_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
 
     @property
     def TP(self):

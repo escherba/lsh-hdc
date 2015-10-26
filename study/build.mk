@@ -5,10 +5,10 @@
 METRICS := \
 	homogeneity completeness nmi_score \
 	adj_rand_score \
-	g_corr g_corr_row g_corr_col \
-	matthews_corr informedness markedness \
+	g_info g_mark g_corr \
+	informedness markedness matthews_corr \
 	conf_homogeneity conf_completeness conf_nmi_score \
-	aul_score roc_auc roc_max_info \
+	roc_max_info aul_score roc_auc \
 	time_cpu
 
 SIMUL_CLUST_ANALY_ARGS := --sim_size 100000 --metrics $(METRICS)

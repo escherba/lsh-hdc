@@ -301,17 +301,17 @@ def do_simulation(args):
 BENCHMARKS = ['time_cpu']
 
 ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
+G_CORR_METRICS = ['g_info', 'g_mark', 'g_corr']
 CONF_ENTROPY_METRICS = ['conf_' + m for m in ENTROPY_METRICS]
 CONFUSION_METRICS = [
     # best
     'adj_rand_score',
-    'g_corr', 'g_corr_row', 'g_corr_col',
     'matthews_corr', 'informedness', 'markedness',
     # ok
     'yule_coeff', 'accuracy',
     # not good
     'jaccard_coeff', 'fscore'
-] + CONF_ENTROPY_METRICS
+] + CONF_ENTROPY_METRICS + G_CORR_METRICS
 
 INCIDENCE_METRICS = CONFUSION_METRICS + ENTROPY_METRICS
 
@@ -331,8 +331,8 @@ LEGEND_METRIC_KWARGS = {
     'informedness': dict(loc='lower right'),
     'markedness': dict(loc='lower right'),
     'g_corr': dict(loc='lower right'),
-    'g_corr_col': dict(loc='lower right'),
-    'g_corr_row': dict(loc='lower right'),
+    'g_mark': dict(loc='lower right'),
+    'g_info': dict(loc='lower right'),
     'time_wall': dict(loc='upper left'),
     'time_cpu': dict(loc='upper left'),
 }
@@ -368,12 +368,8 @@ def add_incidence_metrics(args, clusters, pairs):
             if 'markedness' in args_metrics:
                 pairs.append(('markedness', conf.markedness()))
 
-            if 'g_corr' in args_metrics:
-                pairs.append(('g_corr', conf.g_corr()))
-            if 'g_corr_row' in args_metrics:
-                pairs.append(('g_corr_row', conf.g_corr_row()))
-            if 'g_corr_col' in args_metrics:
-                pairs.append(('g_corr_col', conf.g_corr_col()))
+            if (set(G_CORR_METRICS) & set(args_metrics)):
+                pairs.extend(zip(G_CORR_METRICS, conf.g_corr_metrics()))
 
             # coefficients below are not corrected for chance
             if 'accuracy' in args_metrics:
