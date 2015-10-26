@@ -86,7 +86,7 @@ from itertools import izip, chain
 from operator import mul, itemgetter
 from scipy.special import binom
 from sklearn.metrics.ranking import roc_curve, auc
-from pymaptools.iter import aggregate_tuples, iter_vals
+from pymaptools.iter import aggregate_tuples, iter_items, iter_vals
 
 
 def jaccard_similarity(set1, set2):
@@ -162,6 +162,20 @@ class ContingencyTable(object):
         self.col_totals = col_totals or Counter()
         self.grand_total = grand_total
 
+    def iter_cells_with_indices(self):
+        for ri, row in iter_items(self.rows):
+            for ci, cell in iter_items(row):
+                yield ri, ci, cell
+
+    def iter_cells_with_margins(self):
+        col_totals = self.col_totals
+        row_totals = self.row_totals
+        for ri, row in iter_items(self.rows):
+            rm = row_totals[ri]
+            for ci, cell in iter_items(row):
+                cm = col_totals[ci]
+                yield rm, cm, cell
+
     def iter_cells(self):
         for row in self.iter_rows():
             for cell in row:
@@ -196,6 +210,18 @@ class ContingencyTable(object):
             grand_total += 1
         return cls(rows=rows, cols=cols, row_totals=row_totals,
                    col_totals=col_totals, grand_total=grand_total)
+
+    def chisq_score(self):
+        """Pearson's chi-square statistic
+        """
+        N = float(self.grand_total)
+        if N == 0:
+            return np.nan
+        score = 0.0
+        for rm, cm, observed in self.iter_cells_with_margins():
+            expected = rm * cm / N
+            score += (observed - expected) ** 2.0 / expected
+        return score
 
     def g_score(self):
         """Returns G-statistic for a 2x2 table
@@ -348,6 +374,13 @@ class ConfMatBinary(ContingencyTable):
 
     def kappa(self):
         """Calculate Cohen's kappa of a binary confusion matrix
+
+        Kappa index comes from psychology and was designed to measure
+        interrater agreement. It is also a proper metric for measuring
+        replication. It forms the basis of Adjusted Rand Index used
+        for evaluation of clustering. However its applicability for
+        evaluating experiments where ground truth vectors are known ahead
+        of time is questionable.
         """
         N = self.grand_total
         if N == 0:
@@ -375,10 +408,8 @@ class ConfMatBinary(ContingencyTable):
         contingency table. Some studies (TODO: find references) report this
         metric to be less biased than Cohen's kappa.
         """
-        denominator = reduce(mul, chain(self.iter_row_totals(),
-                                        self.iter_col_totals()))
-        numerator = self.TP * self.TN - self.FP * self.FN
-        return np.nan if denominator == 0 else numerator / sqrt(denominator)
+        N = self.grand_total
+        return np.nan if N == 0 else sqrt(self.chisq_score() / N)
 
     def yule_coeff(self):
         """
