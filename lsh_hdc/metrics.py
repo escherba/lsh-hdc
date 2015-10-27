@@ -220,12 +220,12 @@ class ContingencyTable(object):
         """Pearson's chi-square statistic
         """
         N = float(self.grand_total)
-        if N == 0:
-            return np.nan
         score = 0.0
         for rm, cm, observed in self.iter_cells_with_margins():
-            expected = rm * cm / N
-            score += (observed - expected) ** 2.0 / expected
+            numer = rm * cm
+            if numer != 0:
+                expected = numer / N
+                score += (observed - expected) ** 2 / expected
         return score
 
     def mutual_information(self):
@@ -341,7 +341,14 @@ class ConfMatBinary(ContingencyTable):
 
     @staticmethod
     def _div(numer, denom):
-        return np.nan if denom == 0 else float(numer) / denom
+        if denom == 0:
+            if numer == 0:
+                return np.nan
+            elif numer > 0:
+                return np.PINF
+            else:
+                return np.NINF
+        return float(numer) / denom
 
     def ACC(self):
         """Accuracy (also known as Rand Index)
@@ -480,7 +487,10 @@ class ConfMatBinary(ContingencyTable):
         """
         p1, q1 = self.row_totals
         p2, q2 = self.col_totals
-        return self._div(self._diseq(), min(p1 * q2, p2 * q1))
+        cov = self.covariance()
+        if cov == 0 and self.grand_total != 0:
+            return 0.0
+        return self._div(cov, min(p1 * q2, p2 * q1))
 
     def kappa(self):
         """Calculate Cohen's kappa of a binary confusion matrix
@@ -493,7 +503,10 @@ class ConfMatBinary(ContingencyTable):
         """
         p1, q1 = self.row_totals
         p2, q2 = self.col_totals
-        return self._div(2 * self._diseq(), p1 * q2 + p2 * q1)
+        cov = self.covariance()
+        if cov == 0 and self.grand_total != 0:
+            return 0.0
+        return self._div(2 * cov, p1 * q2 + p2 * q1)
 
     def mp_corr(self):
         """Maxwell & Pilliner's chance-corrected association index
@@ -503,7 +516,10 @@ class ConfMatBinary(ContingencyTable):
         """
         p1, q1 = self.row_totals
         p2, q2 = self.col_totals
-        return self._div(2 * self._diseq(), p1 * q1 + p2 * q2)
+        cov = self.covariance()
+        if cov == 0 and self.grand_total != 0:
+            return 0.0
+        return self._div(2 * cov, p1 * q1 + p2 * q2)
 
     def matthews_corr(self):
         """Matthews Correlation Coefficient
@@ -526,13 +542,16 @@ class ConfMatBinary(ContingencyTable):
         """
         p1, q1 = self.row_totals
         p2, q2 = self.col_totals
-        return self._div(self._diseq(), sqrt(p1 * q1 * p2 * q2))
+        cov = self.covariance()
+        if cov == 0 and self.grand_total != 0:
+            return 0.0
+        return self._div(cov, sqrt(p1 * q1 * p2 * q2))
 
     def mutinf_signed(self):
         """Assigns a sign to mututal information-based metrics
         """
         info, mark, corr = self.mutinf_metrics()
-        sgn = copysign(1, self._diseq())
+        sgn = copysign(1, self.covariance())
         return (sgn * info, sgn * mark, sgn * corr)
 
     def yule_q(self):
@@ -551,7 +570,10 @@ class ConfMatBinary(ContingencyTable):
                    OR + 1
 
         """
-        return self._div(self._diseq(), self.TP * self.TN + self.FP * self.FN)
+        cov = self.covariance()
+        if cov == 0 and self.grand_total != 0:
+            return 0.0
+        return self._div(cov, self.TP * self.TN + self.FP * self.FN)
 
     def yule_y(self):
         """Colligation coefficient (Yule's Y)
@@ -564,17 +586,21 @@ class ConfMatBinary(ContingencyTable):
         """
         ad = self.TP * self.TN
         bc = self.FN * self.FP
-        return self._div(sqrt(ad) - sqrt(bc), sqrt(ad) + sqrt(bc))
+        numer = sqrt(ad) - sqrt(bc)
+        if numer == 0 and self.grand_total != 0:
+            return 0.0
+        return self._div(numer, sqrt(ad) + sqrt(bc))
 
-    def _diseq(self):
-        """Unnormalized disequilibrium measure D
+    def covariance(self):
+        """Determinant of a 2x2 matrix
         """
         return self.TP * self.TN - self.FP * self.FN
 
     def disequilibrium(self):
         """Unnormalized disequilibrium measure D
         """
-        return self._div(self._diseq(), self.grand_total)
+        cov = self.covariance()
+        return self._div(cov, self.grand_total)
 
 
 class ClusteringMetrics(ContingencyTable):

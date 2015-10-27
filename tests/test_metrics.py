@@ -293,12 +293,151 @@ def test_twoway_confusion_phi():
     assert_almost_equal(cm.yule_q(), 0.6512, 4)
     assert_almost_equal(cm.DOR(),    4.7347, 4)
 
-    cm = ConfMatBinary.from_tuple_ccw(0, 0, 0, 0)
-    assert_true(np.isnan(cm.matthews_corr()))
-    assert_true(np.isnan(cm.chisq_score()))
-    assert_true(np.isnan(cm.yule_q()))
     cm = ConfMatBinary.from_tuple_ccw(35, 60, 41, 9)
     assert_almost_equal(cm.chisq_score(), 5.50, 2)
+
+
+def test_0000():
+    """All zeros
+    """
+    cm = ConfMatBinary.from_tuple_ccw(0, 0, 0, 0)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_true(np.isnan(cm.kappa()))
+    assert_true(np.isnan(cm.matthews_corr()))
+
+
+def test_1000():
+    """Chi-sq should return zero
+    """
+    cm = ConfMatBinary.from_tuple_ccw(1, 0, 0, 0)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+
+
+def test_0100():
+    """Chi-sq should return zero
+    """
+    cm = ConfMatBinary.from_tuple_ccw(0, 1, 0, 0)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+
+
+def test_0010():
+    """Chi-sq should return zero
+    """
+    cm = ConfMatBinary.from_tuple_ccw(0, 0, 1, 0)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+
+
+def test_0001():
+    """Chi-sq should return zero
+    """
+    cm = ConfMatBinary.from_tuple_ccw(0, 0, 0, 1)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+
+
+def test_1010():
+    """
+    """
+    cm = ConfMatBinary.from_tuple_ccw(1, 0, 1, 0)
+    assert_almost_equal(cm.chisq_score(), 2.0, 4)
+    assert_almost_equal(cm.g_score(), 2.7726, 4)
+    assert_almost_equal(cm.kappa(), 1.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 1.0, 4)
+
+
+def test_1100():
+    """
+    """
+    cm = ConfMatBinary.from_tuple_ccw(1, 1, 0, 0)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+
+
+def test_0011():
+    """
+    """
+    cm = ConfMatBinary.from_tuple_ccw(0, 0, 1, 1)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+
+
+def test_0101():
+    """
+    """
+    cm = ConfMatBinary.from_tuple_ccw(0, 1, 0, 1)
+    assert_almost_equal(cm.chisq_score(), 2.0, 4)
+    assert_almost_equal(cm.g_score(), 2.7726, 4)
+    assert_almost_equal(cm.kappa(), -1.0, 4)
+    assert_almost_equal(cm.matthews_corr(), -1.0, 4)
+
+
+def test_0111():
+    """
+    """
+    cm = ConfMatBinary.from_tuple_ccw(0, 1, 1, 1)
+    assert_almost_equal(cm.chisq_score(), 0.75, 4)
+    assert_almost_equal(cm.g_score(), 1.0465, 4)
+    assert_almost_equal(cm.kappa(), -0.5, 4)
+    assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+
+
+def test_1011():
+    """
+    Why kappa is such a weird measure -- compare with test_0111
+    """
+    cm = ConfMatBinary.from_tuple_ccw(1, 0, 1, 1)
+    assert_almost_equal(cm.chisq_score(), 0.75, 4)
+    assert_almost_equal(cm.g_score(), 1.0465, 4)
+    assert_almost_equal(cm.kappa(), 0.4, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+
+
+def test_1101():
+    """
+    Why kappa is such a weird measure -- compare with test_0111
+    """
+    cm = ConfMatBinary.from_tuple_ccw(1, 1, 0, 1)
+    assert_almost_equal(cm.chisq_score(), 0.75, 4)
+    assert_almost_equal(cm.g_score(), 1.0465, 4)
+    assert_almost_equal(cm.kappa(), -0.5, 4)
+    assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+
+
+def test_1110():
+    """
+    Why kappa is such a weird measure -- compare with test_0111
+    """
+    cm = ConfMatBinary.from_tuple_ccw(1, 1, 1, 0)
+    assert_almost_equal(cm.chisq_score(), 0.75, 4)
+    assert_almost_equal(cm.g_score(), 1.0465, 4)
+    assert_almost_equal(cm.kappa(), 0.4, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+
+
+def test_1111():
+    """
+    """
+    cm = ConfMatBinary.from_tuple_ccw(1, 1, 1, 1)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
 
 
 def test_kappa_precalculated():
