@@ -90,7 +90,8 @@ https://doi.org/10.1007/s00357-008-9023-7
 
 [2] Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering validation:
 results and implications for applied analyses (p. 341). World Scientific Pub Co
-Inc.  Chicago	https://doi.org/10.1142/9789812832153_0010
+Inc.
+https://doi.org/10.1142/9789812832153_0010
 
 [3] Sokal, R. R., & Rohlf, F. J. (2012). Biometry (4th edn). pp 742-744.
 
@@ -101,13 +102,17 @@ http://dl.acm.org/citation.cfm?id=972454
 [5] Ted Dunning's personal blog
 http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html
 
+[6] Warrens, M. J. (2008). On association coefficients for 2x2 tables and
+properties that do not depend on the marginal distributions. Psychometrika,
+73(4), 777-789.
+https://doi.org/10.1007/s11336-008-9070-3
 """
 
 import numpy as np
 from math import log as logn, sqrt, copysign
 from collections import defaultdict, Counter, Mapping, Set, namedtuple
-from itertools import izip, chain
-from operator import itemgetter, mul
+from itertools import izip
+from operator import itemgetter
 from scipy.special import binom
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples, iter_items, iter_vals
@@ -371,7 +376,7 @@ class ConfMatBinary(ContingencyTable):
     def _div(numer, denom):
         return np.nan if denom == 0 else float(numer) / denom
 
-    def accuracy(self):
+    def ACC(self):
         """Accuracy (also known as Rand Index)
 
         This is generally the wrong metric to use. You probably want either
@@ -380,29 +385,80 @@ class ConfMatBinary(ContingencyTable):
         """
         return self._div(self.TP + self.TN, self.grand_total)
 
-    def precision(self):
-        """Calculate precision from the pairwise confusion matrix
+    def PPV(self):
+        """Precision (Positive Predictive Value)
         """
         return self._div(self.TP, self.TP + self.FP)
 
-    def recall(self):
-        """Calculate recall
-        """
-        return self._div(self.TP, self.TP + self.FN)
-
-    sensitivity = recall
-
-    def specificity(self):
-        """Specificity (True Negative Rate)
-        """
-        return self._div(self.TN, self.FP + self.TN)
-
-    def neg_pred_val(self):
+    def NPV(self):
         """Negative predictive value
         """
         return self._div(self.TN, self.TN + self.FN)
 
-    pos_pred_val = precision
+    def TPR(self):
+        """Recall (Sensitivity)
+        """
+        return self._div(self.TP, self.TP + self.FN)
+
+    def FPR(self):
+        """Fallout (False Positive Rate)
+        """
+        return self._div(self.FP, self.TN + self.FP)
+
+    def TNR(self):
+        """Specificity (True Negative Rate)
+        """
+        return self._div(self.TN, self.FP + self.TN)
+
+    def FNR(self):
+        """Miss Rate (False Negative Rate)
+        """
+        return self._div(self.FN, self.TP + self.FN)
+
+    def FDR(self):
+        """False discovery rate
+        """
+        return self._div(self.FP, self.TP + self.FP)
+
+    def FOR(self):
+        """False omission rate
+        """
+        return self._div(self.FN, self.TN + self.FN)
+
+    def PLL(self):
+        """Positive likelihood ratio
+        """
+        return self._div(self.TPR(), self.FPR())
+
+    def NLL(self):
+        """Negative likelihood ratio
+        """
+        return self._div(self.FNR(), self.TNR())
+
+    def DOR(self):
+        """Diagnostics odds ratio
+        """
+        return self._div(self.PLL(), self.NLL())
+
+    accuracy = ACC
+
+    # information retrieval
+    precision = PPV
+    recall = TPR
+    fallout = FPR
+
+    # clinical diagnostics
+    sensitivity = TPR
+    specificity = TNR
+
+    # sales/marketing
+    hit_rate = TPR
+    miss_rate = FNR
+
+    def prevalence(self):
+        """Prevalence
+        """
+        return self._div(self.TP, self.grand_total)
 
     def informedness(self):
         """Informedness = Sensitivity + Specificity - 1
@@ -418,7 +474,7 @@ class ConfMatBinary(ContingencyTable):
         Informedness can be thought of as renormalization of precision after
         correcting for chance.
         """
-        return self.precision() + self.neg_pred_val() - 1.0
+        return self.precision() + self.NPV() - 1.0
 
     def fscore(self, beta=1.0):
         """F-score
@@ -436,6 +492,24 @@ class ConfMatBinary(ContingencyTable):
         """
         return self._div(self.TP, self.TP + self.FP + self.FN)
 
+    def dice_coeff(self):
+        """Dice association coefficient
+        """
+        return self._div(2 * self.TP, 2 * self.TP + self.FN + self.FP)
+
+    def ochiai_coeff(self):
+        """Ochiai association coefficient
+        """
+        a, b, c = self.TP, self.FN, self.FP
+        return self._div(a, sqrt((a + b) * (a + c)))
+
+    def loevinger_coeff(self):
+        """Loevinger association coefficient
+        """
+        p1, q1 = self.row_totals
+        p2, q2 = self.col_totals
+        return self._div(self._diseq(), min(p1 * q2, p2 * q1))
+
     def kappa(self):
         """Calculate Cohen's kappa of a binary confusion matrix
 
@@ -445,17 +519,19 @@ class ConfMatBinary(ContingencyTable):
         clustering. However its applicability for evaluating experiments where
         ground truth vectors are known ahead of time is questionable.
         """
-        N = self.grand_total
-        if N == 0:
-            return np.nan
+        p1, q1 = self.row_totals
+        p2, q2 = self.col_totals
+        return self._div(2 * self._diseq(), p1 * q2 + p2 * q1)
 
-        sum_a = self.TP + self.FP
-        sum_b = self.TP + self.FN
-        sum_a_sum_b_over_N = (sum_a * sum_b) / float(N)
+    def mp_corr(self):
+        """Maxwell & Pilliner's chance-corrected association index
 
-        numerator = self.TP - sum_a_sum_b_over_N
-        denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b_over_N
-        return numerator / denominator
+        Thie formula is like that for Cohen's Kappa, but with a different
+        denominator [6].
+        """
+        p1, q1 = self.row_totals
+        p2, q2 = self.col_totals
+        return self._div(2 * self._diseq(), p1 * q1 + p2 * q2)
 
     def matthews_corr(self):
         """Matthews Correlation Coefficient
@@ -471,36 +547,55 @@ class ConfMatBinary(ContingencyTable):
         contingency table. Some studies (TODO: find references) report this
         metric to be less biased than Cohen's kappa.
 
-        Matthews coefficient is a geometric mean of informedness and markedness
+        MCC is a geometric mean of informedness and markedness
         (the regression coefficients of the problem and its dual).
+
+        MCC has been described as a chance-corrected version of Yule's Q.
         """
-        return self._div(
-            self.disequilibrium(),
-            sqrt(reduce(mul, chain(self.row_totals, self.col_totals))))
+        p1, q1 = self.row_totals
+        p2, q2 = self.col_totals
+        return self._div(self._diseq(), sqrt(p1 * q1 * p2 * q2))
 
     def mutinf_signed(self):
         """Assigns a sign to mututal information-based metrics
         """
         info, mark, corr = self.mutinf_metrics()
-        sgn = copysign(1, self.disequilibrium())
+        sgn = copysign(1, self._diseq())
         return (sgn * info, sgn * mark, sgn * corr)
 
-    def yule_coeff(self):
-        """Yule's index of association
+    def yule_q(self):
+        """Yule's Q (index of association)
         For a table of shape
 
         a b
         c d
 
-        Yule's index is (ad - bc) / (ad + bc)
+        Yule's Q is (ad - bc) / (ad + bc)
         """
-        return self._div(self.disequilibrium(),
-                         self.TP * self.TN + self.FP * self.FN)
+        return self._div(self._diseq(), self.TP * self.TN + self.FP * self.FN)
+
+    def yule_y(self):
+        """Colligation coefficient (Yule's Y)
+        For a table of shape
+
+        a b
+        c d
+
+        Yule's Y is (sqrt(ad) - sqrt(bc)) / (sqrt(ad) + sqrt(bc))
+        """
+        ad = self.TP * self.TN
+        bc = self.FN * self.FP
+        return self._div(sqrt(ad) - sqrt(bc), sqrt(ad) + sqrt(bc))
+
+    def _diseq(self):
+        """Unnormalized disequilibrium measure D
+        """
+        return self.TP * self.TN - self.FP * self.FN
 
     def disequilibrium(self):
         """Unnormalized disequilibrium measure D
         """
-        return self.TP * self.TN - self.FP * self.FN
+        return self._div(self._diseq(), self.grand_total)
 
 
 class ClusteringMetrics(ContingencyTable):

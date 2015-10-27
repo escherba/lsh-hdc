@@ -311,7 +311,7 @@ CONFUSION_METRICS = [
     'adj_rand_score',
     'matthews_corr', 'informedness', 'markedness',
     # ok
-    'yule_coeff', 'accuracy',
+    'yule_q', 'accuracy',
     # not good
     'jaccard_coeff', 'fscore'
 ] + MI_CORR_METRICS
@@ -373,8 +373,8 @@ def add_incidence_metrics(args, clusters, pairs):
             # coefficients below are not corrected for chance
             if 'accuracy' in args_metrics:
                 pairs.append(('accuracy', conf.accuracy()))
-            if 'yule_coeff' in args_metrics:
-                pairs.append(('yule_coeff', conf.yule_coeff()))
+            if 'yule_q' in args_metrics:
+                pairs.append(('yule_q', conf.yule_q()))
 
             # coefficients below don't consider true negatives
             if 'fscore' in args_metrics:

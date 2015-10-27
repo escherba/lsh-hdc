@@ -285,11 +285,11 @@ def test_negative_correlation():
 def test_twoway_confusion_phi():
     cm = ConfMatBinary.from_tuple_ccw(116, 21, 18, 21)
     assert_almost_equal(cm.matthews_corr(), 0.31, 2)
-    assert_almost_equal(cm.yule_coeff(), 0.65, 2)
+    assert_almost_equal(cm.yule_q(), 0.65, 2)
     cm = ConfMatBinary.from_tuple_ccw(0, 0, 0, 0)
     assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.chisq_score()))
-    assert_true(np.isnan(cm.yule_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
     cm = ConfMatBinary.from_tuple_ccw(35, 60, 41, 9)
     assert_almost_equal(cm.chisq_score(), 5.50, 2)
 
