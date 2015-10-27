@@ -441,6 +441,7 @@ class ConfMatBinary(ContingencyTable):
         return self._div(self.PLL(), self.NLL())
 
     accuracy = ACC
+    rand_index = ACC
 
     # information retrieval
     precision = PPV
@@ -610,21 +611,6 @@ class ClusteringMetrics(ContingencyTable):
     def __init__(self, *args, **kwargs):
         super(ClusteringMetrics, self).__init__(*args, **kwargs)
         self.confusion_matrix_ = self.pairwise_confusion_matrix()
-
-    def precision(self):
-        return self.confusion_matrix_.precision()
-
-    def recall(self):
-        return self.confusion_matrix_.recall()
-
-    def fscore(self, beta=1.0):
-        return self.confusion_matrix_.fscore(beta)
-
-    def rand_index(self):
-        return self.confusion_matrix_.accuracy()
-
-    def jaccard_coeff(self):
-        return self.confusion_matrix_.jaccard_coeff()
 
     def pairwise_confusion_matrix(self):
         """Calculate a binary confusion matrix from object pair distribution
