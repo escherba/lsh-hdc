@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import warnings
 from itertools import chain
 from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
@@ -8,6 +9,22 @@ from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     ConfMatBinary, geometric_mean, harmonic_mean, _div
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true, assert_equal
+
+
+def check_with_nans(num1, num2, places=None, msg=None, delta=None, ensure_nans=True):
+    nancheck_msg = "NaN check failed for '%s'" % msg
+    if np.isnan(num1):
+        if ensure_nans:
+            assert_true(np.isnan(num2), msg=nancheck_msg)
+        elif not np.isnan(num2):
+            warnings.warn(nancheck_msg)
+    elif np.isnan(num2):
+        if ensure_nans:
+            assert_true(np.isnan(num1), msg=nancheck_msg)
+        elif not np.isnan(num1):
+            warnings.warn(nancheck_msg)
+    else:
+        assert_almost_equal(num1, num2, places=places, msg=msg, delta=delta)
 
 
 def _kappa(a, c, d, b):
@@ -200,8 +217,15 @@ def test_IR_example():
     assert_almost_equal(c, 0.357908, 6)
     assert_almost_equal(v, 0.364562, 6)
 
+    assert_almost_equal(cm.chisq_score(),     9.017647, 6)
+    assert_almost_equal(cm.g_score(),        13.325845, 6)
+
     # test confusion matrix-based metrics
     conf = cm.confusion_matrix_
+
+    assert_almost_equal(conf.chisq_score(),   8.063241, 6)
+    assert_almost_equal(conf.g_score(),       7.804221, 6)
+
     assert_almost_equal(conf.jaccard_coeff(), 0.312500, 6)
     assert_almost_equal(conf.ochiai_coeff(),  0.476731, 6)
     assert_almost_equal(conf.fscore(),        0.476190, 6)
@@ -210,6 +234,8 @@ def test_IR_example():
     assert_almost_equal(conf.rand_index(),    0.676471, 6)
     assert_almost_equal(conf.precision(),     0.500000, 6)
     assert_almost_equal(conf.recall(),        0.454545, 6)
+
+    # test invariants
     prec, recall = conf.precision(), conf.recall()
     expected_f = harmonic_mean(prec, recall)
     assert_almost_equal(expected_f, conf.fscore(), 6)
@@ -482,34 +508,35 @@ def test_kappa_precalculated():
     assert_almost_equal(cm.kappa(), 0.191111, 6)
 
 
+def random_tuple(tuple_len, int_from, int_to):
+    result = []
+    for _ in xrange(tuple_len):
+        result.append(random.randint(int_from, int_to))
+    return tuple(result)
+
+
 def test_randomize():
     """Samples 100 random 2x2 matrices
     """
 
-    dec_places = 4
-    for _ in range(100):
-        sample = random.sample(range(0, 1000), 4)
+    for _ in range(10000):
+        sample = random_tuple(4, 0, 100)
         cm = ConfMatBinary.from_tuple_ccw(*sample)
 
         # check dogfood
         assert_equal(
             cm.as_tuple_ccw(),
-            ConfMatBinary.from_tuple_ccw(*cm.as_tuple_ccw()).as_tuple_ccw())
+            ConfMatBinary.from_tuple_ccw(*cm.as_tuple_ccw()).as_tuple_ccw(),
+            msg="must be able to convert to tuple and create from tuple")
 
         # check kappa implementations
-        k1 = _kappa(*sample)
-        k2 = cm.kappa()
-        assert_true((np.isnan(k1) and np.isnan(k2))
-                    or round(k1, dec_places) == round(k2, dec_places))
+        check_with_nans(cm.kappa(), _kappa(*sample), 4,
+                        msg="kappas must be equal")
 
         # check odds ratio implementation
-        or1 = cm.DOR()
-        or2 = _div(cm.PLL(), cm.NLL())
-        assert_true((np.isnan(or1) and np.isnan(or2))
-                    or round(or1, dec_places) == round(or2, dec_places))
+        check_with_nans(cm.DOR(), _div(cm.PLL(), cm.NLL()), 4, ensure_nans=False,
+                        msg="DOR must be equal")
 
         # check F-score and Dice
-        or1 = cm.fscore()
-        or2 = cm.dice_coeff()
-        assert_true((np.isnan(or1) and np.isnan(or2))
-                    or round(or1, dec_places) == round(or2, dec_places))
+        check_with_nans(cm.fscore(), cm.dice_coeff(), 4, ensure_nans=False,
+                        msg="Fscore must be equal")

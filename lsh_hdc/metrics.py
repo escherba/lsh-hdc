@@ -426,6 +426,9 @@ class ConfMatBinary(ContingencyTable):
         """Dice similarity coefficient
 
         Thi is the same as F1-score but calculated slightly differently here.
+        Note that Dice can be zero if total number of positives is zero,
+        buit F-score is undefined in that case (beccause recall is undefined).
+
         Other metrics from the same family: jaccard_coeff, ochiai_coeff
         """
         a = self.TP
