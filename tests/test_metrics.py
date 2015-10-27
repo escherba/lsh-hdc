@@ -6,7 +6,8 @@ from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
     jaccard_similarity, clustering_aul_score, ClusteringMetrics, \
-    ConfusionMatrix2, geometric_mean, harmonic_mean, _div
+    ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
+    matthews_corr
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true, assert_equal
 
@@ -497,15 +498,23 @@ def test_1111():
 
 def test_kappa_precalculated():
     # from literature
-    cm = ConfusionMatrix2.from_ccw(22, 4, 11, 2)
-    assert_almost_equal(cm.kappa(), 0.67, 2)
-    cm = ConfusionMatrix2.from_ccw(147, 10, 62, 3)
-    assert_almost_equal(cm.kappa(), 0.86, 2)
+    assert_almost_equal(cohen_kappa(22, 4, 11, 2),
+                        0.67, 2)
+    assert_almost_equal(matthews_corr(22, 4, 11, 2),
+                        0.67, 2)
+    assert_almost_equal(cohen_kappa(147, 10, 62, 3),
+                        0.86, 2)
+    assert_almost_equal(matthews_corr(147, 10, 62, 3),
+                        0.87, 2)
     # numeric stability cases
-    cm = ConfusionMatrix2.from_ccw(69, 1, 3, 11)
-    assert_almost_equal(cm.kappa(), 0.280000, 6)
-    cm = ConfusionMatrix2.from_ccw(1, 2, 96, 5)
-    assert_almost_equal(cm.kappa(), 0.191111, 6)
+    assert_almost_equal(cohen_kappa(69, 1, 3, 11),
+                        0.280000, 6)
+    assert_almost_equal(matthews_corr(69, 1, 3, 11),
+                        0.350000, 6)
+    assert_almost_equal(cohen_kappa(1, 2, 96, 5),
+                        0.191111, 6)
+    assert_almost_equal(matthews_corr(1, 2, 96, 5),
+                        0.203746, 6)
 
 
 def test_randomize():

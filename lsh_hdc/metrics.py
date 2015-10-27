@@ -756,13 +756,13 @@ def roc_auc_score(y_true, y_score, sample_weight=None):
 def matthews_corr(*args, **kwargs):
     """Return MCC score for a 2x2 contingency table
     """
-    return ConfusionMatrix2(*args, **kwargs).matthews_corr()
+    return ConfusionMatrix2.from_ccw(*args, **kwargs).matthews_corr()
 
 
 def cohen_kappa(*args, **kwargs):
     """Return Cohen's Kappa for a 2x2 contingency table
     """
-    return ConfusionMatrix2(*args, **kwargs).kappa()
+    return ConfusionMatrix2.from_ccw(*args, **kwargs).kappa()
 
 
 def _plot_lift(xs, ys):  # pragma: no cover
