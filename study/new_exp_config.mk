@@ -1,4 +1,4 @@
-EXPERIMENT_ARGS := --doc_len_mean 12 --p_err 0.2
+EXPERIMENT_ARGS := --cluster_size 20 --p_err 0.0
 
 GROUP_FIELD := shingle_skip
 GROUPS := 0 1 2

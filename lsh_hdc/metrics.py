@@ -352,11 +352,7 @@ class ConfMatBinary(ContingencyTable):
         return self.rows[1][1]
 
     def ACC(self):
-        """Accuracy (also known as Rand Index)
-
-        This is generally the wrong metric to use. You probably want either
-        precision, recall, F-score, or a chance-corrected version of accuracy
-        known as Cohen's kappa (see kappa() method).
+        """Accuracy (Simple Matching Coefficient, Rand Index)
         """
         return _div(self.TP + self.TN, self.grand_total)
 
@@ -420,34 +416,37 @@ class ConfMatBinary(ContingencyTable):
     def fscore(self, beta=1.0):
         """F-score
 
-        As beta tends to infinity, F-score will approach recall As beta tends to
-        zero, F-score will approach precision
+        As beta tends to infinity, F-score will approach recall.  As beta tends
+        to zero, F-score will approach precision. For a similarity coefficient
+        see dice_coeff.
         """
         return harmonic_mean_weighted(self.precision(), self.recall(), beta)
 
     def dice_coeff(self):
-        """Same as F1-score but calculated slightly differently here
+        """Dice similarity coefficient
+
+        Thi is the same as F1-score but calculated slightly differently here.
+        Other metrics from the same family: jaccard_coeff, ochiai_coeff
         """
         a = self.TP
         return _div(2 * a, 2 * a + self.FN + self.FP)
 
     def jaccard_coeff(self):
-        """Jaccard coefficient of clustering performance
+        """Jaccard similarity coefficient
 
-        This metric is similar to accuracy except it ignores true negatives
-        (of which there can be very many)
+        Other metrics from the same family: dice_coeff, ochiai_coeff
         """
         return _div(self.TP, self.TP + self.FP + self.FN)
 
     def ochiai_coeff(self):
-        """Ochiai (Cosine) association coefficient
+        """Ochiai (Cosine) similarity coefficient
+
+        Other metrics from the same family: jaccard_coeff, dice_coeff
         """
         a, b, c = self.TP, self.FN, self.FP
         return _div(a, sqrt((a + b) * (a + c)))
 
-    # misc
-    accuracy = ACC
-    rand_index = ACC
+    # various silly terminologies folow
 
     # information retrieval
     precision = PPV
@@ -461,6 +460,11 @@ class ConfMatBinary(ContingencyTable):
     # sales/marketing
     hit_rate = TPR
     miss_rate = FNR
+
+    # other
+    accuracy = ACC
+    rand_index = ACC
+    sm_coeff = ACC
 
     def prevalence(self):
         """Prevalence
