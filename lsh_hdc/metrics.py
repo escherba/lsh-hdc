@@ -440,8 +440,18 @@ class ConfMatBinary(ContingencyTable):
         """
         return self._div(self.PLL(), self.NLL())
 
+    def fscore(self, beta=1.0):
+        """F-score
+
+        As beta tends to infinity, F-score will approach recall As beta tends to
+        zero, F-score will approach precision
+        """
+        return harmonic_mean_weighted(self.precision(), self.recall(), beta)
+
+    # misc
     accuracy = ACC
     rand_index = ACC
+    dice_coeff = fscore
 
     # information retrieval
     precision = PPV
@@ -477,14 +487,6 @@ class ConfMatBinary(ContingencyTable):
         """
         return self.precision() + self.NPV() - 1.0
 
-    def fscore(self, beta=1.0):
-        """F-score
-
-        As beta tends to infinity, F-score will approach recall As beta tends to
-        zero, F-score will approach precision
-        """
-        return harmonic_mean_weighted(self.precision(), self.recall(), beta)
-
     def jaccard_coeff(self):
         """Jaccard coefficient of clustering performance
 
@@ -492,11 +494,6 @@ class ConfMatBinary(ContingencyTable):
         (of which there can be very many)
         """
         return self._div(self.TP, self.TP + self.FP + self.FN)
-
-    def dice_coeff(self):
-        """Dice association coefficient
-        """
-        return self._div(2 * self.TP, 2 * self.TP + self.FN + self.FP)
 
     def ochiai_coeff(self):
         """Ochiai association coefficient
