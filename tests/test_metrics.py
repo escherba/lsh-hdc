@@ -317,6 +317,8 @@ def test_kappa_precalculated():
 def test_randomize():
     """Samples 100 random 2x2 matrices
     """
+
+    dec_places = 4
     for _ in range(100):
         sample = random.sample(range(0, 1000), 4)
         cm = ConfMatBinary.from_tuple_ccw(*sample)
@@ -327,7 +329,13 @@ def test_randomize():
             ConfMatBinary.from_tuple_ccw(*cm.as_tuple_ccw()).as_tuple_ccw())
 
         # check kappa implementations
-        assert_almost_equal(_kappa(*sample), cm.kappa(), 4)
+        k1 = _kappa(*sample)
+        k2 = cm.kappa()
+        assert_true((np.isnan(k1) and np.isnan(k2))
+                    or round(k1, dec_places) == round(k2, dec_places))
 
         # check odds ratio implementation
-        assert_almost_equal(cm.DOR(), cm._div(cm.PLL(), cm.NLL()))
+        or1 = cm.DOR()
+        or2 = cm._div(cm.PLL(), cm.NLL())
+        assert_true((np.isnan(or1) and np.isnan(or2))
+                    or round(or1, dec_places) == round(or2, dec_places))
