@@ -407,8 +407,10 @@ class ConfMatBinary(ContingencyTable):
 
     def DOR(self):
         """Diagnostics odds ratio
+
+        Equal to PLL / NLL
         """
-        return self._div(self.PLL(), self.NLL())
+        return self._div(self.TP * self.TN, self.FP * self.FN)
 
     def fscore(self, beta=1.0):
         """F-score
@@ -539,6 +541,13 @@ class ConfMatBinary(ContingencyTable):
         c d
 
         Yule's Q is (ad - bc) / (ad + bc)
+
+        It relates to odds ratio (here DOR() method):
+
+                   OR - 1
+           Q  =   --------.
+                   OR + 1
+
         """
         return self._div(self._diseq(), self.TP * self.TN + self.FP * self.FN)
 

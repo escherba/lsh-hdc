@@ -7,7 +7,7 @@ from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     jaccard_similarity, clustering_aul_score, ClusteringMetrics, \
     ConfMatBinary, geometric_mean, harmonic_mean
 from numpy.testing import assert_array_almost_equal
-from nose.tools import assert_almost_equal, assert_true
+from nose.tools import assert_almost_equal, assert_true, assert_equal
 
 
 def _kappa(a, c, d, b):
@@ -290,7 +290,9 @@ def test_negative_correlation():
 def test_twoway_confusion_phi():
     cm = ConfMatBinary.from_tuple_ccw(116, 21, 18, 21)
     assert_almost_equal(cm.matthews_corr(), 0.31, 2)
-    assert_almost_equal(cm.yule_q(), 0.65, 2)
+    assert_almost_equal(cm.yule_q(), 0.6512, 4)
+    assert_almost_equal(cm.DOR(),    4.7347, 4)
+
     cm = ConfMatBinary.from_tuple_ccw(0, 0, 0, 0)
     assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.chisq_score()))
@@ -312,9 +314,20 @@ def test_kappa_precalculated():
     assert_almost_equal(cm.kappa(), 0.191111, 6)
 
 
-def test_kappa_compare():
+def test_randomize():
+    """Samples 100 random 2x2 matrices
+    """
     for _ in range(100):
-        # sample 100 random 2x2 matrices
         sample = random.sample(range(0, 1000), 4)
         cm = ConfMatBinary.from_tuple_ccw(*sample)
+
+        # check dogfood
+        assert_equal(
+            cm.as_tuple_ccw(),
+            ConfMatBinary.from_tuple_ccw(*cm.as_tuple_ccw()).as_tuple_ccw())
+
+        # check kappa implementations
         assert_almost_equal(_kappa(*sample), cm.kappa(), 4)
+
+        # check odds ratio implementation
+        assert_almost_equal(cm.DOR(), cm._div(cm.PLL(), cm.NLL()))
