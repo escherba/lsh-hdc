@@ -8,7 +8,7 @@ METRICS := \
 	mi_info mi_mark mi_corr \
 	informedness markedness matthews_corr \
 	roc_max_info aul_score roc_auc \
-	jaccard ochiai fscore \
+	jaccard \
 	time_cpu
 
 SIMUL_CLUST_ANALY_ARGS := --sim_size 100000 --metrics $(METRICS)
