@@ -5,7 +5,7 @@ from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
     jaccard_similarity, clustering_aul_score, ClusteringMetrics, \
-    ConfMatBinary, geometric_mean, harmonic_mean
+    ConfMatBinary, geometric_mean, harmonic_mean, _div
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true, assert_equal
 
@@ -18,7 +18,9 @@ def _kappa(a, c, d, b):
         return np.nan
     po = a + d
     pe = ((a + c) * (a + b) + (b + d) * (c + d)) / float(n)
-    return (po - pe) / (n - pe)
+    numer = po - pe
+    denom = n - pe
+    return 0.0 if denom == 0.0 else numer / denom
 
 
 def _auc(fpr, tpr, reorder=False):
@@ -293,12 +295,177 @@ def test_twoway_confusion_phi():
     assert_almost_equal(cm.yule_q(), 0.6512, 4)
     assert_almost_equal(cm.DOR(),    4.7347, 4)
 
-    cm = ConfMatBinary.from_tuple_ccw(0, 0, 0, 0)
-    assert_true(np.isnan(cm.matthews_corr()))
-    assert_true(np.isnan(cm.chisq_score()))
-    assert_true(np.isnan(cm.yule_q()))
     cm = ConfMatBinary.from_tuple_ccw(35, 60, 41, 9)
     assert_almost_equal(cm.chisq_score(), 5.50, 2)
+
+
+def test_0000():
+    """
+    """
+    m = (0, 0, 0, 0)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_true(np.isnan(cm.kappa()))
+    assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(_kappa(*m)))
+
+
+def test_1000():
+    """
+    """
+    m = (1, 0, 0, 0)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(_kappa(*m), 0.0, 4)
+
+
+def test_0100():
+    """
+    """
+    m = (0, 1, 0, 0)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(_kappa(*m), 0.0, 4)
+
+
+def test_0010():
+    """
+    """
+    m = (0, 0, 1, 0)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(_kappa(*m), 0.0, 4)
+
+
+def test_0001():
+    """
+    """
+    m = (0, 0, 0, 1)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+
+
+def test_1010():
+    """
+    """
+    m = (1, 0, 1, 0)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 2.0, 4)
+    assert_almost_equal(cm.g_score(), 2.7726, 4)
+    assert_almost_equal(cm.kappa(), 1.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 1.0, 4)
+    assert_almost_equal(_kappa(*m), 1.0, 4)
+
+
+def test_1100():
+    """
+    """
+    m = (1, 1, 0, 0)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(_kappa(*m), 0.0, 4)
+
+
+def test_0011():
+    """
+    """
+    m = (0, 0, 1, 1)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(_kappa(*m), 0.0, 4)
+
+
+def test_0101():
+    """
+    """
+    m = (0, 1, 0, 1)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 2.0, 4)
+    assert_almost_equal(cm.g_score(), 2.7726, 4)
+    assert_almost_equal(cm.kappa(), -1.0, 4)
+    assert_almost_equal(cm.matthews_corr(), -1.0, 4)
+    assert_almost_equal(_kappa(*m), -1.0, 4)
+
+
+def test_0111():
+    """
+    """
+    m = (0, 1, 1, 1)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.75, 4)
+    assert_almost_equal(cm.g_score(), 1.0465, 4)
+    assert_almost_equal(cm.kappa(), -0.5, 4)
+    assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+    assert_almost_equal(_kappa(*m), -0.5, 4)
+
+
+def test_1011():
+    """
+    Why kappa is such a weird measure -- compare with test_0111
+    """
+    m = (1, 0, 1, 1)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.75, 4)
+    assert_almost_equal(cm.g_score(), 1.0465, 4)
+    assert_almost_equal(cm.kappa(), 0.4, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+    assert_almost_equal(_kappa(*m), 0.4, 4)
+
+
+def test_1101():
+    """
+    """
+    m = (1, 1, 0, 1)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.75, 4)
+    assert_almost_equal(cm.g_score(), 1.0465, 4)
+    assert_almost_equal(cm.kappa(), -0.5, 4)
+    assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+    assert_almost_equal(_kappa(*m), -0.5, 4)
+
+
+def test_1110():
+    """
+    Why kappa is such a weird measure -- compare with test_0111
+    """
+    m = (1, 1, 1, 0)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.75, 4)
+    assert_almost_equal(cm.g_score(), 1.0465, 4)
+    assert_almost_equal(cm.kappa(), 0.4, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+    assert_almost_equal(_kappa(*m), 0.4, 4)
+
+
+def test_1111():
+    """
+    """
+    m = (1, 1, 1, 1)
+    cm = ConfMatBinary.from_tuple_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
 def test_kappa_precalculated():
@@ -336,6 +503,12 @@ def test_randomize():
 
         # check odds ratio implementation
         or1 = cm.DOR()
-        or2 = cm._div(cm.PLL(), cm.NLL())
+        or2 = _div(cm.PLL(), cm.NLL())
+        assert_true((np.isnan(or1) and np.isnan(or2))
+                    or round(or1, dec_places) == round(or2, dec_places))
+
+        # check F-score and Dice
+        or1 = cm.fscore()
+        or2 = cm.dice_coeff()
         assert_true((np.isnan(or1) and np.isnan(or2))
                     or round(or1, dec_places) == round(or2, dec_places))

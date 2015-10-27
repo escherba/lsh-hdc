@@ -322,17 +322,6 @@ LIFT_METRICS = ['aul_score']
 METRICS = ROC_METRICS + LIFT_METRICS + INCIDENCE_METRICS + BENCHMARKS
 
 LEGEND_METRIC_KWARGS = {
-    'homogeneity': dict(loc='lower right'),
-    'roc_auc': dict(loc='lower right'),
-    'roc_max_info': dict(loc='lower right'),
-    'aul_score': dict(loc='lower right'),
-    'adj_rand_score': dict(loc='lower right'),
-    'matthews_corr': dict(loc='lower right'),
-    'informedness': dict(loc='lower right'),
-    'markedness': dict(loc='lower right'),
-    'mi_corr': dict(loc='lower right'),
-    'mi_mark': dict(loc='lower right'),
-    'mi_info': dict(loc='lower right'),
     'time_wall': dict(loc='upper left'),
     'time_cpu': dict(loc='upper left'),
 }
@@ -457,7 +446,7 @@ def create_plots(args, df, metrics):
                     logging.exception("Exception caught plotting %s:%s", metric, label)
             fig_filename = "fig_%s.%s" % (metric, args.fig_format)
             fig_path = os.path.join(args.output, fig_filename)
-            ax.legend(prop=fontP, **LEGEND_METRIC_KWARGS.get(metric, {}))
+            ax.legend(prop=fontP, **LEGEND_METRIC_KWARGS.get(metric, {'loc': 'lower right'}))
             fig.savefig(fig_path)
 
 
