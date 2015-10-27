@@ -339,3 +339,9 @@ def test_randomize():
         or2 = cm._div(cm.PLL(), cm.NLL())
         assert_true((np.isnan(or1) and np.isnan(or2))
                     or round(or1, dec_places) == round(or2, dec_places))
+
+        # check F-score and Dice
+        or1 = cm.fscore()
+        or2 = cm.dice_coeff()
+        assert_true((np.isnan(or1) and np.isnan(or2))
+                    or round(or1, dec_places) == round(or2, dec_places))

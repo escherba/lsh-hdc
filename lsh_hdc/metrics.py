@@ -420,10 +420,29 @@ class ConfMatBinary(ContingencyTable):
         """
         return harmonic_mean_weighted(self.precision(), self.recall(), beta)
 
+    def dice_coeff(self):
+        """Same as F1-score but calculated slightly differently here
+        """
+        a = self.TP
+        return self._div(2 * a, 2 * a + self.FN + self.FP)
+
+    def jaccard_coeff(self):
+        """Jaccard coefficient of clustering performance
+
+        This metric is similar to accuracy except it ignores true negatives
+        (of which there can be very many)
+        """
+        return self._div(self.TP, self.TP + self.FP + self.FN)
+
+    def ochiai_coeff(self):
+        """Ochiai (Cosine) association coefficient
+        """
+        a, b, c = self.TP, self.FN, self.FP
+        return self._div(a, sqrt((a + b) * (a + c)))
+
     # misc
     accuracy = ACC
     rand_index = ACC
-    dice_coeff = fscore
 
     # information retrieval
     precision = PPV
@@ -458,20 +477,6 @@ class ConfMatBinary(ContingencyTable):
         correcting for chance.
         """
         return self.precision() + self.NPV() - 1.0
-
-    def jaccard_coeff(self):
-        """Jaccard coefficient of clustering performance
-
-        This metric is similar to accuracy except it ignores true negatives
-        (of which there can be very many)
-        """
-        return self._div(self.TP, self.TP + self.FP + self.FN)
-
-    def ochiai_coeff(self):
-        """Ochiai association coefficient
-        """
-        a, b, c = self.TP, self.FN, self.FP
-        return self._div(a, sqrt((a + b) * (a + c)))
 
     def loevinger_coeff(self):
         """Loevinger association coefficient
