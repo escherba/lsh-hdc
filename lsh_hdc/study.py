@@ -244,7 +244,7 @@ def is_pos(x):
     return ':' in x
 
 
-def clusters_to_labels(cluster_iter):
+def clusters_to_labels(cluster_iter, label_negatives=True):
     labels_true = []
     labels_pred = []
     for idx, cluster in enumerate(cluster_iter):
@@ -258,6 +258,8 @@ def clusters_to_labels(cluster_iter):
                 true_cluster = int(true_cluster)
             else:
                 true_cluster = 0
+            if (not label_negatives) and true_cluster == pred_cluster == 0:
+                continue
             labels_true.append(true_cluster)
             labels_pred.append(pred_cluster)
     return labels_true, labels_pred
@@ -334,7 +336,9 @@ def add_incidence_metrics(args, clusters, pairs):
     if (set(INCIDENCE_METRICS) & set(args_metrics)):
 
         from lsh_hdc.metrics import ClusteringMetrics
-        cm = ClusteringMetrics.from_labels(*clusters_to_labels(clusters))
+        labels = clusters_to_labels(
+            clusters, label_negatives=bool(args.label_negatives))
+        cm = ClusteringMetrics.from_labels(*labels)
 
         if (set(ENTROPY_METRICS) & set(args_metrics)):
             pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
@@ -554,6 +558,9 @@ def add_analy_args(parser):
     parser.add_argument(
         '--trial', type=str, default='seed',
         help='Which column to average')
+    parser.add_argument(
+        '--label_negatives', type=int, default=0,
+        help='Whether to label negatives as their own cluster')
     parser.add_argument(
         '--metrics', type=str, nargs='*', choices=METRICS,
         default=('roc_auc', 'nmi_score', 'time_cpu'),
