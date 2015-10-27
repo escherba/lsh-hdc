@@ -12,6 +12,10 @@ where each child process runnning on a multicore machine tries to allocate
 memory for itself. This implementation uses sparse methods on dictionary maps
 instead of building incidence matrices.
 
+Secondly, it was interesting to investigate the type of confusion matrices
+typically produced during pairwise cluster comparisons, and whether it has
+any implications on the choice of overall quality measure.
+
 Validation vs Replication Studies, ARI, and Kappa
 -------------------------------------------------
 
@@ -32,8 +36,8 @@ that, for example, 50% of cups they will encounter have had milk poured first.
 
 To sum up the above, in a replication study where two clusterings are compared
 that were both created by the same algorithm, the Kappa score seems to be an
-appropriate metric (it is symmetric, i.e. independent of row/column
-assignemnts). The same applies to Matthew's Correlation Coefficient. However it
+appropriate metric (it is independent of row/column assignemnts).
+The same applies to Matthew's Correlation Coefficient. However it
 seems that a better chance-corrected metric should exist that would be
 appropriate for Model II studies where the true class portions are fixed.
 
@@ -41,45 +45,44 @@ To be exhaustive, a Model O study would be one where even the grand total is not
 fixed. An example would be an astronomy study that, for example, tests a
 hypothesis about a generalizable property such as dark matter content by looking
 at all galaxies in the Local Group, and the researchers obviously don't get to
-choose ahead of time how many galaxies there are near Milky Way.
-
-Why G-score
-------------
-
-G is a likelihood-ratio statistic and therefore should
-be superior to chi-squre based statistics which rely on Taylor approximation of
-likelihood. One direct benefit is that G statistic is additive while chi-square
-is not. Simulation studies showed [4, 5] that G score outperforms Chi-square on
-highly skewed tables used for word bigram collocations.
+choose ahead of time how many galaxies there are near ours.
 
 References
 ----------
 
-[1] Warrens, M. J. On the equivalence of Cohen's Kappa and the Hubert-Arabie
-Adjusted Rand Index. 2008. J. Classif. 25: 177-183.
+[0] Hasenclever, D., & Scholz, M. (2013). Comparing measures of association in
+2x2 probability tables. arXiv preprint arXiv:1302.6161.
+http://arxiv.org/pdf/1302.6161v1.pdf
+
+[1] Warrens, M. J. (2008). On the equivalence of Cohen's kappa and the
+Hubert-Arabie adjusted Rand index. Journal of Classification, 25(2), 177-183.
 https://doi.org/10.1007/s00357-008-9023-7
 
-[2] Milligan, G.W. Clustering validation: results and implications for applied
-analysis. In Arabie P., de Soete, G. (ed) Clustering and Classification, 1996:
-358-369.  https://doi.org/10.1142/9789812832153_0010
+[2] Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering validation:
+results and implications for applied analyses (p. 341). World Scientific Pub Co
+Inc.
+https://doi.org/10.1142/9789812832153_0010
 
-[3] Sokal, R.R. Rohlf, F.J. Biometry. W.H. Freeman & Co. New York, 2012.  4th
-ed. pp 742-744.
+[3] Sokal, R. R., & Rohlf, F. J. (2012). Biometry (4th edn). pp 742-744.
 
-[4] Dunning, T. Accurate methods for the statisitcs of surprise and coincidence.
-1993. Computational Linguistics 19 (1). 61-74.
+[4] Dunning, T. (1993). Accurate methods for the statistics of surprise and
+coincidence. Computational linguistics, 19(1), 61-74.
 http://dl.acm.org/citation.cfm?id=972454
 
 [5] Ted Dunning's personal blog
 http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html
 
+[6] Warrens, M. J. (2008). On association coefficients for 2x2 tables and
+properties that do not depend on the marginal distributions. Psychometrika,
+73(4), 777-789.
+https://doi.org/10.1007/s11336-008-9070-3
 """
 
 import numpy as np
 from math import log as logn, sqrt, copysign
-from collections import defaultdict, Counter, Mapping, Set
-from itertools import izip, chain
-from operator import itemgetter, mul
+from collections import defaultdict, Counter, Mapping, Set, namedtuple
+from itertools import izip
+from operator import itemgetter
 from scipy.special import binom
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples, iter_items, iter_vals
@@ -228,38 +231,42 @@ class ContingencyTable(object):
             score += (observed - expected) ** 2.0 / expected
         return score
 
+    def mutual_information(self):
+        """Mutual information for expected vs actual contingency table
+        """
+        return (centropy(self.row_totals) +
+                centropy(self.col_totals) -
+                centropy(self.iter_cells()))
+
     def g_score(self):
-        """Returns G-statistic for a 2x2 table
+        """Returns G-statistic for RxC contingency table
 
         Note that this doesn't calculate any corrections to this statistic
         (e.g. Williams', Yates' corrections).
+
+        The statistic is equivalent to the negative of Mutual Information
+        times two. Mututal Information on a contingency table is defined as
+        the differnce between the information in the table and the
+        information in an independent table with the same marginals.
         """
-        return 2.0 * (centropy(self.row_totals) +
-                      centropy(self.col_totals) -
-                      centropy(self.iter_cells()))
+        return 2.0 * self.mutual_information()
 
-    def g_corr_row(self):
-        """Log-likelihood correlation coefficient for fixed row margin tables
+    def mutinf_metrics(self):
+        """Metrics based on mutual information
 
-        Divides G-score by the maximum value it could achieve if row counts were
-        fixed.
+        The coefficient decomposes into regression coefficients defined
+        according to fixed-margin tables. The `mi_info` coefficient, for
+        example, is obtained by dividing the G-score by the maximum achievable
+        value on a table with true class counts (in this case, row totals)
+        fixed. the `mi_mark` is its dual, defined by dividing the G-score by
+        its maximum achievable value when predicted label counts (in this case,
+        column totals) are fixed.
+
+        Note that G scores directly correspond to mutual information of
+        a contingency table.
         """
-        max_achievable = max(0.0, 2.0 * centropy(self.row_totals))
-        return sqrt(max(0.0, self.g_score()) / max_achievable)
-
-    def g_corr_col(self):
-        """Log-likelihood correlation coefficient for fixed column margin tables
-
-        Divides G-score by the maximum value it could achieve if column counts
-        were fixed.
-        """
-        max_achievable = max(0.0, 2.0 * centropy(self.col_totals))
-        return sqrt(max(0.0, self.g_score()) / max_achievable)
-
-    def g_corr(self):
-        """A correlation coefficient defined after G statistic
-        """
-        return geometric_mean(self.g_corr_row(), self.g_corr_col())
+        h, c, rsquare = self.entropy_metrics()
+        return sqrt(h), sqrt(c), sqrt(rsquare)
 
     def entropy_metrics(self):
         """Calculate three centropy metrics used for clustering evaluation
@@ -283,16 +290,17 @@ class ContingencyTable(object):
 
         For a symmetric matrix, all three scores should be the same.
         """
-        H_C = centropy(self.row_totals)
-        H_K = centropy(self.col_totals)
-        H_CK = sum(centropy(col) for col in self.iter_cols())
-        H_KC = sum(centropy(row) for row in self.iter_rows())
-        # The '<=' comparisons below both prevent division by zero errors
-        # and ensure that the scores are non-negative.
-        homogeneity = 0.0 if H_C <= H_CK else (H_C - H_CK) / H_C
-        completeness = 0.0 if H_K <= H_KC else (H_K - H_KC) / H_K
-        nmi_score = harmonic_mean(homogeneity, completeness)
-        return homogeneity, completeness, nmi_score
+        # ensure non-negative values by taking max of 0 and given value
+        mut_info = max(0.0, self.mutual_information())
+        max_h = max(0.0, centropy(self.row_totals))
+        max_c = max(0.0, centropy(self.col_totals))
+        h = 0.0 if max_h == 0.0 else mut_info / max_h
+        c = 0.0 if max_c == 0.0 else mut_info / max_c
+        rsquare = harmonic_mean(h, c)
+        return h, c, rsquare
+
+
+confmatccw_type = namedtuple("ConfMatCCW", "TP FP TN FN")
 
 
 class ConfMatBinary(ContingencyTable):
@@ -306,7 +314,7 @@ class ConfMatBinary(ContingencyTable):
     """
 
     @classmethod
-    def from_cells_ccw(cls, TP, FP, TN, FN):
+    def from_tuple_ccw(cls, TP, FP, TN, FN):
         return cls(
             rows=((TP, FN), (FP, TN)),
             cols=((TP, FP), (FN, TN)),
@@ -314,6 +322,9 @@ class ConfMatBinary(ContingencyTable):
             col_totals=(TP + FP, FN + TN),
             grand_total=(TP + FP + TN + FN)
         )
+
+    def as_tuple_ccw(self):
+        return confmatccw_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
 
     @property
     def TP(self):
@@ -331,35 +342,106 @@ class ConfMatBinary(ContingencyTable):
     def TN(self):
         return self.rows[1][1]
 
-    def accuracy(self):
+    @staticmethod
+    def _div(numer, denom):
+        return np.nan if denom == 0 else float(numer) / denom
+
+    def ACC(self):
         """Accuracy (also known as Rand Index)
 
         This is generally the wrong metric to use. You probably want either
         precision, recall, F-score, or a chance-corrected version of accuracy
         known as Cohen's kappa (see kappa() method).
         """
-        denominator = self.grand_total
-        return np.nan if denominator == 0 else float(self.TP + self.TN) / denominator
+        return self._div(self.TP + self.TN, self.grand_total)
 
-    def precision(self):
-        """Calculate precision from the pairwise confusion matrix
+    def PPV(self):
+        """Precision (Positive Predictive Value)
         """
-        denominator = self.TP + self.FP
-        return np.nan if denominator == 0 else float(self.TP) / denominator
+        return self._div(self.TP, self.TP + self.FP)
 
-    def recall(self):
-        """Calculate recall from the pairwise confusion matrix
+    def NPV(self):
+        """Negative predictive value
         """
-        denominator = self.TP + self.FN
-        return np.nan if denominator == 0 else float(self.TP) / denominator
+        return self._div(self.TN, self.TN + self.FN)
 
-    sensitivity = recall
-
-    def specificity(self):
-        """Specificity (or True Negative Rate)
+    def TPR(self):
+        """Recall (Sensitivity)
         """
-        denominator = self.FP + self.TN
-        return np.nan if denominator == 0 else float(self.TN) / denominator
+        return self._div(self.TP, self.TP + self.FN)
+
+    def FPR(self):
+        """Fallout (False Positive Rate)
+        """
+        return self._div(self.FP, self.TN + self.FP)
+
+    def TNR(self):
+        """Specificity (True Negative Rate)
+        """
+        return self._div(self.TN, self.FP + self.TN)
+
+    def FNR(self):
+        """Miss Rate (False Negative Rate)
+        """
+        return self._div(self.FN, self.TP + self.FN)
+
+    def FDR(self):
+        """False discovery rate
+        """
+        return self._div(self.FP, self.TP + self.FP)
+
+    def FOR(self):
+        """False omission rate
+        """
+        return self._div(self.FN, self.TN + self.FN)
+
+    def PLL(self):
+        """Positive likelihood ratio
+        """
+        return self._div(self.TPR(), self.FPR())
+
+    def NLL(self):
+        """Negative likelihood ratio
+        """
+        return self._div(self.FNR(), self.TNR())
+
+    def DOR(self):
+        """Diagnostics odds ratio
+
+        Equal to PLL / NLL
+        """
+        return self._div(self.TP * self.TN, self.FP * self.FN)
+
+    def fscore(self, beta=1.0):
+        """F-score
+
+        As beta tends to infinity, F-score will approach recall As beta tends to
+        zero, F-score will approach precision
+        """
+        return harmonic_mean_weighted(self.precision(), self.recall(), beta)
+
+    # misc
+    accuracy = ACC
+    rand_index = ACC
+    dice_coeff = fscore
+
+    # information retrieval
+    precision = PPV
+    recall = TPR
+    fallout = FPR
+
+    # clinical diagnostics
+    sensitivity = TPR
+    specificity = TNR
+
+    # sales/marketing
+    hit_rate = TPR
+    miss_rate = FNR
+
+    def prevalence(self):
+        """Prevalence
+        """
+        return self._div(self.TP, self.grand_total)
 
     def informedness(self):
         """Informedness = Sensitivity + Specificity - 1
@@ -375,32 +457,28 @@ class ConfMatBinary(ContingencyTable):
         Informedness can be thought of as renormalization of precision after
         correcting for chance.
         """
-        return self.precision() + self.neg_pred_val() - 1.0
-
-    pos_pred_val = precision
-
-    def neg_pred_val(self):
-        """Negative predictive value
-        """
-        denominator = self.TN + self.FN
-        return np.nan if denominator == 0 else float(self.TN) / denominator
-
-    def fscore(self, beta=1.0):
-        """Calculate F-score from the pairwise confusion metric
-
-        As beta tends to infinity, F-score will approach recall As beta tends to
-        zero, F-score will approach precision
-        """
-        return harmonic_mean_weighted(self.precision(), self.recall(), beta)
+        return self.precision() + self.NPV() - 1.0
 
     def jaccard_coeff(self):
-        """Calculate Jaccard coefficient of clustering performance
+        """Jaccard coefficient of clustering performance
 
         This metric is similar to accuracy except it ignores true negatives
         (of which there can be very many)
         """
-        denominator = self.TP + self.FP + self.FN
-        return np.nan if denominator == 0 else float(self.TP) / denominator
+        return self._div(self.TP, self.TP + self.FP + self.FN)
+
+    def ochiai_coeff(self):
+        """Ochiai association coefficient
+        """
+        a, b, c = self.TP, self.FN, self.FP
+        return self._div(a, sqrt((a + b) * (a + c)))
+
+    def loevinger_coeff(self):
+        """Loevinger association coefficient
+        """
+        p1, q1 = self.row_totals
+        p2, q2 = self.col_totals
+        return self._div(self._diseq(), min(p1 * q2, p2 * q1))
 
     def kappa(self):
         """Calculate Cohen's kappa of a binary confusion matrix
@@ -411,20 +489,22 @@ class ConfMatBinary(ContingencyTable):
         clustering. However its applicability for evaluating experiments where
         ground truth vectors are known ahead of time is questionable.
         """
-        N = self.grand_total
-        if N == 0:
-            return np.nan
+        p1, q1 = self.row_totals
+        p2, q2 = self.col_totals
+        return self._div(2 * self._diseq(), p1 * q2 + p2 * q1)
 
-        sum_a = self.TP + self.FP
-        sum_b = self.TP + self.FN
-        sum_a_sum_b_over_N = (sum_a * sum_b) / float(N)
+    def mp_corr(self):
+        """Maxwell & Pilliner's chance-corrected association index
 
-        numerator = self.TP - sum_a_sum_b_over_N
-        denominator = 0.5 * (sum_a + sum_b) - sum_a_sum_b_over_N
-        return numerator / denominator
+        Thie formula is like that for Cohen's Kappa, but with a different
+        denominator [6].
+        """
+        p1, q1 = self.row_totals
+        p2, q2 = self.col_totals
+        return self._div(2 * self._diseq(), p1 * q1 + p2 * q2)
 
     def matthews_corr(self):
-        """Calculate Matthews Correlation Coefficient
+        """Matthews Correlation Coefficient
 
         For a table of shape
 
@@ -437,27 +517,62 @@ class ConfMatBinary(ContingencyTable):
         contingency table. Some studies (TODO: find references) report this
         metric to be less biased than Cohen's kappa.
 
-        Matthews coefficient is a geometric mean of informedness and markedness
+        MCC is a geometric mean of informedness and markedness
         (the regression coefficients of the problem and its dual).
-        """
-        denominator = reduce(mul, chain(self.iter_row_totals(),
-                                        self.iter_col_totals()))
-        numerator = self.TP * self.TN - self.FP * self.FN
-        return np.nan if denominator == 0 else numerator / sqrt(denominator)
 
-    def yule_coeff(self):
+        MCC has been described as a chance-corrected version of Yule's Q.
         """
+        p1, q1 = self.row_totals
+        p2, q2 = self.col_totals
+        return self._div(self._diseq(), sqrt(p1 * q1 * p2 * q2))
+
+    def mutinf_signed(self):
+        """Assigns a sign to mututal information-based metrics
+        """
+        info, mark, corr = self.mutinf_metrics()
+        sgn = copysign(1, self._diseq())
+        return (sgn * info, sgn * mark, sgn * corr)
+
+    def yule_q(self):
+        """Yule's Q (index of association)
         For a table of shape
 
         a b
         c d
 
-        Yule's index is (ad - bc) / (ad + bc)
+        Yule's Q is (ad - bc) / (ad + bc)
+
+        It relates to odds ratio (here DOR() method):
+
+                   OR - 1
+           Q  =   --------.
+                   OR + 1
+
+        """
+        return self._div(self._diseq(), self.TP * self.TN + self.FP * self.FN)
+
+    def yule_y(self):
+        """Colligation coefficient (Yule's Y)
+        For a table of shape
+
+        a b
+        c d
+
+        Yule's Y is (sqrt(ad) - sqrt(bc)) / (sqrt(ad) + sqrt(bc))
         """
         ad = self.TP * self.TN
-        bc = self.FP * self.FN
-        denominator = ad + bc
-        return np.nan if denominator == 0 else float(ad - bc) / denominator
+        bc = self.FN * self.FP
+        return self._div(sqrt(ad) - sqrt(bc), sqrt(ad) + sqrt(bc))
+
+    def _diseq(self):
+        """Unnormalized disequilibrium measure D
+        """
+        return self.TP * self.TN - self.FP * self.FN
+
+    def disequilibrium(self):
+        """Unnormalized disequilibrium measure D
+        """
+        return self._div(self._diseq(), self.grand_total)
 
 
 class ClusteringMetrics(ContingencyTable):
@@ -473,21 +588,6 @@ class ClusteringMetrics(ContingencyTable):
         super(ClusteringMetrics, self).__init__(*args, **kwargs)
         self.confusion_matrix_ = self.pairwise_confusion_matrix()
 
-    def precision(self):
-        return self.confusion_matrix_.precision()
-
-    def recall(self):
-        return self.confusion_matrix_.recall()
-
-    def fscore(self, beta=1.0):
-        return self.confusion_matrix_.fscore(beta)
-
-    def rand_index(self):
-        return self.confusion_matrix_.accuracy()
-
-    def jaccard_coeff(self):
-        return self.confusion_matrix_.jaccard_coeff()
-
     def pairwise_confusion_matrix(self):
         """Calculate a binary confusion matrix from object pair distribution
 
@@ -499,7 +599,7 @@ class ClusteringMetrics(ContingencyTable):
         FP = TP_plus_FP - TP
         FN = TP_plus_FN - TP
         TN = binom(self.grand_total, 2) - TP - FP - FN
-        return ConfMatBinary.from_cells_ccw(TP, FP, TN, FN)
+        return ConfMatBinary.from_tuple_ccw(TP, FP, TN, FN)
 
     def adjusted_rand_index(self):
         """Calculate Adjusted Rand Index in a memory-efficient way
