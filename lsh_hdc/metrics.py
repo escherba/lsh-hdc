@@ -100,11 +100,8 @@ def jaccard_similarity(set1, set2):
         set1 = set(set1)
     if not isinstance(set2, Set):
         set2 = set(set2)
-    denominator = len(set1 | set2)
-    if denominator == 0:
-        return np.nan
-    else:
-        return len(set1 & set2) / float(denominator)
+    denom = len(set1 | set2)
+    return np.nan if denom == 0 else len(set1 & set2) / float(denom)
 
 
 def centropy(counts):
