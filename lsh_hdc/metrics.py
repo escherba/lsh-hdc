@@ -88,6 +88,19 @@ from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples, iter_items, iter_vals
 
 
+def _div(numer, denom):
+    """Divide without raising zero division error or losing decimal part
+    """
+    if denom == 0:
+        if numer == 0:
+            return np.nan
+        elif numer > 0:
+            return np.PINF
+        else:
+            return np.NINF
+    return float(numer) / denom
+
+
 def jaccard_similarity(set1, set2):
     """Return Jaccard similarity between two sets
 
@@ -100,8 +113,7 @@ def jaccard_similarity(set1, set2):
         set1 = set(set1)
     if not isinstance(set2, Set):
         set2 = set(set2)
-    denom = len(set1 | set2)
-    return np.nan if denom == 0 else len(set1 & set2) / float(denom)
+    return _div(len(set1 & set2), len(set1 | set2))
 
 
 def centropy(counts):
@@ -339,17 +351,6 @@ class ConfMatBinary(ContingencyTable):
     def TN(self):
         return self.rows[1][1]
 
-    @staticmethod
-    def _div(numer, denom):
-        if denom == 0:
-            if numer == 0:
-                return np.nan
-            elif numer > 0:
-                return np.PINF
-            else:
-                return np.NINF
-        return float(numer) / denom
-
     def ACC(self):
         """Accuracy (also known as Rand Index)
 
@@ -357,64 +358,64 @@ class ConfMatBinary(ContingencyTable):
         precision, recall, F-score, or a chance-corrected version of accuracy
         known as Cohen's kappa (see kappa() method).
         """
-        return self._div(self.TP + self.TN, self.grand_total)
+        return _div(self.TP + self.TN, self.grand_total)
 
     def PPV(self):
         """Precision (Positive Predictive Value)
         """
-        return self._div(self.TP, self.TP + self.FP)
+        return _div(self.TP, self.TP + self.FP)
 
     def NPV(self):
         """Negative predictive value
         """
-        return self._div(self.TN, self.TN + self.FN)
+        return _div(self.TN, self.TN + self.FN)
 
     def TPR(self):
         """Recall (Sensitivity)
         """
-        return self._div(self.TP, self.TP + self.FN)
+        return _div(self.TP, self.TP + self.FN)
 
     def FPR(self):
         """Fallout (False Positive Rate)
         """
-        return self._div(self.FP, self.TN + self.FP)
+        return _div(self.FP, self.TN + self.FP)
 
     def TNR(self):
         """Specificity (True Negative Rate)
         """
-        return self._div(self.TN, self.FP + self.TN)
+        return _div(self.TN, self.FP + self.TN)
 
     def FNR(self):
         """Miss Rate (False Negative Rate)
         """
-        return self._div(self.FN, self.TP + self.FN)
+        return _div(self.FN, self.TP + self.FN)
 
     def FDR(self):
         """False discovery rate
         """
-        return self._div(self.FP, self.TP + self.FP)
+        return _div(self.FP, self.TP + self.FP)
 
     def FOR(self):
         """False omission rate
         """
-        return self._div(self.FN, self.TN + self.FN)
+        return _div(self.FN, self.TN + self.FN)
 
     def PLL(self):
         """Positive likelihood ratio
         """
-        return self._div(self.TPR(), self.FPR())
+        return _div(self.TPR(), self.FPR())
 
     def NLL(self):
         """Negative likelihood ratio
         """
-        return self._div(self.FNR(), self.TNR())
+        return _div(self.FNR(), self.TNR())
 
     def DOR(self):
         """Diagnostics odds ratio
 
         Equal to PLL / NLL
         """
-        return self._div(self.TP * self.TN, self.FP * self.FN)
+        return _div(self.TP * self.TN, self.FP * self.FN)
 
     def fscore(self, beta=1.0):
         """F-score
@@ -428,7 +429,7 @@ class ConfMatBinary(ContingencyTable):
         """Same as F1-score but calculated slightly differently here
         """
         a = self.TP
-        return self._div(2 * a, 2 * a + self.FN + self.FP)
+        return _div(2 * a, 2 * a + self.FN + self.FP)
 
     def jaccard_coeff(self):
         """Jaccard coefficient of clustering performance
@@ -436,13 +437,13 @@ class ConfMatBinary(ContingencyTable):
         This metric is similar to accuracy except it ignores true negatives
         (of which there can be very many)
         """
-        return self._div(self.TP, self.TP + self.FP + self.FN)
+        return _div(self.TP, self.TP + self.FP + self.FN)
 
     def ochiai_coeff(self):
         """Ochiai (Cosine) association coefficient
         """
         a, b, c = self.TP, self.FN, self.FP
-        return self._div(a, sqrt((a + b) * (a + c)))
+        return _div(a, sqrt((a + b) * (a + c)))
 
     # misc
     accuracy = ACC
@@ -464,7 +465,7 @@ class ConfMatBinary(ContingencyTable):
     def prevalence(self):
         """Prevalence
         """
-        return self._div(self.TP, self.grand_total)
+        return _div(self.TP, self.grand_total)
 
     def informedness(self):
         """Informedness = Sensitivity + Specificity - 1
@@ -490,7 +491,7 @@ class ConfMatBinary(ContingencyTable):
         cov = self.covariance()
         if cov == 0 and self.grand_total != 0:
             return 0.0
-        return self._div(cov, min(p1 * q2, p2 * q1))
+        return _div(cov, min(p1 * q2, p2 * q1))
 
     def kappa(self):
         """Calculate Cohen's kappa of a binary confusion matrix
@@ -506,7 +507,7 @@ class ConfMatBinary(ContingencyTable):
         cov = self.covariance()
         if cov == 0 and self.grand_total != 0:
             return 0.0
-        return self._div(2 * cov, p1 * q2 + p2 * q1)
+        return _div(2 * cov, p1 * q2 + p2 * q1)
 
     def mp_corr(self):
         """Maxwell & Pilliner's chance-corrected association index
@@ -519,7 +520,7 @@ class ConfMatBinary(ContingencyTable):
         cov = self.covariance()
         if cov == 0 and self.grand_total != 0:
             return 0.0
-        return self._div(2 * cov, p1 * q1 + p2 * q2)
+        return _div(2 * cov, p1 * q1 + p2 * q2)
 
     def matthews_corr(self):
         """Matthews Correlation Coefficient
@@ -545,7 +546,7 @@ class ConfMatBinary(ContingencyTable):
         cov = self.covariance()
         if cov == 0 and self.grand_total != 0:
             return 0.0
-        return self._div(cov, sqrt(p1 * q1 * p2 * q2))
+        return _div(cov, sqrt(p1 * q1 * p2 * q2))
 
     def mutinf_signed(self):
         """Assigns a sign to mututal information-based metrics
@@ -573,7 +574,7 @@ class ConfMatBinary(ContingencyTable):
         cov = self.covariance()
         if cov == 0 and self.grand_total != 0:
             return 0.0
-        return self._div(cov, self.TP * self.TN + self.FP * self.FN)
+        return _div(cov, self.TP * self.TN + self.FP * self.FN)
 
     def yule_y(self):
         """Colligation coefficient (Yule's Y)
@@ -589,7 +590,7 @@ class ConfMatBinary(ContingencyTable):
         numer = sqrt(ad) - sqrt(bc)
         if numer == 0 and self.grand_total != 0:
             return 0.0
-        return self._div(numer, sqrt(ad) + sqrt(bc))
+        return _div(numer, sqrt(ad) + sqrt(bc))
 
     def covariance(self):
         """Determinant of a 2x2 matrix
@@ -600,7 +601,7 @@ class ConfMatBinary(ContingencyTable):
         """Unnormalized disequilibrium measure D
         """
         cov = self.covariance()
-        return self._div(cov, self.grand_total)
+        return _div(cov, self.grand_total)
 
 
 class ClusteringMetrics(ContingencyTable):

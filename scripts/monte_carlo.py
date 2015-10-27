@@ -3,7 +3,6 @@ import random
 import os
 import warnings
 from lsh_hdc.metrics import ClusteringMetrics
-from matplotlib import pyplot as plt
 from itertools import product
 from pymaptools.iter import izip_with_cycles, isiterable
 
@@ -95,6 +94,7 @@ class Grid(object):
     def plot(self, pairs, xlim=None, ylim=None, title=None,
              jitter=0.001, marker='.', s=0.01, color='black', alpha=1.0,
              save_to=None, xlabel=None, ylabel=None, **kwargs):
+        from matplotlib import pyplot as plt
         fig, ax = plt.subplots()
         for (xs, ys), jitter_, marker_, s_, color_, alpha_ in \
                 izip_with_cycles(pairs, jitter, marker, s, color, alpha):
