@@ -78,6 +78,7 @@ properties that do not depend on the marginal distributions. Psychometrika,
 https://doi.org/10.1007/s11336-008-9070-3
 """
 
+
 import numpy as np
 from math import log as logn, sqrt, copysign
 from collections import defaultdict, Counter, Mapping, Set, namedtuple
@@ -309,7 +310,7 @@ class ContingencyTable(object):
         return h, c, rsquare
 
 
-tableccw_type = namedtuple("TableCCW", "TP FP TN FN")
+confmat2_type = namedtuple("Table2CCW", "TP FP TN FN")
 
 
 class ConfusionMatrix2(ContingencyTable):
@@ -324,9 +325,15 @@ class ConfusionMatrix2(ContingencyTable):
 
     For a nominal variable, the negative class becomes a distinct label, and
     TP/FP/FN/TN terminology does not apply, although the algorithms should work
-    the same way (with the obvious distinction that different assumptions will be
-    made).
+    the same way (with the obvious distinction that different assumptions will
+    be made).
     """
+
+    @classmethod
+    def from_random_counts(cls, low=0, high=100):
+        """Return a matrix instance initialized with random values
+        """
+        return cls.from_ccw(*np.random.randint(low=low, high=high, size=(4,)))
 
     @classmethod
     def from_ccw(cls, TP, FP, TN, FN):
@@ -338,8 +345,8 @@ class ConfusionMatrix2(ContingencyTable):
             grand_total=(TP + FP + TN + FN)
         )
 
-    def as_tuple_ccw(self):
-        return tableccw_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
+    def to_ccw(self):
+        return confmat2_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
 
     @property
     def TP(self):

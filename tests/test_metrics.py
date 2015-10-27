@@ -508,29 +508,22 @@ def test_kappa_precalculated():
     assert_almost_equal(cm.kappa(), 0.191111, 6)
 
 
-def random_tuple(tuple_len, int_from, int_to):
-    result = []
-    for _ in xrange(tuple_len):
-        result.append(random.randint(int_from, int_to))
-    return tuple(result)
-
-
 def test_randomize():
     """Samples 100 random 2x2 matrices
     """
 
     for _ in range(10000):
-        sample = random_tuple(4, 0, 100)
-        cm = ConfusionMatrix2.from_ccw(*sample)
+        cm = ConfusionMatrix2.from_random_counts(low=0, high=100)
+        cells_ccw = cm.to_ccw()
 
         # check dogfood
         assert_equal(
-            cm.as_tuple_ccw(),
-            ConfusionMatrix2.from_ccw(*cm.as_tuple_ccw()).as_tuple_ccw(),
+            cm.to_ccw(),
+            ConfusionMatrix2.from_ccw(*cm.to_ccw()).to_ccw(),
             msg="must be able to convert to tuple and create from tuple")
 
         # check kappa implementations
-        check_with_nans(cm.kappa(), _kappa(*sample), 4,
+        check_with_nans(cm.kappa(), _kappa(*cells_ccw), 4,
                         msg="kappas must be equal")
 
         # check odds ratio implementation
