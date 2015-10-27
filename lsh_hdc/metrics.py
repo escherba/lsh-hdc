@@ -446,26 +446,6 @@ class ConfMatBinary(ContingencyTable):
         a, b, c = self.TP, self.FN, self.FP
         return _div(a, sqrt((a + b) * (a + c)))
 
-    # various silly terminologies folow
-
-    # information retrieval
-    precision = PPV
-    recall = TPR
-    fallout = FPR
-
-    # clinical diagnostics
-    sensitivity = TPR
-    specificity = TNR
-
-    # sales/marketing
-    hit_rate = TPR
-    miss_rate = FNR
-
-    # other
-    accuracy = ACC
-    rand_index = ACC
-    sm_coeff = ACC
-
     def prevalence(self):
         """Prevalence
         """
@@ -601,11 +581,28 @@ class ConfMatBinary(ContingencyTable):
         """
         return self.TP * self.TN - self.FP * self.FN
 
-    def disequilibrium(self):
-        """Unnormalized disequilibrium measure D
-        """
-        cov = self.covariance()
-        return _div(cov, self.grand_total)
+    # various silly terminologies folow
+
+    # information retrieval
+    precision = PPV
+    recall = TPR
+    fallout = FPR
+
+    # clinical diagnostics
+    sensitivity = TPR
+    specificity = TNR
+
+    # sales/marketing
+    hit_rate = TPR
+    miss_rate = FNR
+
+    # ecology
+    sm_coeff = ACC
+    phi_coeff = matthews_corr
+
+    # other
+    accuracy = ACC
+    rand_index = ACC
 
 
 class ClusteringMetrics(ContingencyTable):
