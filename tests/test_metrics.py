@@ -306,8 +306,8 @@ def test_0000():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_true(np.isnan(cm.kappa()))
     assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.kappa()))
     assert_true(np.isnan(_kappa(*m)))
 
 
@@ -318,8 +318,8 @@ def test_1000():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
@@ -330,8 +330,8 @@ def test_0100():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
@@ -342,8 +342,8 @@ def test_0010():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
@@ -354,8 +354,9 @@ def test_0001():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+    assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
 def test_1010():
@@ -365,8 +366,8 @@ def test_1010():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
     assert_almost_equal(cm.g_score(), 2.7726, 4)
-    assert_almost_equal(cm.kappa(), 1.0, 4)
     assert_almost_equal(cm.matthews_corr(), 1.0, 4)
+    assert_almost_equal(cm.kappa(), 1.0, 4)
     assert_almost_equal(_kappa(*m), 1.0, 4)
 
 
@@ -377,8 +378,8 @@ def test_1100():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
@@ -389,8 +390,8 @@ def test_0011():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
@@ -401,8 +402,8 @@ def test_0101():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
     assert_almost_equal(cm.g_score(), 2.7726, 4)
-    assert_almost_equal(cm.kappa(), -1.0, 4)
     assert_almost_equal(cm.matthews_corr(), -1.0, 4)
+    assert_almost_equal(cm.kappa(), -1.0, 4)
     assert_almost_equal(_kappa(*m), -1.0, 4)
 
 
@@ -413,8 +414,8 @@ def test_0111():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
-    assert_almost_equal(cm.kappa(), -0.5, 4)
     assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+    assert_almost_equal(cm.kappa(), -0.5, 4)
     assert_almost_equal(_kappa(*m), -0.5, 4)
 
 
@@ -426,8 +427,8 @@ def test_1011():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
-    assert_almost_equal(cm.kappa(), 0.4, 4)
     assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+    assert_almost_equal(cm.kappa(), 0.4, 4)
     assert_almost_equal(_kappa(*m), 0.4, 4)
 
 
@@ -438,8 +439,8 @@ def test_1101():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
-    assert_almost_equal(cm.kappa(), -0.5, 4)
     assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+    assert_almost_equal(cm.kappa(), -0.5, 4)
     assert_almost_equal(_kappa(*m), -0.5, 4)
 
 
@@ -451,8 +452,8 @@ def test_1110():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
-    assert_almost_equal(cm.kappa(), 0.4, 4)
     assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+    assert_almost_equal(cm.kappa(), 0.4, 4)
     assert_almost_equal(_kappa(*m), 0.4, 4)
 
 
@@ -463,8 +464,8 @@ def test_1111():
     cm = ConfMatBinary.from_tuple_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
