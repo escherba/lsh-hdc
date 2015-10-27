@@ -14,37 +14,7 @@ instead of building incidence matrices.
 
 Secondly, it was interesting to investigate the type of confusion matrices
 typically produced during pairwise cluster comparisons, and whether it has
-any implications on the choice of overall quality measure. For example,
-if sampled from a random pool of 500,000 clusterings, the following gives the
-lowest Matthews' correlation coefficient (MCC) value:
-
->>> ltrue = [2, 2, 1, 2, 1, 1, 1, 4, 1, 1, 0, 1, 3, 1, 3]
->>> lpred = [5, 5, 2, 3, 0, 5, 3, 5, 4, 5, 5, 3, 5, 1, 3]
-
->>> cm = ClusteringMetrics.from_labels(ltrue, lpred)
->>> conf = cm.confusion_matrix_
->>> conf.as_tuple_ccw()
-ConfMatCCW(TP=3.0, FP=24.0, TN=49.0, FN=29.0)
-
->>> mcc = conf.matthews_corr()
->>> round(mcc, 4)
--0.2475
-
-Thridly, an attempt is made to provide a mutual information-based set of
-correlation coefficients that can serve as an alternative to Cohen's Kappa
-or MCC. The coefficient is similar to the one described in [0], however it is
-normalized to its maximum value and decomposed into two regression components.
-
-
-Why G-score
-------------
-
-G is a likelihood-ratio statistic and therefore should
-be superior to chi-squre based statistics which rely on Taylor approximation of
-likelihood. One direct benefit is that G statistic is additive while chi-square
-is not. Simulation studies showed [4, 5] that G score outperforms Chi-square on
-highly skewed tables used for word bigram collocations.
-
+any implications on the choice of overall quality measure.
 
 Validation vs Replication Studies, ARI, and Kappa
 -------------------------------------------------
