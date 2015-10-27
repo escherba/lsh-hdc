@@ -201,11 +201,13 @@ def test_IR_example():
     # test confusion matrix-based metrics
     conf = cm.confusion_matrix_
     assert_almost_equal(conf.jaccard_coeff(), 0.312500, 6)
+    assert_almost_equal(conf.ochiai_coeff(),  0.476731, 6)
+    assert_almost_equal(conf.fscore(),        0.476190, 6)
+    assert_almost_equal(conf.dice_coeff(),    0.476190, 6)
+
     assert_almost_equal(conf.rand_index(),    0.676471, 6)
     assert_almost_equal(conf.precision(),     0.500000, 6)
     assert_almost_equal(conf.recall(),        0.454545, 6)
-    assert_almost_equal(conf.fscore(),        0.476190, 6)
-    assert_almost_equal(conf.dice_coeff(),    0.476190, 6)
     prec, recall = conf.precision(), conf.recall()
     expected_f = harmonic_mean(prec, recall)
     assert_almost_equal(expected_f, conf.fscore(), 6)

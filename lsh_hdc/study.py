@@ -307,13 +307,11 @@ ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
 MI_CORR_METRICS = ['mi_info', 'mi_mark', 'mi_corr']
 
 CONFUSION_METRICS = [
-    # best
+    # recommended
     'adj_rand_score',
     'matthews_corr', 'informedness', 'markedness',
-    # ok
-    'yule_q', 'accuracy',
-    # not good
-    'jaccard_coeff', 'fscore'
+    # these metrics don't consider TN
+    'jaccard', 'ochiai', 'fscore'
 ] + MI_CORR_METRICS
 
 INCIDENCE_METRICS = CONFUSION_METRICS + ENTROPY_METRICS
@@ -328,7 +326,6 @@ LEGEND_METRIC_KWARGS = {
     'roc_auc': dict(loc='lower right'),
     'roc_max_info': dict(loc='lower right'),
     'aul_score': dict(loc='lower right'),
-    'accuracy': dict(loc='lower right'),
     'adj_rand_score': dict(loc='lower right'),
     'matthews_corr': dict(loc='lower right'),
     'informedness': dict(loc='lower right'),
@@ -370,17 +367,13 @@ def add_incidence_metrics(args, clusters, pairs):
             if (set(MI_CORR_METRICS) & set(args_metrics)):
                 pairs.extend(zip(MI_CORR_METRICS, conf.mutinf_signed()))
 
-            # coefficients below are not corrected for chance
-            if 'accuracy' in args_metrics:
-                pairs.append(('accuracy', conf.accuracy()))
-            if 'yule_q' in args_metrics:
-                pairs.append(('yule_q', conf.yule_q()))
-
             # coefficients below don't consider true negatives
             if 'fscore' in args_metrics:
                 pairs.append(('fscore', conf.fscore()))
-            if 'jaccard_coeff' in args_metrics:
-                pairs.append(('jaccard_coeff', conf.jaccard_coeff()))
+            if 'jaccard' in args_metrics:
+                pairs.append(('jaccard', conf.jaccard_coeff()))
+            if 'ochiai' in args_metrics:
+                pairs.append(('ochiai', conf.ochiai_coeff()))
 
 
 def add_roc_metrics(args, clusters, pairs):
