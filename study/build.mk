@@ -11,7 +11,7 @@ METRICS := \
 	jaccard \
 	time_cpu
 
-SIMUL_CLUST_ANALY_ARGS := --sim_size 100000 --metrics $(METRICS)
+SIMUL_CLUST_ANALY_ARGS := --label_negatives 1 --sim_size 100000 --metrics $(METRICS)
 
 TRIAL_FIELD := seed
 TRIALS := $(shell seq 10 15)
