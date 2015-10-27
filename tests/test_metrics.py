@@ -6,7 +6,7 @@ from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
     jaccard_similarity, clustering_aul_score, ClusteringMetrics, \
-    ConfMatBinary, geometric_mean, harmonic_mean, _div
+    ConfusionMatrix2, geometric_mean, harmonic_mean, _div
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true, assert_equal
 
@@ -283,7 +283,7 @@ def test_twoway_confusion_ll():
     """Example from McDonald's G-test for independence
     http://www.biostathandbook.com/gtestind.html
     """
-    cm = ConfMatBinary.from_tuple_ccw(4758, 8840, 76, 30)
+    cm = ConfusionMatrix2.from_ccw(4758, 8840, 76, 30)
     assert_almost_equal(cm.g_score(),       2.14, 2)
     mi_info, mi_mark, mi_corr = cm.mutinf_signed()
     assert_almost_equal(mi_corr,            0.0150, 4)
@@ -299,7 +299,7 @@ def test_twoway_confusion_ll():
 def test_negative_correlation():
     """Some metrics should have negative sign
     """
-    cm = ConfMatBinary.from_tuple_ccw(10, 120, 8, 300)
+    cm = ConfusionMatrix2.from_ccw(10, 120, 8, 300)
     assert_almost_equal(cm.g_score(),        384.52, 2)
     mi_info, mi_mark, mi_corr = cm.mutinf_signed()
     assert_almost_equal(mi_corr,            -0.8510, 4)
@@ -316,12 +316,12 @@ def test_negative_correlation():
 
 
 def test_twoway_confusion_phi():
-    cm = ConfMatBinary.from_tuple_ccw(116, 21, 18, 21)
+    cm = ConfusionMatrix2.from_ccw(116, 21, 18, 21)
     assert_almost_equal(cm.matthews_corr(), 0.31, 2)
     assert_almost_equal(cm.yule_q(), 0.6512, 4)
     assert_almost_equal(cm.DOR(),    4.7347, 4)
 
-    cm = ConfMatBinary.from_tuple_ccw(35, 60, 41, 9)
+    cm = ConfusionMatrix2.from_ccw(35, 60, 41, 9)
     assert_almost_equal(cm.chisq_score(), 5.50, 2)
 
 
@@ -329,7 +329,7 @@ def test_0000():
     """
     """
     m = (0, 0, 0, 0)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_true(np.isnan(cm.matthews_corr()))
@@ -341,7 +341,7 @@ def test_1000():
     """
     """
     m = (1, 0, 0, 0)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
@@ -353,7 +353,7 @@ def test_0100():
     """
     """
     m = (0, 1, 0, 0)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
@@ -365,7 +365,7 @@ def test_0010():
     """
     """
     m = (0, 0, 1, 0)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
@@ -377,7 +377,7 @@ def test_0001():
     """
     """
     m = (0, 0, 0, 1)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
@@ -389,7 +389,7 @@ def test_1010():
     """
     """
     m = (1, 0, 1, 0)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
     assert_almost_equal(cm.g_score(), 2.7726, 4)
     assert_almost_equal(cm.matthews_corr(), 1.0, 4)
@@ -401,7 +401,7 @@ def test_1100():
     """
     """
     m = (1, 1, 0, 0)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
@@ -413,7 +413,7 @@ def test_0011():
     """
     """
     m = (0, 0, 1, 1)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
@@ -425,7 +425,7 @@ def test_0101():
     """
     """
     m = (0, 1, 0, 1)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
     assert_almost_equal(cm.g_score(), 2.7726, 4)
     assert_almost_equal(cm.matthews_corr(), -1.0, 4)
@@ -437,7 +437,7 @@ def test_0111():
     """
     """
     m = (0, 1, 1, 1)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
     assert_almost_equal(cm.matthews_corr(), -0.5, 4)
@@ -450,7 +450,7 @@ def test_1011():
     Why kappa is such a weird measure -- compare with test_0111
     """
     m = (1, 0, 1, 1)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
     assert_almost_equal(cm.matthews_corr(), 0.5, 4)
@@ -462,7 +462,7 @@ def test_1101():
     """
     """
     m = (1, 1, 0, 1)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
     assert_almost_equal(cm.matthews_corr(), -0.5, 4)
@@ -475,7 +475,7 @@ def test_1110():
     Why kappa is such a weird measure -- compare with test_0111
     """
     m = (1, 1, 1, 0)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
     assert_almost_equal(cm.matthews_corr(), 0.5, 4)
@@ -487,7 +487,7 @@ def test_1111():
     """
     """
     m = (1, 1, 1, 1)
-    cm = ConfMatBinary.from_tuple_ccw(*m)
+    cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
@@ -497,14 +497,14 @@ def test_1111():
 
 def test_kappa_precalculated():
     # from literature
-    cm = ConfMatBinary.from_tuple_ccw(22, 4, 11, 2)
+    cm = ConfusionMatrix2.from_ccw(22, 4, 11, 2)
     assert_almost_equal(cm.kappa(), 0.67, 2)
-    cm = ConfMatBinary.from_tuple_ccw(147, 10, 62, 3)
+    cm = ConfusionMatrix2.from_ccw(147, 10, 62, 3)
     assert_almost_equal(cm.kappa(), 0.86, 2)
     # numeric stability cases
-    cm = ConfMatBinary.from_tuple_ccw(69, 1, 3, 11)
+    cm = ConfusionMatrix2.from_ccw(69, 1, 3, 11)
     assert_almost_equal(cm.kappa(), 0.280000, 6)
-    cm = ConfMatBinary.from_tuple_ccw(1, 2, 96, 5)
+    cm = ConfusionMatrix2.from_ccw(1, 2, 96, 5)
     assert_almost_equal(cm.kappa(), 0.191111, 6)
 
 
@@ -521,12 +521,12 @@ def test_randomize():
 
     for _ in range(10000):
         sample = random_tuple(4, 0, 100)
-        cm = ConfMatBinary.from_tuple_ccw(*sample)
+        cm = ConfusionMatrix2.from_ccw(*sample)
 
         # check dogfood
         assert_equal(
             cm.as_tuple_ccw(),
-            ConfMatBinary.from_tuple_ccw(*cm.as_tuple_ccw()).as_tuple_ccw(),
+            ConfusionMatrix2.from_ccw(*cm.as_tuple_ccw()).as_tuple_ccw(),
             msg="must be able to convert to tuple and create from tuple")
 
         # check kappa implementations
