@@ -1,10 +1,18 @@
 import numpy as np
 import os
 import warnings
-from itertools import izip
-from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
-from itertools import product
+from collections import defaultdict
+from itertools import product, izip
 from pymaptools.iter import izip_with_cycles, isiterable
+from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
+
+
+def labels_to_clusters(ltrue, lpred):
+
+    result = defaultdict(list)
+    for l1, l2 in izip(ltrue, lpred):
+        result[l1].append(l2)
+    return result
 
 
 class Grid(object):
@@ -27,6 +35,21 @@ class Grid(object):
             self.get_matrix = self.matrix_from_matrices
         else:
             raise ValueError("Unknown grid_type selection '%s'" % grid_type)
+
+    def show_cluster(self, idx, inverse=False):
+        grid = self.grid
+        if inverse:
+            a, b = 1, 0
+        else:
+            a, b = 0, 1
+        return labels_to_clusters(grid[a][idx], grid[b][idx])
+
+    def best_clustering_by_score(self, score, minimum=False):
+        idx, val = self.find_best(score, minimum)
+        return {"idx": idx,
+                "found": "%s = %.4f" % (score, val),
+                "result": self.show_cluster(idx),
+                "inverse": self.show_cluster(idx, inverse=True)}
 
     def matrix_from_labels(self, *args):
         ltrue, lpred = args

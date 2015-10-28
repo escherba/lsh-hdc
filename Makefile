@@ -1,4 +1,4 @@
-.PHONY: clean coverage develop env extras package release test virtualenv build_ext
+.PHONY: clean coverage develop env extras package release test virtualenv build_ext shell
 
 PYMODULE := lsh_hdc
 EXTENSION := $(PYMODULE)/ext.so
