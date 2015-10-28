@@ -78,6 +78,7 @@ properties that do not depend on the marginal distributions. Psychometrika,
 https://doi.org/10.1007/s11336-008-9070-3
 """
 
+
 import numpy as np
 from math import log as logn, sqrt, copysign
 from collections import defaultdict, Counter, Mapping, Set, namedtuple
@@ -309,21 +310,33 @@ class ContingencyTable(object):
         return h, c, rsquare
 
 
-confmatccw_type = namedtuple("ConfMatCCW", "TP FP TN FN")
+confmat2_type = namedtuple("Table2CCW", "TP FP TN FN")
 
 
-class ConfMatBinary(ContingencyTable):
-    """A binary confusion matrix
+class ConfusionMatrix2(ContingencyTable):
+    """A confusion matrix (2x2 contingency table)
 
-    A confusion matrix where the ground truth levels are rows looks like:
+    For a binary variable (where one is measuring either presence vs absence of
+    a particular feature), a confusion matrix where the ground truth levels are
+    rows looks like:
 
         TP  FN
         FP  TN
 
+    For a nominal variable, the negative class becomes a distinct label, and
+    TP/FP/FN/TN terminology does not apply, although the algorithms should work
+    the same way (with the obvious distinction that different assumptions will
+    be made).
     """
 
     @classmethod
-    def from_tuple_ccw(cls, TP, FP, TN, FN):
+    def from_random_counts(cls, low=0, high=100):
+        """Return a matrix instance initialized with random values
+        """
+        return cls.from_ccw(*np.random.randint(low=low, high=high, size=(4,)))
+
+    @classmethod
+    def from_ccw(cls, TP, FP, TN, FN):
         return cls(
             rows=((TP, FN), (FP, TN)),
             cols=((TP, FP), (FN, TN)),
@@ -332,8 +345,8 @@ class ConfMatBinary(ContingencyTable):
             grand_total=(TP + FP + TN + FN)
         )
 
-    def as_tuple_ccw(self):
-        return confmatccw_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
+    def to_ccw(self):
+        return confmat2_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
 
     @property
     def TP(self):
@@ -423,9 +436,12 @@ class ConfMatBinary(ContingencyTable):
         return harmonic_mean_weighted(self.precision(), self.recall(), beta)
 
     def dice_coeff(self):
-        """Dice similarity coefficient
+        """Dice similarity coefficient (Nei-Li coefficient)
 
         Thi is the same as F1-score but calculated slightly differently here.
+        Note that Dice can be zero if total number of positives is zero,
+        buit F-score is undefined in that case (beccause recall is undefined).
+
         Other metrics from the same family: jaccard_coeff, ochiai_coeff
         """
         a = self.TP
@@ -507,7 +523,7 @@ class ConfMatBinary(ContingencyTable):
         return _div(2 * cov, p1 * q1 + p2 * q2)
 
     def matthews_corr(self):
-        """Matthews Correlation Coefficient
+        """Matthews Correlation Coefficient (Phi coefficient)
 
         For a table of shape
 
@@ -516,14 +532,15 @@ class ConfMatBinary(ContingencyTable):
 
         MCC is (ad - bc) / sqrt((a + b)(c + d)(a + c)(b + d))
 
-        Note that MCC is directly related to Chi-square statitstic on a 2x2
-        contingency table. Some studies (TODO: find references) report this
-        metric to be less biased than Cohen's kappa.
+        MCC is directly related to the Chi-square statitstic. Its value is equal
+        to the the Chi-square value normalized by the maximum value Chi-Square
+        can achieve with given margins (for a 2x2 table, the maximum Chi-square
+        score is N) and transformed to correlation space by taking a square
+        root. MCC is a also a geometric mean of informedness and markedness (the
+        regression coefficients of the problem and its dual).
 
-        MCC is a geometric mean of informedness and markedness
-        (the regression coefficients of the problem and its dual).
-
-        MCC has been described as a chance-corrected version of Yule's Q.
+        Also known as Phi Coefficient and as Yule's Q with correction for
+        chance.
         """
         p1, q1 = self.row_totals
         p2, q2 = self.col_totals
@@ -629,7 +646,7 @@ class ClusteringMetrics(ContingencyTable):
         FP = TP_plus_FP - TP
         FN = TP_plus_FN - TP
         TN = binom(self.grand_total, 2) - TP - FP - FN
-        return ConfMatBinary.from_tuple_ccw(TP, FP, TN, FN)
+        return ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
 
     def adjusted_rand_index(self):
         """Calculate Adjusted Rand Index in a memory-efficient way
@@ -734,6 +751,18 @@ def roc_auc_score(y_true, y_score, sample_weight=None):
     0.75
     """
     return RocCurve.from_binary(y_true, y_score).auc_score()
+
+
+def matthews_corr(*args, **kwargs):
+    """Return MCC score for a 2x2 contingency table
+    """
+    return ConfusionMatrix2.from_ccw(*args, **kwargs).matthews_corr()
+
+
+def cohen_kappa(*args, **kwargs):
+    """Return Cohen's Kappa for a 2x2 contingency table
+    """
+    return ConfusionMatrix2.from_ccw(*args, **kwargs).kappa()
 
 
 def _plot_lift(xs, ys):  # pragma: no cover
