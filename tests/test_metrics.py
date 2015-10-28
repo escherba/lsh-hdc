@@ -448,7 +448,6 @@ def test_0111():
 
 def test_1011():
     """
-    Why kappa is such a weird measure -- compare with test_0111
     """
     m = (1, 0, 1, 1)
     cm = ConfusionMatrix2.from_ccw(*m)
@@ -473,7 +472,6 @@ def test_1101():
 
 def test_1110():
     """
-    Why kappa is such a weird measure -- compare with test_0111
     """
     m = (1, 1, 1, 0)
     cm = ConfusionMatrix2.from_ccw(*m)

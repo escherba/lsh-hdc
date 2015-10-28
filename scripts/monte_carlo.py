@@ -1,37 +1,73 @@
 import numpy as np
-import random
 import os
 import warnings
-from lsh_hdc.metrics import ClusteringMetrics
+from itertools import izip
+from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
 from itertools import product
 from pymaptools.iter import izip_with_cycles, isiterable
 
 
 class Grid(object):
 
-    def __init__(self, n=10000, size=20, max_classes=6, seed=None):
+    def __init__(self, grid_type='clusters', n=10000, size=20, max_classes=5,
+                 max_counts=100, seed=None):
         if seed is not None:
-            random.seed(seed)
-        self.population = range(max_classes)
+            np.random.seed(seed)
+        self.max_classes = max_classes
+        self.max_counts = max_counts
         self.n = n
         self.size = size
-        self.grid = []
-        self.fill_grid()
+        if grid_type == 'clusters':
+            self.grid = self.fill_clusters()
+            self.grid_type = grid_type
+            self.get_matrix = self.matrix_from_labels
+        elif grid_type == 'matrices':
+            self.grid = self.fill_matrices()
+            self.grid_type = grid_type
+            self.get_matrix = self.matrix_from_matrices
+        else:
+            raise ValueError("Unknown grid_type selection '%s'" % grid_type)
 
-    @staticmethod
-    def draw_sample(population, size):
-        sample = []
-        for _ in xrange(size):
-            sample.extend(random.sample(population, 1))
-        return sample
+    def matrix_from_labels(self, *args):
+        ltrue, lpred = args
+        cm = ClusteringMetrics.from_labels(ltrue, lpred)
+        return cm.confusion_matrix_
 
-    def fill_grid(self):
-        grid = self.grid = []
-        population, size = self.population, self.size
-        for _ in xrange(self.n):
-            classes = self.draw_sample(population, size)
-            clusters = self.draw_sample(population, size)
-            grid.append((classes, clusters))
+    def matrix_from_matrices(self, *args):
+        arr = args[0]
+        return ConfusionMatrix2.from_ccw(*arr)
+
+    def iter_grid(self):
+        return enumerate(izip(*self.grid))
+
+    iter_clusters = iter_grid
+
+    def iter_matrices(self):
+        if self.grid_type == 'matrices':
+            for idx, tup in self.iter_grid():
+                yield idx, self.matrix_from_matrices(*tup)
+        elif self.grid_type == 'clusters':
+            for idx, labels in self.iter_grid():
+                yield idx, self.matrix_from_labels(*labels)
+
+    def describe_matrices(self):
+        for idx, matrix in self.iter_matrices():
+            tup = tuple(matrix.to_ccw())
+            max_idx = tup.index(max(tup))
+            if max_idx != 2:
+                print idx, tup
+
+    def fill_clusters(self):
+        classes = np.random.randint(
+            low=0, high=self.max_classes, size=(self.n, self.size))
+        clusters = np.random.randint(
+            low=0, high=self.max_classes, size=(self.n, self.size))
+        return classes, clusters
+
+    def fill_matrices(self):
+        matrices = np.random.randint(
+            low=0, high=self.max_counts, size=(self.n, 4))
+        return (matrices,)
 
     def find_best(self, score, minimum=False):
         best_index = -1
@@ -41,9 +77,7 @@ class Grid(object):
         else:
             direction = -1
             curr_score = float('-inf')
-        for idx, labels in enumerate(self.grid):
-            cm = ClusteringMetrics.from_labels(*labels)
-            conf = cm.confusion_matrix_
+        for idx, conf in self.iter_matrices():
             method = getattr(conf, score)
             new_score = method()
             if cmp(curr_score, new_score) == direction:
@@ -57,9 +91,7 @@ class Grid(object):
             scores = [scores]
         for score, dim in izip_with_cycles(scores, score_dim):
             result[score] = np.empty((self.n, dim), dtype=dtype)
-        for idx, labels in enumerate(self.grid):
-            cm = ClusteringMetrics.from_labels(*labels)
-            conf = cm.confusion_matrix_
+        for idx, conf in self.iter_matrices():
             for score in scores:
                 result[score][idx, :] = getattr(conf, score)()
         return result
@@ -93,16 +125,22 @@ class Grid(object):
 
     def plot(self, pairs, xlim=None, ylim=None, title=None,
              jitter=0.001, marker='.', s=0.01, color='black', alpha=1.0,
-             save_to=None, xlabel=None, ylabel=None, **kwargs):
+             save_to=None, label=None, xlabel=None, ylabel=None, **kwargs):
         from matplotlib import pyplot as plt
         fig, ax = plt.subplots()
-        for (xs, ys), jitter_, marker_, s_, color_, alpha_ in \
-                izip_with_cycles(pairs, jitter, marker, s, color, alpha):
+        for (xs, ys), jitter_, marker_, s_, color_, label_, alpha_ in \
+                izip_with_cycles(pairs, jitter, marker, s, color, label, alpha):
             if jitter_ is not None:
                 xs = np.random.normal(xs, jitter_)
                 ys = np.random.normal(ys, jitter_)
-            ax.scatter(xs, ys, marker=marker_, s=s_, color=color_, alpha=alpha_,
-                       **kwargs)
+            ax.scatter(xs, ys, marker=marker_, s=s_, color=color_,
+                       alpha=alpha_, label=label_, **kwargs)
+
+        if label:
+            legend = ax.legend(loc='upper left', markerscale=80, scatterpoints=1)
+            for lbl in legend.get_texts():
+                lbl.set_fontsize('small')
+
         if xlabel is not None:
             ax.set_xlabel(xlabel)
         if ylabel is not None:
@@ -110,7 +148,7 @@ class Grid(object):
         if xlim is not None:
             ax.set_xlim(xlim)
         if ylim is not None:
-            ax.set_xlim(ylim)
+            ax.set_ylim(ylim)
         if title is not None:
             ax.set_title(title)
         if save_to is None:
