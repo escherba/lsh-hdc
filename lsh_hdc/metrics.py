@@ -448,7 +448,7 @@ class ConfusionMatrix2(ContingencyTable):
         From [7]:
 
             ...a prevalence effect exists when the proportion of agreements on
-            the positive classification differs from that import of the negative
+            the positive classification differs from that of the negative
             classification
 
         Example high-prevalence matrix:
@@ -755,8 +755,8 @@ class RocCurve(object):
 
         If number of Y classes is other than two, a warning will be triggered
         but no exception thrown (the return value will be a NaN). This differes
-        from the import behavior of Scikit-Learn's roc_auc_score method (it
-        always raises an exception) taht I find annoying!
+        from the behavior of Scikit-Learn's roc_auc_score method (it always
+        raises an exception) that I find annoying!
 
         Also, we don't reorder arrays during ROC calculation since they are
         assumed to be in order.
