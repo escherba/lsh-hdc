@@ -237,12 +237,47 @@ class ContingencyTable(TableOfCounts):
                 score += (observed - expected) ** 2 / expected
         return score
 
-    def mutual_information(self):
-        """Mutual information for expected vs actual contingency table
+    def _entropies(self):
+        """Return H_C, H_K, and mutual information
+
+        Not normalized by N
         """
-        return (centropy(self.row_totals) +
-                centropy(self.col_totals) -
-                centropy(self.iter_cells()))
+        H_C = centropy(self.row_totals)
+        H_K = centropy(self.col_totals)
+        H_actual = centropy(self.iter_cells())
+        H_expected = H_C + H_K
+        I_CK = H_expected - H_actual
+        return H_C, H_K, I_CK
+
+    def vi_distance(self):
+        """Variation of Information distance
+        """
+        H_C, H_K, I_CK = self._entropies()
+        VI_CK = (H_C - I_CK) + (H_K - I_CK)
+        return VI_CK / self.grand_total
+
+    def split_join_distance(self):
+        """Projection distance between partitions
+
+        Used in graph commmunity analysis. Originally defined by van Dogen.
+        Example given in [0]:
+
+        >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
+        >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
+        >>> cm = ClusteringMetrics.from_partitions(p1, p2)
+        >>> cm.split_join_distance()
+        11
+
+        References
+        ----------
+
+        [0] Dongen, S. V. (2000). Performance criteria for graph clustering and
+        Markov cluster experiments. Information Systems [INS], (R 0012), 1-36.
+
+        """
+        pa_B = sum(max(x) for x in self.iter_rows())
+        pb_A = sum(max(x) for x in self.iter_cols())
+        return 2 * self.grand_total - pa_B - pb_A
 
     def g_score(self):
         """Returns G-statistic for RxC contingency table
@@ -255,7 +290,8 @@ class ContingencyTable(TableOfCounts):
         the differnce between the information in the table and the
         information in an independent table with the same marginals.
         """
-        return 2.0 * self.mutual_information()
+        _, _, I_CK = self._entropies()
+        return 2.0 * I_CK
 
     def mutinf_metrics(self):
         """Metrics based on mutual information
@@ -298,13 +334,46 @@ class ContingencyTable(TableOfCounts):
         during normalization.
         """
         # ensure non-negative values by taking max of 0 and given value
-        mut_info = max(0.0, self.mutual_information())
-        max_h = max(0.0, centropy(self.row_totals))
-        max_c = max(0.0, centropy(self.col_totals))
-        h = 0.0 if max_h == 0.0 else mut_info / max_h
-        c = 0.0 if max_c == 0.0 else mut_info / max_c
+        H_C, H_K, I_CK = self._entropies()
+        h = 0.0 if H_C == 0.0 else max(0.0, I_CK / H_C)
+        c = 0.0 if H_K == 0.0 else max(0.0, I_CK / H_K)
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
+
+
+class ClusteringMetrics(ContingencyTable):
+
+    """Provides external clustering evaluation metrics
+
+    A subclass of ContingencyTable that builds a pairwise confusion matrix for
+    clustering comparisons.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(ClusteringMetrics, self).__init__(*args, **kwargs)
+        self.confusion_matrix_ = self.pairwise_confusion_matrix()
+
+    def pairwise_confusion_matrix(self):
+        """Calculate a binary confusion matrix from object pair distribution
+
+        Order of objects returned: TP, FP, TN, FN
+        """
+        TP_plus_FP = sum(nchoose2(a) for a in self.iter_col_totals())
+        TP_plus_FN = sum(nchoose2(b) for b in self.iter_row_totals())
+        TP = sum(nchoose2(cell) for cell in self.iter_cells())
+        FP = TP_plus_FP - TP
+        FN = TP_plus_FN - TP
+        TN = nchoose2(self.grand_total) - TP - FP - FN
+        return ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
+
+    def adjusted_rand_index(self):
+        """Calculate Adjusted Rand Index in a memory-efficient way
+
+        Adjusted Rand Index measures overall agreement between two clusterings.
+        It is Rand index adjusted for chance, and has the property that the
+        resulting metric is independent of cluster size.
+        """
+        return self.confusion_matrix_.kappa()
 
 
 confmat2_type = namedtuple("Table2CCW", "TP FP TN FN")
@@ -493,18 +562,32 @@ class ConfusionMatrix2(ContingencyTable):
     def informedness(self):
         """Informedness (Recall corrected for chance)
 
-        An alternative formula is:
+        Alternative formulations:
 
             Informedness = Sensitivity + Specificity - 1.0
+                         = TPR - FPR
 
         Synonyms: True Skill Score, Hannssen-Kuiper Score
         """
-        return self.TPR() - self.FPR()
+        p1, q1 = self.row_totals.values()
+        cov = self.covariance()
+        if cov == 0 and self.grand_total != 0:
+            return 0.0
+        return _div(cov, p1 * q1)
 
     def markedness(self):
         """Markedness (Precision corrected for chance)
+
+        Alternative formulation:
+
+            Markedness = PPV + NPV - 1.0
+
         """
-        return self.PPV() + self.NPV() - 1.0
+        p2, q2 = self.col_totals.values()
+        cov = self.covariance()
+        if cov == 0 and self.grand_total != 0:
+            return 0.0
+        return _div(cov, p2 * q2)
 
     def loevinger_coeff(self):
         """Loevinger association coefficient
@@ -665,69 +748,10 @@ class ConfusionMatrix2(ContingencyTable):
     rand_index = ACC
 
 
-class ClusteringMetrics(ContingencyTable):
-
-    """Provides external clustering evaluation metrics
-
-    A subclass of ContingencyTable that provides four external clustering
-    evaluation metrics: homogeneity, completeness, V-measure, and adjusted Rand
-    index.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(ClusteringMetrics, self).__init__(*args, **kwargs)
-        self.confusion_matrix_ = self.pairwise_confusion_matrix()
-
-    def pairwise_confusion_matrix(self):
-        """Calculate a binary confusion matrix from object pair distribution
-
-        Order of objects returned: TP, FP, TN, FN
-        """
-        TP_plus_FP = sum(nchoose2(a) for a in self.iter_col_totals())
-        TP_plus_FN = sum(nchoose2(b) for b in self.iter_row_totals())
-        TP = sum(nchoose2(cell) for cell in self.iter_cells())
-        FP = TP_plus_FP - TP
-        FN = TP_plus_FN - TP
-        TN = nchoose2(self.grand_total) - TP - FP - FN
-        return ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
-
-    def split_join_distance(self):
-        """Projection distance between partitions
-
-        Used in graph commmunity analysis. Originally defined by van Dogen.
-        Example given in [0]:
-
-        >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
-        >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
-        >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-        >>> cm.split_join_distance()
-        11
-
-        References
-        ----------
-
-        [0] Dongen, S. V. (2000). Performance criteria for graph clustering and
-        Markov cluster experiments. Information Systems [INS], (R 0012), 1-36.
-
-        """
-        pa_B = sum(max(x) for x in self.iter_rows())
-        pb_A = sum(max(x) for x in self.iter_cols())
-        return 2 * self.grand_total - pa_B - pb_A
-
-    def adjusted_rand_index(self):
-        """Calculate Adjusted Rand Index in a memory-efficient way
-
-        Adjusted Rand Index measures overall agreement between two clusterings.
-        It is Rand index adjusted for chance, and has the property that the
-        resulting metric is independent of cluster size.
-        """
-        return self.confusion_matrix_.kappa()
-
-
 def homogeneity_completeness_v_measure(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Sklearn function
     """
-    ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
+    ct = ContingencyTable.from_labels(labels_true, labels_pred)
     return ct.entropy_metrics()
 
 

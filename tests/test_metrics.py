@@ -545,12 +545,12 @@ def test_clusterings_randomize():
             check_with_nans(m1, m2, 4)
 
 
-def test_2x2_randomize():
+def test_2x2_invariants():
     """Alternative implementations should coincide for a random sample
     """
 
-    for _ in xrange(1000):
-        cm = ConfusionMatrix2.from_random_counts(low=0, high=100)
+    for _ in xrange(10000):
+        cm = ConfusionMatrix2.from_random_counts(low=0, high=10)
         cells_ccw = cm.to_ccw()
 
         # check dogfood
@@ -558,6 +558,24 @@ def test_2x2_randomize():
             cm.to_ccw(),
             ConfusionMatrix2.from_ccw(*cm.to_ccw()).to_ccw(),
             msg="must be able to convert to tuple and create from tuple")
+
+        # check informedness
+        info0 = cm.informedness()
+        info1 = cm.sensitivity() + cm.specificity() - 1.0
+        info2 = cm.TPR() - cm.FPR()
+        check_with_nans(info0, info1, 4, ensure_nans=False)
+        check_with_nans(info0, info2, 4, ensure_nans=False)
+
+        # check markedness
+        mark0 = cm.markedness()
+        mark1 = cm.PPV() + cm.NPV() - 1.0
+        check_with_nans(mark0, mark1, 4, ensure_nans=False)
+
+        # check matthews corr coeff
+        mcc0 = cm.matthews_corr()
+        mcc1 = geometric_mean(info0, mark0)
+        check_with_nans(mcc0, mcc1, 4, ensure_nans=True,
+                        msg="MCC1 and MCC 2 must be the same")
 
         # check kappa implementations
         check_with_nans(cm.kappa(), _kappa(*cells_ccw), 4,
