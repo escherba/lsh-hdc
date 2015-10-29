@@ -76,6 +76,11 @@ http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html
 properties that do not depend on the marginal distributions. Psychometrika,
 73(4), 777-789.
 https://doi.org/10.1007/s11336-008-9070-3
+
+[7] Sim, J., & Wright, C. C. (2005). The kappa statistic in reliability studies:
+use, interpretation, and sample size requirements. Physical therapy, 85(3),
+257-268.
+http://www.ncbi.nlm.nih.gov/pubmed/15733050
 """
 
 import numpy as np
@@ -143,28 +148,62 @@ def centropy(counts):
     return 0.0 if n == 0 else n * logn(n) - sum_c_logn_c
 
 
+def ratio2weights(ratio):
+    if ratio <= 1.0:
+        lweight = ratio / (1.0 + ratio)
+    else:
+        lweight = 1.0 / (1.0 + 1.0 / ratio)
+    return lweight, 1.0 - lweight
+
+
 def geometric_mean(x, y):
-    """Geometric mean of two numbers
+    """Geometric mean of two numbers. Returns a float
 
     Although geometric mean is defined for negative numbers, Scipy function
     doesn't allow it... sigh
     """
-    return copysign(1, x) * sqrt(x * y)
+    prod = x * y
+    if prod < 0.0:
+        raise ValueError("x and y have different signs")
+    return copysign(1, x) * sqrt(prod)
+
+
+def geometric_mean_weighted(x, y, ratio=1.0):
+    """Geometric mean of two numbers with a weight ratio. Returns a float
+
+    >>> geometric_mean_weighted(1, 4, ratio=1.0)
+    2.0
+    >>> geometric_mean_weighted(1, 4, ratio=0.0)
+    1.0
+    >>> geometric_mean_weighted(1, 4, ratio=float('inf'))
+    4.0
+    """
+    lweight, rweight = ratio2weights(ratio)
+    lsign = copysign(1, x)
+    rsign = copysign(1, y)
+    if lsign != rsign and x != y:
+        raise ValueError("x and y have different signs")
+    return lsign * (abs(x) ** rweight) * (abs(y) ** lweight)
 
 
 def harmonic_mean(x, y):
     """Harmonic mean of two numbers. Returns a float
     """
-    # the condition below is only for numeric safety when x and y are small
     return float(x) if x == y else 2.0 * (x * y) / (x + y)
 
 
-def harmonic_mean_weighted(x, y, beta=1.0):
-    """Harmonic mean of two numbers. Returns a float
+def harmonic_mean_weighted(x, y, ratio=1.0):
+    """Harmonic mean of two numbers with a weight ratio. Returns a float
+
+    >>> harmonic_mean_weighted(1, 3, ratio=1.0)
+    1.5
+    >>> harmonic_mean_weighted(1, 3, ratio=0.0)
+    1.0
+    >>> harmonic_mean_weighted(1, 3, ratio=float('inf'))
+    3.0
     """
-    # the condition below is only for numeric safety when x and y are small
-    beta **= 2.0
-    return float(x) if x == y else (1.0 + beta) * (x * y) / (beta * x + y)
+    lweight, rweight = ratio2weights(ratio)
+    return float(x) if x == y else (x * y) / (lweight * x + rweight * y)
 
 
 class ContingencyTable(TableOfCounts):
@@ -318,11 +357,15 @@ class ConfusionMatrix2(ContingencyTable):
 
     def TPR(self):
         """Recall (Sensitivity)
+
+        Also known as hit rate
         """
         return _div(self.TP, self.TP + self.FN)
 
     def FPR(self):
         """Fallout (False Positive Rate)
+
+        Synonyms: fallout, false alarm rate
         """
         return _div(self.FP, self.TN + self.FP)
 
@@ -370,7 +413,7 @@ class ConfusionMatrix2(ContingencyTable):
         to zero, F-score will approach precision. For a similarity coefficient
         see dice_coeff.
         """
-        return harmonic_mean_weighted(self.precision(), self.recall(), beta)
+        return harmonic_mean_weighted(self.precision(), self.recall(), beta ** 2)
 
     def dice_coeff(self):
         """Dice similarity coefficient (Nei-Li coefficient)
@@ -399,26 +442,54 @@ class ConfusionMatrix2(ContingencyTable):
         a, b, c = self.TP, self.FN, self.FP
         return _div(a, sqrt((a + b) * (a + c)))
 
-    def prevalence(self):
+    def prevalence_index(self):
         """Prevalence
+
+        From [7]:
+
+            ...a prevalence effect exists when the proportion of agreements on
+            the positive classification differs from that import of the negative
+            classification
+
+        Example high-prevalence matrix:
+
+            3   27
+            28  132
+
         """
-        return _div(self.TP, self.grand_total)
+        return _div(abs(self.TP - self.TN), self.grand_total)
+
+    def bias_index(self):
+        """Bias
+
+        From [7]:
+
+            Bias is the extent to which the raters disagree on the proportion of
+            positive (or negative) cases
+
+        Example high-bias matrix:
+
+            17  14
+            78  81
+
+        """
+        return _div(abs(self.FN - self.FP), self.grand_total)
 
     def informedness(self):
-        """Informedness = Sensitivity + Specificity - 1
+        """Informedness (Recall corrected for chance)
 
-        Informedness can be thought of as renormalization of recall after
-        correcting for chance.
+        An alternative formula is:
+
+            Informedness = Sensitivity + Specificity - 1.0
+
+        Synonyms: True Skill Score, Hannssen-Kuiper Score
         """
-        return self.sensitivity() + self.specificity() - 1.0
+        return self.TPR() - self.FPR()
 
     def markedness(self):
-        """Markedness = Precision + NPV - 1
-
-        Informedness can be thought of as renormalization of precision after
-        correcting for chance.
+        """Markedness (Precision corrected for chance)
         """
-        return self.precision() + self.NPV() - 1.0
+        return self.PPV() + self.NPV() - 1.0
 
     def loevinger_coeff(self):
         """Loevinger association coefficient
@@ -433,11 +504,35 @@ class ConfusionMatrix2(ContingencyTable):
     def kappa(self):
         """Calculate Cohen's kappa of a binary confusion matrix
 
-        Kappa index comes from psychology and was designed to measure interrater
-        agreement. It is also a proper metric for measuring replication. It
-        forms the basis of Adjusted Rand Index used for evaluation of
-        clustering. However its applicability for evaluating experiments where
-        ground truth vectors are known ahead of time is questionable.
+        Kappa index comes from psychology and was originally introduced to
+        measure interrater agreement. It is also appropriate for evaluating
+        replication. In clustering applications, it is known as the 'Adjusted
+        Rand Index'. Kappa is derived from corercting accuracy (Simple Matching
+        Coefficient, Rand Index) for chance. Tbe general formula for chance
+        correction of an association coefficient ``k`` is:
+
+                   k - E(k)
+            k' = ------------ ,
+                 k_max - E(k)
+
+        where ``k_max`` is the maximum value the score can achieve given the
+        same table margins, and ``E(k)`` is the expected value of ``k`` under
+        statistical independence given existing margins.
+
+        Kappa can be decomposed into a harmonic mean of two components
+        (regression coefficients for a problem and its dual):
+
+            k0 = cov / (p2 * q1)
+            k1 = cov / (p1 * q2)
+
+        From these components, it turns out, one can also derive Matthews'
+        correlation coefficient simply by calculating a geometric mean.  However
+        k0 and k1 don't have a lower bound. For that reason, it is preferable to
+        use informedness and markedness (these two have a clear range from -1.0
+        to 1.0 and their geometric mean also results in a correllation
+        coefficient, Matthews') if one is looking for regression-like
+        coefficients. On real-world data, k0 and k1 have a similar behavior
+        to informedness and markedness.
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
@@ -449,8 +544,7 @@ class ConfusionMatrix2(ContingencyTable):
     def mp_corr(self):
         """Maxwell & Pilliner's chance-corrected association index
 
-        Thie formula is like that for Cohen's Kappa, but with a different
-        denominator [6].
+        Another covariance-based association index.
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
@@ -462,13 +556,6 @@ class ConfusionMatrix2(ContingencyTable):
     def matthews_corr(self):
         """Matthews Correlation Coefficient (Phi coefficient)
 
-        For a table of shape
-
-        a b
-        c d
-
-        MCC is (ad - bc) / sqrt((a + b)(c + d)(a + c)(b + d))
-
         MCC is directly related to the Chi-square statitstic. Its value is equal
         to the the Chi-square value normalized by the maximum value Chi-Square
         can achieve with given margins (for a 2x2 table, the maximum Chi-square
@@ -476,7 +563,11 @@ class ConfusionMatrix2(ContingencyTable):
         root. MCC is a also a geometric mean of informedness and markedness (the
         regression coefficients of the problem and its dual).
 
-        Also known as Phi Coefficient and as Yule's Q with correction for
+        MCC is also related to Cohen's Kappa (see description for kappa method)
+        and together the two are the most commonly used chance-corrected
+        association coefficient.
+
+        MCC is laso known as Phi Coefficient or as Yule's Q with correction for
         chance.
         """
         p1, q1 = self.row_totals.values()
