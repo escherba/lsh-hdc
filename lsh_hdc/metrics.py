@@ -221,26 +221,27 @@ class ContingencyTable(TableOfCounts):
         return sqrt(h), sqrt(c), sqrt(rsquare)
 
     def entropy_metrics(self):
-        """Calculate three centropy metrics used for clustering evaluation
+        """Calculate three entropy-based metrics used for clustering evaluation
 
         The metrics are: Homogeneity, Completeness, and V-measure
 
-        The V-measure metric is also known as Normalized Mutual Informmation,
-        and is the harmonic mean of Homogeneity and Completeness. The latter two
-        metrics are complementary of each other (dual).
+        The V-measure metric is also known as Normalized Mutual Information
+        (NMI), and is defined here as the harmonic mean of Homogeneity and
+        Completeness.  Homogeneity and Completeness are duals of each other and
+        can be thought of as squared regression coefficients of a given
+        clustering vs true labels (homogeneity) and of the dual problem of true
+        labels vs given clustering (completeness). Because of the dual property,
+        in a symmetric matrix, all three scores are the same.
 
         This code is replaces an equivalent function in Scikit-Learn known as
-        `homogeneity_completeness_v_measure`, which alas takes up O(n^2) space
-        because it creates a dense contingency matrix during calculation.  Here
-        we use sparse dict-based methods to achieve the same result while using
-        much less RAM.
+        `homogeneity_completeness_v_measure` (the Scikit-Learn version takes up
+        O(n^2) space because it stores data in a dense NumPy array) while the
+        given version is subquadratic because of sparse underlying storage.
 
-        The entropy variables used in the code here are improperly defined
-        because they ought to be divided by N (the grand total for the
-        contigency table). However, numerically it is more efficient not to
-        perform the division.
-
-        For a symmetric matrix, all three scores should be the same.
+        Note that the entropy variables as used directly in the code below are
+        improperly defined because they ought to be divided by N (the grand
+        total for the contigency table). However, the N variable cancels out
+        during normalization.
         """
         # ensure non-negative values by taking max of 0 and given value
         mut_info = max(0.0, self.mutual_information())
@@ -583,6 +584,29 @@ class ClusteringMetrics(ContingencyTable):
         FN = TP_plus_FN - TP
         TN = binom(self.grand_total, 2) - TP - FP - FN
         return ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
+
+    def split_join_distance(self):
+        """Projection distance between partitions
+
+        Used in graph commmunity analysis. Originally defined by van Dogen.
+        Example given in [0]:
+
+        >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
+        >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
+        >>> cm = ClusteringMetrics.from_partitions(p1, p2)
+        >>> cm.split_join_distance()
+        11
+
+        References
+        ----------
+
+        [0] Dongen, S. V. (2000). Performance criteria for graph clustering and
+        Markov cluster experiments. Information Systems [INS], (R 0012), 1-36.
+
+        """
+        pa_B = sum(max(x) for x in self.iter_rows())
+        pb_A = sum(max(x) for x in self.iter_cols())
+        return 2 * self.grand_total - pa_B - pb_A
 
     def adjusted_rand_index(self):
         """Calculate Adjusted Rand Index in a memory-efficient way

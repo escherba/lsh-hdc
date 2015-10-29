@@ -1,6 +1,8 @@
 .PHONY: clean coverage develop env extras package release test virtualenv build_ext shell
 
+SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 PYMODULE := lsh_hdc
+SHELL_PRELOAD := $(SRC_ROOT)/$(PYMODULE)/metrics.py
 EXTENSION := $(PYMODULE)/ext.so
 EXTENSION_INTERMEDIATE := $(PYMODULE)/ext.cpp
 EXTENSION_DEPS := $(PYMODULE)/ext.pyx
@@ -33,7 +35,7 @@ test: env build_ext
 	$(PYENV) py.test README.rst
 
 shell: extras build_ext
-	$(PYENV) $(ENV_EXTRA) ipython
+	$(PYENV) PYTHONSTARTUP=$(SHELL_PRELOAD) ipython
 
 extras: env/make.extras
 env/make.extras: $(EXTRAS_REQS) | env

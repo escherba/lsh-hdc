@@ -41,6 +41,23 @@ def _kappa(a, c, d, b):
     return 0.0 if denom == 0.0 else numer / denom
 
 
+def _entropy_metrics(cm):
+    """Given a ClusteringMetrics object, calculate three entropy-based metrics
+
+    (Alternative implementation for testing)
+    """
+    H_C = centropy(cm.row_totals)
+    H_K = centropy(cm.col_totals)
+    H_CK = sum(centropy(col) for col in cm.iter_cols())
+    H_KC = sum(centropy(row) for row in cm.iter_rows())
+    # The '<=' comparisons below both prevent division by zero errors
+    # and ensure that the scores are non-negative.
+    homogeneity = 0.0 if H_C <= H_CK else (H_C - H_CK) / H_C
+    completeness = 0.0 if H_K <= H_KC else (H_K - H_KC) / H_K
+    nmi_score = harmonic_mean(homogeneity, completeness)
+    return homogeneity, completeness, nmi_score
+
+
 def _auc(fpr, tpr, reorder=False):
     """Compute area under ROC curve
 
@@ -515,11 +532,24 @@ def test_kappa_precalculated():
                         0.203746, 6)
 
 
-def test_randomize():
-    """Samples 100 random 2x2 matrices
+def test_clusterings_randomize():
+    """Alternative implementations should coincide for a random sample
     """
 
-    for _ in range(10000):
+    for _ in xrange(1000):
+        ltrue = np.random.randint(low=0, high=5, size=(20,))
+        lpred = np.random.randint(low=0, high=5, size=(20,))
+        cm = ClusteringMetrics.from_labels(ltrue, lpred)
+
+        for m1, m2 in zip(cm.entropy_metrics(), _entropy_metrics(cm)):
+            check_with_nans(m1, m2, 4)
+
+
+def test_2x2_randomize():
+    """Alternative implementations should coincide for a random sample
+    """
+
+    for _ in xrange(1000):
         cm = ConfusionMatrix2.from_random_counts(low=0, high=100)
         cells_ccw = cm.to_ccw()
 

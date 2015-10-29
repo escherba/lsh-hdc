@@ -1,18 +1,10 @@
 import numpy as np
 import os
 import warnings
-from collections import defaultdict
 from itertools import product, izip
 from pymaptools.iter import izip_with_cycles, isiterable
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
-
-
-def labels_to_clusters(ltrue, lpred):
-
-    result = defaultdict(list)
-    for l1, l2 in izip(ltrue, lpred):
-        result[l1].append(l2)
-    return result
+from pymaptools.containers import labels_to_clusters
 
 
 class Grid(object):

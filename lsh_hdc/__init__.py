@@ -15,7 +15,7 @@ from logging import getLogger
 from itertools import imap, izip, islice, chain, combinations
 from abc import abstractmethod
 from pymaptools.iter import cycle, take, shinglify, isiterable
-from lsh_hdc.utils import toiter, tsorted, fill_with_last
+from lsh_hdc.utils import wrap_scalar, tsorted, fill_with_last
 from lsh_hdc.ext import hashable, VarlenHash, PHashCombiner as HashCombiner
 
 # Various hash functions
@@ -191,8 +191,8 @@ def lsh_combinations(width, bandwidth, ramp):
     mapping = collections.defaultdict(list)
     for get_left, get_right in izip(left_getters, right_getters):
         for element in master:
-            mapping[tsorted(toiter(get_left(element)))].append(
-                tsorted(toiter(get_right(element))))
+            mapping[tsorted(wrap_scalar(get_left(element)))].append(
+                tsorted(wrap_scalar(get_right(element))))
     return sorted(set(tsorted(k + v[0]) for k, v in mapping.iteritems()))
 
 
