@@ -32,13 +32,21 @@ def _kappa(a, c, d, b):
     """An alternative implementation of Cohen's kappa (for testing)
     """
     n = a + b + c + d
-    if n == 0:
+    p1 = a + b
+    p2 = a + c
+    q1 = c + d
+    q2 = b + d
+    if a == n or b == n or c == n or d == n:
+        # only one cell is non-zero
         return np.nan
-    po = a + d
-    pe = ((a + c) * (a + b) + (b + d) * (c + d)) / float(n)
-    numer = po - pe
-    denom = n - pe
-    return 0.0 if denom == 0.0 else numer / denom
+    elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+        # one row or column is zero, another non-zero
+        return 0.0
+    else:
+        # no more than one cell is zero
+        po = a + d
+        pe = (p2 * p1 + q2 * q1) / float(n)
+        return _div(po - pe, n - pe)
 
 
 def _entropy_metrics(cm):
@@ -362,9 +370,9 @@ def test_1000():
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
-    assert_almost_equal(_kappa(*m), 0.0, 4)
+    assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.kappa()))
+    assert_true(np.isnan(_kappa(*m)))
 
 
 def test_0100():
@@ -374,9 +382,9 @@ def test_0100():
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
-    assert_almost_equal(_kappa(*m), 0.0, 4)
+    assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.kappa()))
+    assert_true(np.isnan(_kappa(*m)))
 
 
 def test_0010():
@@ -386,9 +394,9 @@ def test_0010():
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
-    assert_almost_equal(_kappa(*m), 0.0, 4)
+    assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.kappa()))
+    assert_true(np.isnan(_kappa(*m)))
 
 
 def test_0001():
@@ -398,9 +406,9 @@ def test_0001():
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
-    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
-    assert_almost_equal(cm.kappa(), 0.0, 4)
-    assert_almost_equal(_kappa(*m), 0.0, 4)
+    assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.kappa()))
+    assert_true(np.isnan(_kappa(*m)))
 
 
 def test_1010():
@@ -574,7 +582,7 @@ def test_2x2_invariants():
         # check matthews corr coeff
         mcc0 = cm.matthews_corr()
         mcc1 = geometric_mean(info0, mark0)
-        check_with_nans(mcc0, mcc1, 4, ensure_nans=True,
+        check_with_nans(mcc0, mcc1, 4, ensure_nans=False,
                         msg="MCC1 and MCC 2 must be the same")
 
         # check kappa implementations

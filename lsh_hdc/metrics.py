@@ -570,10 +570,7 @@ class ConfusionMatrix2(ContingencyTable):
         Synonyms: True Skill Score, Hannssen-Kuiper Score
         """
         p1, q1 = self.row_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
-            return 0.0
-        return _div(cov, p1 * q1)
+        return _div(self.covar(), p1 * q1)
 
     def markedness(self):
         """Markedness (Precision corrected for chance)
@@ -584,20 +581,24 @@ class ConfusionMatrix2(ContingencyTable):
 
         """
         p2, q2 = self.col_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
-            return 0.0
-        return _div(cov, p2 * q2)
+        return _div(self.covar(), p2 * q2)
 
     def loevinger_coeff(self):
         """Loevinger association coefficient
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
+        a, c, d, b = self.to_ccw()
+        n = self.grand_total
+        if a == n or b == n or c == n or d == n:
+            # only one cell is non-zero
+            return np.nan
+        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+            # one row or column is zero, another non-zero
             return 0.0
-        return _div(cov, min(p1 * q2, p2 * q1))
+        else:
+            # no more than one cell is zero
+            return _div(self.covar(), min(p1 * q2, p2 * q1))
 
     def kappa(self):
         """Calculate Cohen's kappa of a binary confusion matrix
@@ -634,10 +635,17 @@ class ConfusionMatrix2(ContingencyTable):
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
+        a, c, d, b = self.to_ccw()
+        n = self.grand_total
+        if a == n or b == n or c == n or d == n:
+            # only one cell is non-zero
+            return np.nan
+        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+            # one row or column is zero, another non-zero
             return 0.0
-        return _div(2 * cov, p1 * q2 + p2 * q1)
+        else:
+            # no more than one cell is zero
+            return _div(2 * self.covar(), p1 * q2 + p2 * q1)
 
     def mp_corr(self):
         """Maxwell & Pilliner's chance-corrected association index
@@ -646,10 +654,17 @@ class ConfusionMatrix2(ContingencyTable):
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
+        a, c, d, b = self.to_ccw()
+        n = self.grand_total
+        if a == n or b == n or c == n or d == n:
+            # only one cell is non-zero
+            return np.nan
+        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+            # one row or column is zero, another non-zero
             return 0.0
-        return _div(2 * cov, p1 * q1 + p2 * q2)
+        else:
+            # no more than one cell is zero
+            return _div(2 * self.covar(), p1 * q1 + p2 * q2)
 
     def matthews_corr(self):
         """Matthews Correlation Coefficient (Phi coefficient)
@@ -662,24 +677,31 @@ class ConfusionMatrix2(ContingencyTable):
         regression coefficients of the problem and its dual).
 
         MCC is also related to Cohen's Kappa (see description for kappa method)
-        and together the two are the most commonly used chance-corrected
-        association coefficient.
+        and together they are the two most commonly used chance-corrected
+        association coefficients.
 
         MCC is laso known as Phi Coefficient or as Yule's Q with correction for
         chance.
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
+        a, c, d, b = self.to_ccw()
+        n = self.grand_total
+        if a == n or b == n or c == n or d == n:
+            # only one cell is non-zero
+            return np.nan
+        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+            # one row or column is zero, another non-zero
             return 0.0
-        return _div(cov, sqrt(p1 * q1 * p2 * q2))
+        else:
+            # no more than one cell is zero
+            return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
 
     def mutinf_signed(self):
         """Assigns a sign to mututal information-based metrics
         """
         info, mark, corr = self.mutinf_metrics()
-        sgn = copysign(1, self.covariance())
+        sgn = copysign(1, self.covar())
         return (sgn * info, sgn * mark, sgn * corr)
 
     def yule_q(self):
@@ -698,10 +720,19 @@ class ConfusionMatrix2(ContingencyTable):
                    OR + 1
 
         """
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
+        p1, q1 = self.row_totals.values()
+        p2, q2 = self.col_totals.values()
+        a, c, d, b = self.to_ccw()
+        n = self.grand_total
+        if a == n or b == n or c == n or d == n:
+            # only one cell is non-zero
+            return np.nan
+        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+            # one row or column is zero, another non-zero
             return 0.0
-        return _div(cov, self.TP * self.TN + self.FP * self.FN)
+        else:
+            # no more than one cell is zero
+            return _div(self.covar(), a * d + b * c)
 
     def yule_y(self):
         """Colligation coefficient (Yule's Y)
@@ -712,14 +743,24 @@ class ConfusionMatrix2(ContingencyTable):
 
         Yule's Y is (sqrt(ad) - sqrt(bc)) / (sqrt(ad) + sqrt(bc))
         """
-        ad = self.TP * self.TN
-        bc = self.FN * self.FP
-        numer = sqrt(ad) - sqrt(bc)
-        if numer == 0 and self.grand_total != 0:
+        p1, q1 = self.row_totals.values()
+        p2, q2 = self.col_totals.values()
+        a, c, d, b = self.to_ccw()
+        n = self.grand_total
+        if a == n or b == n or c == n or d == n:
+            # only one cell is non-zero
+            return np.nan
+        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+            # one row or column is zero, another non-zero
             return 0.0
-        return _div(numer, sqrt(ad) + sqrt(bc))
+        else:
+            # no more than one cell is zero
+            ad = a * d
+            bc = b * c
+            numer = sqrt(ad) - sqrt(bc)
+            return _div(numer, sqrt(ad) + sqrt(bc))
 
-    def covariance(self):
+    def covar(self):
         """Determinant of a 2x2 matrix
         """
         return self.TP * self.TN - self.FP * self.FN
