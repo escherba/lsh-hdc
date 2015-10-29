@@ -88,10 +88,23 @@ from math import log as logn, sqrt, copysign
 from collections import Mapping, Set, namedtuple
 from itertools import izip
 from operator import itemgetter
-from scipy.special import binom
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples
 from pymaptools.containers import TableOfCounts
+
+
+def nchoose2(n):
+    """Binomial coefficient for k=2
+
+    Scipy has ``scipy.special.binom`` and ``scipy.misc.comb``, however on
+    individaul (non-vectorized) ops used in memory-constratined stream
+    computation, a simple definition below is faster. It is possible to get the
+    best of both worlds by writing a generator that returns NumPy arrays of
+    limited size and then calling a vectorized n-choose-2 function on those,
+    however the current way is fast enough for computing coincidence matrices
+    (turns out memory was the bottleneck, not raw computation speed).
+    """
+    return (n * (n - 1)) >> 1
 
 
 def _div(numer, denom):
@@ -149,6 +162,8 @@ def centropy(counts):
 
 
 def ratio2weights(ratio):
+    """Numerically accurate conversion of ratio of two weights to weights
+    """
     if ratio <= 1.0:
         lweight = ratio / (1.0 + ratio)
     else:
@@ -507,7 +522,7 @@ class ConfusionMatrix2(ContingencyTable):
         Kappa index comes from psychology and was originally introduced to
         measure interrater agreement. It is also appropriate for evaluating
         replication. In clustering applications, it is known as the 'Adjusted
-        Rand Index'. Kappa is derived from corercting accuracy (Simple Matching
+        Rand Index'. Kappa is derived by correcting Accuracy (Simple Matching
         Coefficient, Rand Index) for chance. Tbe general formula for chance
         correction of an association coefficient ``k`` is:
 
@@ -668,12 +683,12 @@ class ClusteringMetrics(ContingencyTable):
 
         Order of objects returned: TP, FP, TN, FN
         """
-        TP_plus_FP = sum(binom(a, 2) for a in self.iter_col_totals())
-        TP_plus_FN = sum(binom(b, 2) for b in self.iter_row_totals())
-        TP = sum(binom(cell, 2) for cell in self.iter_cells())
+        TP_plus_FP = sum(nchoose2(a) for a in self.iter_col_totals())
+        TP_plus_FN = sum(nchoose2(b) for b in self.iter_row_totals())
+        TP = sum(nchoose2(cell) for cell in self.iter_cells())
         FP = TP_plus_FP - TP
         FN = TP_plus_FN - TP
-        TN = binom(self.grand_total, 2) - TP - FP - FN
+        TN = nchoose2(self.grand_total) - TP - FP - FN
         return ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
 
     def split_join_distance(self):
