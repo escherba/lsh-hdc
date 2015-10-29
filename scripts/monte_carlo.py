@@ -1,10 +1,10 @@
 import numpy as np
 import os
 import warnings
-from itertools import izip
-from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
-from itertools import product
+from itertools import product, izip
 from pymaptools.iter import izip_with_cycles, isiterable
+from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
+from pymaptools.containers import labels_to_clusters
 
 
 class Grid(object):
@@ -21,12 +21,33 @@ class Grid(object):
             self.grid = self.fill_clusters()
             self.grid_type = grid_type
             self.get_matrix = self.matrix_from_labels
+            self.show_record = self.show_cluster
         elif grid_type == 'matrices':
             self.grid = self.fill_matrices()
             self.grid_type = grid_type
             self.get_matrix = self.matrix_from_matrices
+            self.show_record = self.show_matrix
         else:
             raise ValueError("Unknown grid_type selection '%s'" % grid_type)
+
+    def show_matrix(self, idx, inverse=False):
+        grid = self.grid
+        return grid[0][idx]
+
+    def show_cluster(self, idx, inverse=False):
+        grid = self.grid
+        if inverse:
+            a, b = 1, 0
+        else:
+            a, b = 0, 1
+        return labels_to_clusters(grid[a][idx], grid[b][idx])
+
+    def best_clustering_by_score(self, score, flip_sign=False):
+        idx, val = self.find_highest(score, flip_sign)
+        return {"idx": idx,
+                "found": "%s = %.4f" % (score, val),
+                "result": self.show_cluster(idx),
+                "inverse": self.show_cluster(idx, inverse=True)}
 
     def matrix_from_labels(self, *args):
         ltrue, lpred = args
@@ -69,9 +90,9 @@ class Grid(object):
             low=0, high=self.max_counts, size=(self.n, 4))
         return (matrices,)
 
-    def find_best(self, score, minimum=False):
+    def find_highest(self, score, flip_sign=False):
         best_index = -1
-        if minimum:
+        if flip_sign:
             direction = 1
             curr_score = float('inf')
         else:

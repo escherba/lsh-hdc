@@ -20,7 +20,7 @@ def fill_with_last(lst, k):
     return lst
 
 
-def toiter(a):
+def wrap_scalar(a):
     """If scalar, convert to tuple"""
     return a if isiterable(a) else (a,)
 
@@ -98,7 +98,7 @@ def sigsim(x, y, dim):
     :returns: similarity between two signatures
     :rtype: float
     """
-    return float(sum(imap(operator.eq, x, y))) / float(dim)
+    return sum(imap(operator.eq, x, y)) / float(dim)
 
 
 def sort_by_length(els, reverse=True):
