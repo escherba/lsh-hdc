@@ -156,7 +156,7 @@ def test_perfectly_bad_clustering():
     """
     h, c, v = homogeneity_completeness_v_measure([0, 0, 1, 1], [1, 1, 1, 1])
     assert_almost_equal(h, 0.00, 2)
-    assert_almost_equal(c, 0.00, 2)
+    assert_almost_equal(c, 1.00, 2)
     assert_almost_equal(v, 0.00, 2)
 
 
@@ -374,6 +374,12 @@ def test_1000():
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
+
+    h, c, v = cm.entropy_metrics()
+    assert_almost_equal(h, 1.0, 4)
+    assert_almost_equal(c, 1.0, 4)
+    assert_almost_equal(v, 1.0, 4)
+
     assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
@@ -392,6 +398,12 @@ def test_0100():
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
+
+    h, c, v = cm.entropy_metrics()
+    assert_almost_equal(h, 1.0, 4)
+    assert_almost_equal(c, 1.0, 4)
+    assert_almost_equal(v, 1.0, 4)
+
     assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
@@ -410,6 +422,12 @@ def test_0010():
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
+
+    h, c, v = cm.entropy_metrics()
+    assert_almost_equal(h, 1.0, 4)
+    assert_almost_equal(c, 1.0, 4)
+    assert_almost_equal(v, 1.0, 4)
+
     assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
@@ -428,6 +446,12 @@ def test_0001():
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
+
+    h, c, v = cm.entropy_metrics()
+    assert_almost_equal(h, 1.0, 4)
+    assert_almost_equal(c, 1.0, 4)
+    assert_almost_equal(v, 1.0, 4)
+
     assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))

@@ -342,8 +342,8 @@ class ContingencyTable(TableOfCounts):
         """
         # ensure non-negative values by taking max of 0 and given value
         H_C, H_K, I_CK = self._entropies()
-        h = 0.0 if H_C == 0.0 else max(0.0, I_CK / H_C)
-        c = 0.0 if H_K == 0.0 else max(0.0, I_CK / H_K)
+        h = 1.0 if H_C == 0.0 else max(0.0, I_CK / H_C)
+        c = 1.0 if H_K == 0.0 else max(0.0, I_CK / H_K)
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
 
@@ -672,7 +672,7 @@ class ConfusionMatrix2(ContingencyTable):
     def kappa0(self):
         """One-sided component of Kappa, Matthews, and Loevinger indices
 
-        Roughly corresponds to informedness
+        Roughly corresponds to markedness
         """
         _, q1 = self.row_totals.values()
         p2, _ = self.col_totals.values()
@@ -681,7 +681,7 @@ class ConfusionMatrix2(ContingencyTable):
     def kappa1(self):
         """One-sided component of Kappa, Matthews, and Loevinger indices
 
-        Roughly corresponds to markedness
+        Roughly corresponds to informedness
         """
         p1, _ = self.row_totals.values()
         _, q2 = self.col_totals.values()
@@ -736,8 +736,8 @@ class ConfusionMatrix2(ContingencyTable):
         Kappa can be decomposed into a harmonic mean of two components
         (regression coefficients for a problem and its dual):
 
-            k0 = cov / (p2 * q1)
-            k1 = cov / (p1 * q2)
+            k0 = cov / (p2 * q1)       # markedness-like
+            k1 = cov / (p1 * q2)       # informedness-like
 
         From these components, it turns out, one can also derive Matthews'
         correlation coefficient simply by calculating a geometric mean.  However
