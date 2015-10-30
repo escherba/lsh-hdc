@@ -254,8 +254,8 @@ def test_IR_example():
 
     assert_almost_equal(coassoc.jaccard_coeff(), 0.312500, 6)
     assert_almost_equal(coassoc.ochiai_coeff(),  0.476731, 6)
-    assert_almost_equal(coassoc.fscore(),        0.476190, 6)
     assert_almost_equal(coassoc.dice_coeff(),    0.476190, 6)
+    assert_almost_equal(coassoc.sokal_sneath(),  0.185185, 6)
 
     assert_almost_equal(coassoc.rand_index(),    0.676471, 6)
     assert_almost_equal(coassoc.precision(),     0.500000, 6)

@@ -93,6 +93,11 @@ from pymaptools.iter import aggregate_tuples
 from pymaptools.containers import TableOfCounts
 
 
+class pretty_repr(type):
+    def _repr_pretty_(self, p, cycle):
+        p.text(repr(self))
+
+
 def nchoose2(n):
     """Binomial coefficient for k=2
 
@@ -354,13 +359,17 @@ class ClusteringMetrics(ContingencyTable):
         self.coassoc_ = self.compute_coassoc()
 
     def compute_coassoc(self):
-        """Calculate a pairwise co-association matrix from two partitionings
+        """Calculate a pairwise co-association matrix from two partitionings.
+
+        Note that although the resulting confusion matrix has the form of a
+        correlation table for two binary variables, it is not symmetric if the
+        original partitionings are not symmetric.
         """
-        TP_plus_FP = sum(nchoose2(a) for a in self.iter_col_totals())
-        TP_plus_FN = sum(nchoose2(b) for b in self.iter_row_totals())
+        actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
+        called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
         TP = sum(nchoose2(cell) for cell in self.iter_cells())
-        FP = TP_plus_FP - TP
-        FN = TP_plus_FN - TP
+        FN = actual_positives - TP
+        FP = called_positives - TP
         TN = nchoose2(self.grand_total) - TP - FP - FN
         return ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
 
@@ -374,7 +383,7 @@ class ClusteringMetrics(ContingencyTable):
         return self.coassoc_.kappa()
 
 
-confmat2_type = namedtuple("Table2CCW", "TP FP TN FN")
+confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
 
 
 class ConfusionMatrix2(ContingencyTable):
@@ -393,15 +402,31 @@ class ConfusionMatrix2(ContingencyTable):
     be made).
     """
 
+    __metaclass__ = pretty_repr
+
+    def __repr__(self):
+        return repr(self.to_ccw())
+
+    def __init__(self, TP, FN, FP, TN):
+        super(ConfusionMatrix2, self).__init__(rows=[(TP, FN), (FP, TN)])
+
+    @classmethod
+    def from_rows(cls, rows):
+        return super(ConfusionMatrix2, cls)(rows=rows)
+
+    @classmethod
+    def from_cols(cls, cols):
+        return super(ConfusionMatrix2, cls)(cols=cols)
+
     @classmethod
     def from_random_counts(cls, low=0, high=100):
         """Return a matrix instance initialized with random values
         """
-        return cls.from_ccw(*np.random.randint(low=low, high=high, size=(4,)))
+        return cls(*np.random.randint(low=low, high=high, size=(4,)))
 
     @classmethod
     def from_ccw(cls, TP, FP, TN, FN):
-        return cls(rows=[(TP, FN), (FP, TN)])
+        return cls(TP, FN, FP, TN)
 
     def to_ccw(self):
         return confmat2_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
@@ -523,6 +548,15 @@ class ConfusionMatrix2(ContingencyTable):
         """
         a, b, c = self.TP, self.FN, self.FP
         return _div(a, sqrt((a + b) * (a + c)))
+
+    def sokal_sneath(self):
+        """Sokal and Sneath similarity index
+
+        Dice places more weight on 'a' component, Jaccard places equal weight on
+        'a' and 'b + c', while Sokal and Sneath places more weight on 'b + c'.
+        """
+        a = self.TP
+        return _div(a, a + 2 * (self.FN + self.FP))
 
     def prevalence_index(self):
         """Prevalence
