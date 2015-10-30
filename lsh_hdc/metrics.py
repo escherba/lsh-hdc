@@ -711,12 +711,9 @@ class ConfusionMatrix2(ContingencyTable):
         1.0
 
         """
-        k0 = self.kappa0()
-        k1 = self.kappa1()
-        if np.isnan(k0) or np.isnan(k1):
-            return np.nan
-        else:
-            return max(k0, k1)
+        p1, q1 = self.row_totals.values()
+        p2, q2 = self.col_totals.values()
+        return _div(self.covar(), min(p1 * q2, p2 * q1))
 
     def kappa(self):
         """Cohen's kappa (interrater agreement index)
