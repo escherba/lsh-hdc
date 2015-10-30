@@ -246,20 +246,24 @@ def test_IR_example():
     assert_almost_equal(cm.chisq_score(),     9.017647, 6)
     assert_almost_equal(cm.g_score(),        13.325845, 6)
 
+    assert_almost_equal(cm.adjusted_rand_index(),          0.242915, 6)
+    assert_almost_equal(cm.adjusted_jaccard_coeff(),       0.217138, 6)
+    assert_almost_equal(cm.adjusted_sokal_sneath_coeff(), -0.058363, 6)
+
     # test metrics that are based on pairwise co-association matrix
     coassoc = cm.coassoc_
 
-    assert_almost_equal(coassoc.chisq_score(),   8.063241, 6)
-    assert_almost_equal(coassoc.g_score(),       7.804221, 6)
+    assert_almost_equal(coassoc.chisq_score(),         8.063241, 6)
+    assert_almost_equal(coassoc.g_score(),             7.804221, 6)
 
-    assert_almost_equal(coassoc.jaccard_coeff(), 0.312500, 6)
-    assert_almost_equal(coassoc.ochiai_coeff(),  0.476731, 6)
-    assert_almost_equal(coassoc.dice_coeff(),    0.476190, 6)
-    assert_almost_equal(coassoc.sokal_sneath(),  0.185185, 6)
+    assert_almost_equal(coassoc.jaccard_coeff(),       0.312500, 6)
+    assert_almost_equal(coassoc.ochiai_coeff(),        0.476731, 6)
+    assert_almost_equal(coassoc.dice_coeff(),          0.476190, 6)
+    assert_almost_equal(coassoc.sokal_sneath_coeff(),  0.185185, 6)
 
-    assert_almost_equal(coassoc.rand_index(),    0.676471, 6)
-    assert_almost_equal(coassoc.precision(),     0.500000, 6)
-    assert_almost_equal(coassoc.recall(),        0.454545, 6)
+    assert_almost_equal(coassoc.rand_index(),          0.676471, 6)
+    assert_almost_equal(coassoc.precision(),           0.500000, 6)
+    assert_almost_equal(coassoc.recall(),              0.454545, 6)
 
 
 def test_adjustment_for_chance():
@@ -698,3 +702,17 @@ def test_2x2_invariants():
                         msg="Fscore must be equal to expected")
         check_with_nans(expected_f, cm.dice_coeff(), 6, ensure_nans=False,
                         msg="Fscore must be equal to Dice")
+
+        # check association coefficients (1)
+        dice = cm.dice_coeff()
+        expected_jaccard = _div(dice, 2.0 - dice)
+        actual_jaccard = cm.jaccard_coeff()
+        check_with_nans(actual_jaccard, expected_jaccard, 6, ensure_nans=False,
+                        msg="Jaccard coeff must match expected value")
+
+        # check association coefficients (2)
+        jaccard = cm.jaccard_coeff()
+        expected_ss2 = _div(jaccard, 2.0 - jaccard)
+        actual_ss2 = cm.sokal_sneath_coeff()
+        check_with_nans(actual_ss2, expected_ss2, 6, ensure_nans=False,
+                        msg="SS2 coeff must match expected value")

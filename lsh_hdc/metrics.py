@@ -254,12 +254,14 @@ class ContingencyTable(TableOfCounts):
         I_CK = H_expected - H_actual
         return H_C, H_K, I_CK
 
-    def vi_distance(self):
+    def vi_distance(self, base=2.0):
         """Variation of Information distance
+
+        Normalized to log base 2
         """
         H_C, H_K, I_CK = self._entropies()
         VI_CK = (H_C - I_CK) + (H_K - I_CK)
-        return VI_CK / self.grand_total
+        return VI_CK / (logn(base) * self.grand_total)
 
     def split_join_distance(self):
         """Projection distance between partitions
@@ -381,6 +383,50 @@ class ClusteringMetrics(ContingencyTable):
         resulting metric is independent of cluster size.
         """
         return self.coassoc_.kappa()
+
+    def adjusted_jaccard_coeff(self):
+        """Jaccard similarity coefficient with correction for chance
+
+        Uses Taylor series-based correction from [0]
+
+        [0] Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
+        Jaccard and other similarity indices for chance agreement in cluster
+        analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
+        https://doi.org/10.1007/s11634-011-0090-y
+        """
+        n = self.grand_total
+        coassoc = self.coassoc_
+        P = 2 * (coassoc.TP + coassoc.FN)
+        Q = 2 * (coassoc.TP + coassoc.FP)
+        PnQn = float((P + n) * (Q + n))
+        numer = PnQn / (n ** 2) - n
+        denom = P + Q + n - PnQn / (n ** 2)
+        exp_J = numer / denom
+        J = coassoc.jaccard_coeff()
+        CJ = (J - exp_J) / (1.0 - exp_J)
+        return CJ
+
+    def adjusted_sokal_sneath_coeff(self):
+        """Sokal-Sneath similarity coefficient with correction for chance
+
+        Uses Taylor series-based correction from [0]
+
+        [0] Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
+        Jaccard and other similarity indices for chance agreement in cluster
+        analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
+        https://doi.org/10.1007/s11634-011-0090-y
+        """
+        n = self.grand_total
+        coassoc = self.coassoc_
+        P = 2 * (coassoc.TP + coassoc.FN)
+        Q = 2 * (coassoc.TP + coassoc.FP)
+        PnQn = float((P + n) * (Q + n))
+        numer = PnQn / (n ** 2) - n
+        denom = (P + Q + 2 * n) - n - 3 * PnQn / (n ** 2)
+        exp_S = numer / denom
+        S = coassoc.sokal_sneath_coeff()
+        CS = (S - exp_S) / (1.0 - exp_S)
+        return CS
 
 
 confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
@@ -557,7 +603,7 @@ class ConfusionMatrix2(ContingencyTable):
         a, b, c = self.TP, self.FN, self.FP
         return _div(a, sqrt((a + b) * (a + c)))
 
-    def sokal_sneath(self):
+    def sokal_sneath_coeff(self):
         """Sokal and Sneath similarity index
 
         Dice places more weight on 'a' component, Jaccard places equal weight on
@@ -623,6 +669,24 @@ class ConfusionMatrix2(ContingencyTable):
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
 
+    def kappa0(self):
+        """One-sided component of Kappa, Matthews, and Loevinger indices
+
+        Roughly corresponds to informedness
+        """
+        _, q1 = self.row_totals.values()
+        p2, _ = self.col_totals.values()
+        return _div(self.covar(), p2 * q1)
+
+    def kappa1(self):
+        """One-sided component of Kappa, Matthews, and Loevinger indices
+
+        Roughly corresponds to markedness
+        """
+        p1, _ = self.row_totals.values()
+        _, q2 = self.col_totals.values()
+        return _div(self.covar(), p1 * q2)
+
     def loevinger_coeff(self):
         """Loevinger two-sided coefficient of homogeneity
 
@@ -647,9 +711,12 @@ class ConfusionMatrix2(ContingencyTable):
         1.0
 
         """
-        p1, q1 = self.row_totals.values()
-        p2, q2 = self.col_totals.values()
-        return _div(self.covar(), min(p1 * q2, p2 * q1))
+        k0 = self.kappa0()
+        k1 = self.kappa1()
+        if np.isnan(k0) or np.isnan(k1):
+            return np.nan
+        else:
+            return max(k0, k1)
 
     def kappa(self):
         """Cohen's kappa (interrater agreement index)
@@ -928,7 +995,7 @@ def clustering_aul_score(clusters, is_pos):
 
     The AUL score calculated is very similar to the Gini index of inequality
     (area between equality and the Lorenz curve) except we do not subtract 0.5.
-    Note that it can be lower than 0.5 because, in a very bad clustering, small
+    Note that it can be lower than 0.5 because, in a very poor clustering, small
     clusters of size 1 will be sorted by negative of the number of positives.
 
     Useful when primary criterion of clustering quality is bigger clusters
@@ -941,11 +1008,11 @@ def clustering_aul_score(clusters, is_pos):
     data = sorted(sortable, key=itemgetter(0), reverse=True)
     data = list(aggregate_tuples(data))
 
-    # in first pass, calculate some totals and cumulatives
     total_pos = 0
     max_horizontal = 0
     max_vertical = 0
 
+    # in the first pass, calculate some totals
     for cluster_size, pos_counts in data:
         num_clusters = len(pos_counts)
         total_pos += sum(pos_counts)
@@ -962,7 +1029,6 @@ def clustering_aul_score(clusters, is_pos):
     if max_vertical == 0:
         return np.nan
 
-    # in the second pass, calculate the AUL metric
     aul_score = 0.0
     bin_height = 0.0
     bin_right_edge = 0
@@ -970,6 +1036,7 @@ def clustering_aul_score(clusters, is_pos):
     # xs = []
     # ys = []
 
+    # in the second pass, calculate the AUL metric:
     # for each group of clusters of the same size...
     for cluster_size, pos_counts in data:
         avg_pos_count = sum(pos_counts) / float(len(pos_counts))

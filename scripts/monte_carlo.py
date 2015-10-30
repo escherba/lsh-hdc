@@ -7,6 +7,21 @@ from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
 from pymaptools.containers import labels_to_clusters
 
 
+def eval_method(obj, method_name, *args, **kwargs):
+    try:
+        method = getattr(obj, method_name)
+    except AttributeError:
+        method = getattr(obj.coassoc_, method_name)
+    return method(*args, **kwargs)
+
+
+def get_conf(obj):
+    try:
+        return obj.conf
+    except AttributeError:
+        return obj
+
+
 class Grid(object):
 
     def __init__(self, grid_type='clusters', n=10000, size=20, max_classes=5,
@@ -51,8 +66,7 @@ class Grid(object):
 
     def matrix_from_labels(self, *args):
         ltrue, lpred = args
-        cm = ClusteringMetrics.from_labels(ltrue, lpred)
-        return cm.coassoc_
+        return ClusteringMetrics.from_labels(ltrue, lpred)
 
     def matrix_from_matrices(self, *args):
         arr = args[0]
@@ -73,7 +87,7 @@ class Grid(object):
 
     def describe_matrices(self):
         for idx, matrix in self.iter_matrices():
-            tup = tuple(matrix.to_ccw())
+            tup = tuple(get_conf(matrix).to_ccw())
             max_idx = tup.index(max(tup))
             if max_idx != 2:
                 print idx, tup
@@ -99,8 +113,7 @@ class Grid(object):
             direction = -1
             curr_score = float('-inf')
         for idx, conf in self.iter_matrices():
-            method = getattr(conf, score)
-            new_score = method()
+            new_score = eval_method(conf, score)
             if cmp(curr_score, new_score) == direction:
                 best_index = idx
                 curr_score = new_score
@@ -108,6 +121,7 @@ class Grid(object):
 
     def find_matching_matrix(self, matches):
         for idx, mx in self.iter_matrices():
+            mx = get_conf(mx)
             if matches(mx):
                 return idx, mx
         else:
@@ -121,7 +135,7 @@ class Grid(object):
             result[score] = np.empty((self.n, dim), dtype=dtype)
         for idx, conf in self.iter_matrices():
             for score in scores:
-                result[score][idx, :] = getattr(conf, score)()
+                result[score][idx, :] = eval_method(conf, score)
         return result
 
     def corrplot(self, compute_result, save_to, **kwargs):
