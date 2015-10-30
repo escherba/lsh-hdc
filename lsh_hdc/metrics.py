@@ -729,19 +729,8 @@ class ConfusionMatrix2(ContingencyTable):
                    OR + 1
 
         """
-        p1, q1 = self.row_totals.values()
-        p2, q2 = self.col_totals.values()
         a, c, d, b = self.to_ccw()
-        n = self.grand_total
-        if a == n or b == n or c == n or d == n:
-            # only one cell is non-zero
-            return np.nan
-        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
-            # one row or column is zero, another non-zero
-            return 0.0
-        else:
-            # no more than one cell is zero
-            return _div(self.covar(), a * d + b * c)
+        return _div(self.covar(), a * d + b * c)
 
     def yule_y(self):
         """Colligation coefficient (Yule's Y)
@@ -752,22 +741,11 @@ class ConfusionMatrix2(ContingencyTable):
 
         Yule's Y is (sqrt(ad) - sqrt(bc)) / (sqrt(ad) + sqrt(bc))
         """
-        p1, q1 = self.row_totals.values()
-        p2, q2 = self.col_totals.values()
         a, c, d, b = self.to_ccw()
-        n = self.grand_total
-        if a == n or b == n or c == n or d == n:
-            # only one cell is non-zero
-            return np.nan
-        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
-            # one row or column is zero, another non-zero
-            return 0.0
-        else:
-            # no more than one cell is zero
-            ad = a * d
-            bc = b * c
-            numer = sqrt(ad) - sqrt(bc)
-            return _div(numer, sqrt(ad) + sqrt(bc))
+        ad = a * d
+        bc = b * c
+        return _div(sqrt(ad) - sqrt(bc),
+                    sqrt(ad) + sqrt(bc))
 
     def covar(self):
         """Determinant of a 2x2 matrix
