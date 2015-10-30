@@ -52,7 +52,7 @@ class Grid(object):
     def matrix_from_labels(self, *args):
         ltrue, lpred = args
         cm = ClusteringMetrics.from_labels(ltrue, lpred)
-        return cm.confusion_matrix_
+        return cm.coassoc_
 
     def matrix_from_matrices(self, *args):
         arr = args[0]
@@ -105,6 +105,13 @@ class Grid(object):
                 best_index = idx
                 curr_score = new_score
         return (best_index, curr_score)
+
+    def find_matching_matrix(self, matches):
+        for idx, mx in self.iter_matrices():
+            if matches(mx):
+                return idx, mx
+        else:
+            return None
 
     def compute(self, scores, score_dim=1, dtype=np.float16):
         result = {}

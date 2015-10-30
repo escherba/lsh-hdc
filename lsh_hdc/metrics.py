@@ -12,7 +12,7 @@ where each child process runnning on a multicore machine tries to allocate
 memory for itself. This implementation uses sparse methods on dictionary maps
 instead of building incidence matrices.
 
-Secondly, it was interesting to investigate the type of confusion matrices
+Secondly, it was interesting to investigate the type of co-association matrices
 typically produced during pairwise cluster comparisons, and whether it has
 any implications on the choice of overall quality measure.
 
@@ -88,10 +88,28 @@ from math import log as logn, sqrt, copysign
 from collections import Mapping, Set, namedtuple
 from itertools import izip
 from operator import itemgetter
-from scipy.special import binom
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples
 from pymaptools.containers import TableOfCounts
+
+
+class pretty_repr(type):
+    def _repr_pretty_(self, p, cycle):
+        p.text(repr(self))
+
+
+def nchoose2(n):
+    """Binomial coefficient for k=2
+
+    Scipy has ``scipy.special.binom`` and ``scipy.misc.comb``, however on
+    individaul (non-vectorized) ops used in memory-constratined stream
+    computation, a simple definition below is faster. It is possible to get the
+    best of both worlds by writing a generator that returns NumPy arrays of
+    limited size and then calling a vectorized n-choose-2 function on those,
+    however the current way is fast enough for computing coincidence matrices
+    (turns out memory was the bottleneck, not raw computation speed).
+    """
+    return (n * (n - 1)) >> 1
 
 
 def _div(numer, denom):
@@ -149,6 +167,8 @@ def centropy(counts):
 
 
 def ratio2weights(ratio):
+    """Numerically accurate conversion of ratio of two weights to weights
+    """
     if ratio <= 1.0:
         lweight = ratio / (1.0 + ratio)
     else:
@@ -222,12 +242,47 @@ class ContingencyTable(TableOfCounts):
                 score += (observed - expected) ** 2 / expected
         return score
 
-    def mutual_information(self):
-        """Mutual information for expected vs actual contingency table
+    def _entropies(self):
+        """Return H_C, H_K, and mutual information
+
+        Not normalized by N
         """
-        return (centropy(self.row_totals) +
-                centropy(self.col_totals) -
-                centropy(self.iter_cells()))
+        H_C = centropy(self.row_totals)
+        H_K = centropy(self.col_totals)
+        H_actual = centropy(self.iter_cells())
+        H_expected = H_C + H_K
+        I_CK = H_expected - H_actual
+        return H_C, H_K, I_CK
+
+    def vi_distance(self):
+        """Variation of Information distance
+        """
+        H_C, H_K, I_CK = self._entropies()
+        VI_CK = (H_C - I_CK) + (H_K - I_CK)
+        return VI_CK / self.grand_total
+
+    def split_join_distance(self):
+        """Projection distance between partitions
+
+        Used in graph commmunity analysis. Originally defined by van Dogen.
+        Example given in [0]:
+
+        >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
+        >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
+        >>> cm = ClusteringMetrics.from_partitions(p1, p2)
+        >>> cm.split_join_distance()
+        11
+
+        References
+        ----------
+
+        [0] Dongen, S. V. (2000). Performance criteria for graph clustering and
+        Markov cluster experiments. Information Systems [INS], (R 0012), 1-36.
+
+        """
+        pa_B = sum(max(x) for x in self.iter_rows())
+        pb_A = sum(max(x) for x in self.iter_cols())
+        return 2 * self.grand_total - pa_B - pb_A
 
     def g_score(self):
         """Returns G-statistic for RxC contingency table
@@ -240,7 +295,8 @@ class ContingencyTable(TableOfCounts):
         the differnce between the information in the table and the
         information in an independent table with the same marginals.
         """
-        return 2.0 * self.mutual_information()
+        _, _, I_CK = self._entropies()
+        return 2.0 * I_CK
 
     def mutinf_metrics(self):
         """Metrics based on mutual information
@@ -283,16 +339,51 @@ class ContingencyTable(TableOfCounts):
         during normalization.
         """
         # ensure non-negative values by taking max of 0 and given value
-        mut_info = max(0.0, self.mutual_information())
-        max_h = max(0.0, centropy(self.row_totals))
-        max_c = max(0.0, centropy(self.col_totals))
-        h = 0.0 if max_h == 0.0 else mut_info / max_h
-        c = 0.0 if max_c == 0.0 else mut_info / max_c
+        H_C, H_K, I_CK = self._entropies()
+        h = 0.0 if H_C == 0.0 else max(0.0, I_CK / H_C)
+        c = 0.0 if H_K == 0.0 else max(0.0, I_CK / H_K)
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
 
 
-confmat2_type = namedtuple("Table2CCW", "TP FP TN FN")
+class ClusteringMetrics(ContingencyTable):
+
+    """Provides external clustering evaluation metrics
+
+    A subclass of ContingencyTable that builds a pairwise co-association matrix
+    for clustering comparisons.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(ClusteringMetrics, self).__init__(*args, **kwargs)
+        self.coassoc_ = self.compute_coassoc()
+
+    def compute_coassoc(self):
+        """Calculate a pairwise co-association matrix from two partitionings.
+
+        Note that although the resulting confusion matrix has the form of a
+        correlation table for two binary variables, it is not symmetric if the
+        original partitionings are not symmetric.
+        """
+        actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
+        called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
+        TP = sum(nchoose2(cell) for cell in self.iter_cells())
+        FN = actual_positives - TP
+        FP = called_positives - TP
+        TN = nchoose2(self.grand_total) - TP - FP - FN
+        return ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
+
+    def adjusted_rand_index(self):
+        """Calculate Adjusted Rand Index in a memory-efficient way
+
+        Adjusted Rand Index measures overall agreement between two clusterings.
+        It is Rand index adjusted for chance, and has the property that the
+        resulting metric is independent of cluster size.
+        """
+        return self.coassoc_.kappa()
+
+
+confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
 
 
 class ConfusionMatrix2(ContingencyTable):
@@ -311,15 +402,39 @@ class ConfusionMatrix2(ContingencyTable):
     be made).
     """
 
+    __metaclass__ = pretty_repr
+
+    def __repr__(self):
+        return repr(self.to_array())
+
+    def __init__(self, TP, FN, FP, TN):
+        super(ConfusionMatrix2, self).__init__(rows=((TP, FN), (FP, TN)))
+
+    @classmethod
+    def from_rows(cls, rows):
+        return super(ConfusionMatrix2, cls)(rows=rows)
+
+    from_array = from_rows
+
+    def to_array(self):
+        return np.array(self.to_rows())
+
+    def to_rows(self):
+        return ((self.TP, self.FN), (self.FP, self.TN))
+
+    @classmethod
+    def from_cols(cls, cols):
+        return super(ConfusionMatrix2, cls)(cols=cols)
+
     @classmethod
     def from_random_counts(cls, low=0, high=100):
         """Return a matrix instance initialized with random values
         """
-        return cls.from_ccw(*np.random.randint(low=low, high=high, size=(4,)))
+        return cls(*np.random.randint(low=low, high=high, size=(4,)))
 
     @classmethod
     def from_ccw(cls, TP, FP, TN, FN):
-        return cls(rows=[(TP, FN), (FP, TN)])
+        return cls(TP, FN, FP, TN)
 
     def to_ccw(self):
         return confmat2_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
@@ -442,13 +557,22 @@ class ConfusionMatrix2(ContingencyTable):
         a, b, c = self.TP, self.FN, self.FP
         return _div(a, sqrt((a + b) * (a + c)))
 
+    def sokal_sneath(self):
+        """Sokal and Sneath similarity index
+
+        Dice places more weight on 'a' component, Jaccard places equal weight on
+        'a' and 'b + c', while Sokal and Sneath places more weight on 'b + c'.
+        """
+        a = self.TP
+        return _div(a, a + 2 * (self.FN + self.FP))
+
     def prevalence_index(self):
         """Prevalence
 
         From [7]:
 
             ...a prevalence effect exists when the proportion of agreements on
-            the positive classification differs from that import of the negative
+            the positive classification differs from that of the negative
             classification
 
         Example high-prevalence matrix:
@@ -478,36 +602,62 @@ class ConfusionMatrix2(ContingencyTable):
     def informedness(self):
         """Informedness (Recall corrected for chance)
 
-        An alternative formula is:
+        Alternative formulations:
 
             Informedness = Sensitivity + Specificity - 1.0
+                         = TPR - FPR
 
         Synonyms: True Skill Score, Hannssen-Kuiper Score
         """
-        return self.TPR() - self.FPR()
+        p1, q1 = self.row_totals.values()
+        return _div(self.covar(), p1 * q1)
 
     def markedness(self):
         """Markedness (Precision corrected for chance)
+
+        Alternative formulation:
+
+            Markedness = PPV + NPV - 1.0
+
         """
-        return self.PPV() + self.NPV() - 1.0
+        p2, q2 = self.col_totals.values()
+        return _div(self.covar(), p2 * q2)
 
     def loevinger_coeff(self):
-        """Loevinger association coefficient
+        """Loevinger two-sided coefficient of homogeneity
+
+        Given a clustering (numbers correspond to class labels, inner groups to
+        clusters) with perfect homogeneity but imperfect completeness, Loevinger
+        coefficient returns a perfect score on the corresponding pairwise
+        co-association matrix:
+
+        >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
+        ...
+        >>> cm = ClusteringMetrics.from_clusters(clusters)
+        >>> cm.coassoc_.loevinger_coeff()
+        1.0
+
+        At the same time, kappa and matthews coefficients are 0.63 and 0.68,
+        respectively. Being symmetrically defined, Loevinger coefficient will
+        also return a perfect score in the dual (opposite) situation:
+
+        >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
+        >>> cm = ClusteringMetrics.from_clusters(clusters)
+        >>> cm.coassoc_.loevinger_coeff()
+        1.0
+
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
-            return 0.0
-        return _div(cov, min(p1 * q2, p2 * q1))
+        return _div(self.covar(), min(p1 * q2, p2 * q1))
 
     def kappa(self):
-        """Calculate Cohen's kappa of a binary confusion matrix
+        """Cohen's kappa (interrater agreement index)
 
         Kappa index comes from psychology and was originally introduced to
         measure interrater agreement. It is also appropriate for evaluating
         replication. In clustering applications, it is known as the 'Adjusted
-        Rand Index'. Kappa is derived from corercting accuracy (Simple Matching
+        Rand Index'. Kappa is derived by correcting Accuracy (Simple Matching
         Coefficient, Rand Index) for chance. Tbe general formula for chance
         correction of an association coefficient ``k`` is:
 
@@ -536,10 +686,17 @@ class ConfusionMatrix2(ContingencyTable):
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
+        a, c, d, b = self.to_ccw()
+        n = self.grand_total
+        if a == n or b == n or c == n or d == n:
+            # only one cell is non-zero
+            return np.nan
+        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+            # one row or column is zero, another non-zero
             return 0.0
-        return _div(2 * cov, p1 * q2 + p2 * q1)
+        else:
+            # no more than one cell is zero
+            return _div(2 * self.covar(), p1 * q2 + p2 * q1)
 
     def mp_corr(self):
         """Maxwell & Pilliner's chance-corrected association index
@@ -548,10 +705,17 @@ class ConfusionMatrix2(ContingencyTable):
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
+        a, c, d, b = self.to_ccw()
+        n = self.grand_total
+        if a == n or b == n or c == n or d == n:
+            # only one cell is non-zero
+            return np.nan
+        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+            # one row or column is zero, another non-zero
             return 0.0
-        return _div(2 * cov, p1 * q1 + p2 * q2)
+        else:
+            # no more than one cell is zero
+            return _div(2 * self.covar(), p1 * q1 + p2 * q2)
 
     def matthews_corr(self):
         """Matthews Correlation Coefficient (Phi coefficient)
@@ -564,64 +728,56 @@ class ConfusionMatrix2(ContingencyTable):
         regression coefficients of the problem and its dual).
 
         MCC is also related to Cohen's Kappa (see description for kappa method)
-        and together the two are the most commonly used chance-corrected
-        association coefficient.
+        and together they are the two most commonly used chance-corrected
+        association coefficients.
 
         MCC is laso known as Phi Coefficient or as Yule's Q with correction for
         chance.
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
+        a, c, d, b = self.to_ccw()
+        n = self.grand_total
+        if a == n or b == n or c == n or d == n:
+            # only one cell is non-zero
+            return np.nan
+        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+            # one row or column is zero, another non-zero
             return 0.0
-        return _div(cov, sqrt(p1 * q1 * p2 * q2))
+        else:
+            # no more than one cell is zero
+            return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
 
     def mutinf_signed(self):
         """Assigns a sign to mututal information-based metrics
         """
         info, mark, corr = self.mutinf_metrics()
-        sgn = copysign(1, self.covariance())
+        sgn = copysign(1, self.covar())
         return (sgn * info, sgn * mark, sgn * corr)
 
     def yule_q(self):
         """Yule's Q (index of association)
-        For a table of shape
 
-        a b
-        c d
+        this index relates to the D odds ratio:
 
-        Yule's Q is (ad - bc) / (ad + bc)
-
-        It relates to odds ratio (here DOR() method):
-
-                   OR - 1
-           Q  =   --------.
-                   OR + 1
+                   DOR - 1
+           Q  =    ------- .
+                   DOR + 1
 
         """
-        cov = self.covariance()
-        if cov == 0 and self.grand_total != 0:
-            return 0.0
-        return _div(cov, self.TP * self.TN + self.FP * self.FN)
+        a, c, d, b = self.to_ccw()
+        return _div(self.covar(), a * d + b * c)
 
     def yule_y(self):
-        """Colligation coefficient (Yule's Y)
-        For a table of shape
-
-        a b
-        c d
-
-        Yule's Y is (sqrt(ad) - sqrt(bc)) / (sqrt(ad) + sqrt(bc))
+        """Yule's Y (Colligation Coefficient)
         """
-        ad = self.TP * self.TN
-        bc = self.FN * self.FP
-        numer = sqrt(ad) - sqrt(bc)
-        if numer == 0 and self.grand_total != 0:
-            return 0.0
-        return _div(numer, sqrt(ad) + sqrt(bc))
+        a, c, d, b = self.to_ccw()
+        ad = a * d
+        bc = b * c
+        return _div(sqrt(ad) - sqrt(bc),
+                    sqrt(ad) + sqrt(bc))
 
-    def covariance(self):
+    def covar(self):
         """Determinant of a 2x2 matrix
         """
         return self.TP * self.TN - self.FP * self.FN
@@ -650,69 +806,10 @@ class ConfusionMatrix2(ContingencyTable):
     rand_index = ACC
 
 
-class ClusteringMetrics(ContingencyTable):
-
-    """Provides external clustering evaluation metrics
-
-    A subclass of ContingencyTable that provides four external clustering
-    evaluation metrics: homogeneity, completeness, V-measure, and adjusted Rand
-    index.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(ClusteringMetrics, self).__init__(*args, **kwargs)
-        self.confusion_matrix_ = self.pairwise_confusion_matrix()
-
-    def pairwise_confusion_matrix(self):
-        """Calculate a binary confusion matrix from object pair distribution
-
-        Order of objects returned: TP, FP, TN, FN
-        """
-        TP_plus_FP = sum(binom(a, 2) for a in self.iter_col_totals())
-        TP_plus_FN = sum(binom(b, 2) for b in self.iter_row_totals())
-        TP = sum(binom(cell, 2) for cell in self.iter_cells())
-        FP = TP_plus_FP - TP
-        FN = TP_plus_FN - TP
-        TN = binom(self.grand_total, 2) - TP - FP - FN
-        return ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
-
-    def split_join_distance(self):
-        """Projection distance between partitions
-
-        Used in graph commmunity analysis. Originally defined by van Dogen.
-        Example given in [0]:
-
-        >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
-        >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
-        >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-        >>> cm.split_join_distance()
-        11
-
-        References
-        ----------
-
-        [0] Dongen, S. V. (2000). Performance criteria for graph clustering and
-        Markov cluster experiments. Information Systems [INS], (R 0012), 1-36.
-
-        """
-        pa_B = sum(max(x) for x in self.iter_rows())
-        pb_A = sum(max(x) for x in self.iter_cols())
-        return 2 * self.grand_total - pa_B - pb_A
-
-    def adjusted_rand_index(self):
-        """Calculate Adjusted Rand Index in a memory-efficient way
-
-        Adjusted Rand Index measures overall agreement between two clusterings.
-        It is Rand index adjusted for chance, and has the property that the
-        resulting metric is independent of cluster size.
-        """
-        return self.confusion_matrix_.kappa()
-
-
 def homogeneity_completeness_v_measure(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Sklearn function
     """
-    ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
+    ct = ContingencyTable.from_labels(labels_true, labels_pred)
     return ct.entropy_metrics()
 
 
@@ -755,8 +852,8 @@ class RocCurve(object):
 
         If number of Y classes is other than two, a warning will be triggered
         but no exception thrown (the return value will be a NaN). This differes
-        from the import behavior of Scikit-Learn's roc_auc_score method (it
-        always raises an exception) taht I find annoying!
+        from the behavior of Scikit-Learn's roc_auc_score method (it always
+        raises an exception) that I find annoying!
 
         Also, we don't reorder arrays during ROC calculation since they are
         assumed to be in order.
@@ -838,14 +935,8 @@ def clustering_aul_score(clusters, is_pos):
     containing more data in the positive class, while unassigned data (or
     clusters of size one) ought to belong to the negative class
     """
-    def count_pos(cluster):
-        # count negatives
-        return sum(is_pos(point) for point in cluster)
 
-    def make_sortable(cluster):
-        return len(cluster), count_pos(cluster)
-
-    sortable = [make_sortable(cluster) for cluster in clusters]
+    sortable = [(len(cluster), sum(is_pos(point) for point in cluster)) for cluster in clusters]
     # sort just by cluster size
     data = sorted(sortable, key=itemgetter(0), reverse=True)
     data = list(aggregate_tuples(data))
