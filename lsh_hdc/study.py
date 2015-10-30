@@ -305,18 +305,17 @@ BENCHMARKS = ['time_cpu']
 # square of mutual entropy correlation coefficients (for RxC matrices)
 ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
 
-# mutual information correlation coefficients (for 2x2 matrices)
-MI_CORR_METRICS = ['mi_info', 'mi_mark', 'mi_corr']
-
-CONFUSION_METRICS = [
-    # recommended
-    'adj_rand_score',
+PAIRWISE_METRICS = [
+    'adjusted_rand_index',
+    'mi_corr1', 'mi_corr0', 'mi_corr',
     'matthews_corr', 'informedness', 'markedness',
-    # these metrics don't consider TN
-    'jaccard', 'ochiai', 'fscore'
-] + MI_CORR_METRICS
+    'jaccard_coeff', 'ochiai_coeff', 'fscore',
+    'adjusted_jaccard_coeff', 'adjusted_sokal_sneath_coeff',
+    'adjusted_gower_legendre_coeff', 'adjusted_rogers_tanimoto_coeff',
+    'kappa0', 'kappa1'
+]
 
-INCIDENCE_METRICS = CONFUSION_METRICS + ENTROPY_METRICS
+INCIDENCE_METRICS = PAIRWISE_METRICS + ENTROPY_METRICS
 
 ROC_METRICS = ['roc_max_info', 'roc_auc']
 LIFT_METRICS = ['aul_score']
@@ -332,7 +331,7 @@ LEGEND_METRIC_KWARGS = {
 def add_incidence_metrics(args, clusters, pairs):
     """Add metrics based on incidence matrix of classes and clusters
     """
-    args_metrics = INCIDENCE_METRICS  # args.metrics
+    args_metrics = args.metrics
     if (set(INCIDENCE_METRICS) & set(args_metrics)):
 
         from lsh_hdc.metrics import ClusteringMetrics
@@ -343,30 +342,15 @@ def add_incidence_metrics(args, clusters, pairs):
         if (set(ENTROPY_METRICS) & set(args_metrics)):
             pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
 
-        if (set(CONFUSION_METRICS) & set(args_metrics)):
-            coassoc = cm.coassoc_
-
-            # the coefficients below are arguably the best
-            if 'adj_rand_score' in args_metrics:
-                pairs.append(('adj_rand_score', coassoc.kappa()))
-
-            if 'matthews_corr' in args_metrics:
-                pairs.append(('matthews_corr', coassoc.matthews_corr()))
-            if 'informedness' in args_metrics:
-                pairs.append(('informedness', coassoc.informedness()))
-            if 'markedness' in args_metrics:
-                pairs.append(('markedness', coassoc.markedness()))
-
-            if (set(MI_CORR_METRICS) & set(args_metrics)):
-                pairs.extend(zip(MI_CORR_METRICS, coassoc.mutinf_signed()))
-
-            # coefficients below don't consider true negatives
-            if 'fscore' in args_metrics:
-                pairs.append(('fscore', coassoc.fscore()))
-            if 'jaccard' in args_metrics:
-                pairs.append(('jaccard', coassoc.jaccard_coeff()))
-            if 'ochiai' in args_metrics:
-                pairs.append(('ochiai', coassoc.ochiai_coeff()))
+        pairwise_metrics = set(PAIRWISE_METRICS) & set(args_metrics)
+        if (pairwise_metrics):
+            for metric in pairwise_metrics:
+                try:
+                    score = cm.get_score(metric)
+                except AttributeError:
+                    logging.warn("Method %s not defined on pairwise confusion matrix", metric)
+                    continue
+                pairs.append((metric, score))
 
 
 def add_roc_metrics(args, clusters, pairs):

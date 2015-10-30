@@ -4,11 +4,13 @@
 # Experiment-independent defaults
 METRICS := \
 	homogeneity completeness nmi_score \
-	adj_rand_score \
-	mi_info mi_mark mi_corr \
+	adjusted_rand_index kappa0 kappa1 \
+	mi_corr1 mi_corr0 mi_corr \
+	adjusted_jaccard_coeff adjusted_sokal_sneath_coeff \
+	adjusted_rogers_tanimoto_coeff adjusted_gower_legendre_coeff \
 	informedness markedness matthews_corr \
 	roc_max_info aul_score roc_auc \
-	jaccard \
+	jaccard_coeff \
 	time_cpu
 
 SIMUL_CLUST_ANALY_ARGS := --label_negatives 1 --sim_size 100000 --metrics $(METRICS)
