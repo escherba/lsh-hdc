@@ -344,29 +344,29 @@ def add_incidence_metrics(args, clusters, pairs):
             pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
 
         if (set(CONFUSION_METRICS) & set(args_metrics)):
-            conf = cm.confusion_matrix_
+            coassoc = cm.coassoc_
 
             # the coefficients below are arguably the best
             if 'adj_rand_score' in args_metrics:
-                pairs.append(('adj_rand_score', conf.kappa()))
+                pairs.append(('adj_rand_score', coassoc.kappa()))
 
             if 'matthews_corr' in args_metrics:
-                pairs.append(('matthews_corr', conf.matthews_corr()))
+                pairs.append(('matthews_corr', coassoc.matthews_corr()))
             if 'informedness' in args_metrics:
-                pairs.append(('informedness', conf.informedness()))
+                pairs.append(('informedness', coassoc.informedness()))
             if 'markedness' in args_metrics:
-                pairs.append(('markedness', conf.markedness()))
+                pairs.append(('markedness', coassoc.markedness()))
 
             if (set(MI_CORR_METRICS) & set(args_metrics)):
-                pairs.extend(zip(MI_CORR_METRICS, conf.mutinf_signed()))
+                pairs.extend(zip(MI_CORR_METRICS, coassoc.mutinf_signed()))
 
             # coefficients below don't consider true negatives
             if 'fscore' in args_metrics:
-                pairs.append(('fscore', conf.fscore()))
+                pairs.append(('fscore', coassoc.fscore()))
             if 'jaccard' in args_metrics:
-                pairs.append(('jaccard', conf.jaccard_coeff()))
+                pairs.append(('jaccard', coassoc.jaccard_coeff()))
             if 'ochiai' in args_metrics:
-                pairs.append(('ochiai', conf.ochiai_coeff()))
+                pairs.append(('ochiai', coassoc.ochiai_coeff()))
 
 
 def add_roc_metrics(args, clusters, pairs):

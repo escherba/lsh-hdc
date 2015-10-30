@@ -12,7 +12,7 @@ where each child process runnning on a multicore machine tries to allocate
 memory for itself. This implementation uses sparse methods on dictionary maps
 instead of building incidence matrices.
 
-Secondly, it was interesting to investigate the type of confusion matrices
+Secondly, it was interesting to investigate the type of co-association matrices
 typically produced during pairwise cluster comparisons, and whether it has
 any implications on the choice of overall quality measure.
 
@@ -345,18 +345,16 @@ class ClusteringMetrics(ContingencyTable):
 
     """Provides external clustering evaluation metrics
 
-    A subclass of ContingencyTable that builds a pairwise confusion matrix for
-    clustering comparisons.
+    A subclass of ContingencyTable that builds a pairwise co-association matrix
+    for clustering comparisons.
     """
 
     def __init__(self, *args, **kwargs):
         super(ClusteringMetrics, self).__init__(*args, **kwargs)
-        self.confusion_matrix_ = self.pairwise_confusion_matrix()
+        self.coassoc_ = self.compute_coassoc()
 
-    def pairwise_confusion_matrix(self):
-        """Calculate a binary confusion matrix from object pair distribution
-
-        Order of objects returned: TP, FP, TN, FN
+    def compute_coassoc(self):
+        """Calculate a pairwise co-association matrix from two partitionings
         """
         TP_plus_FP = sum(nchoose2(a) for a in self.iter_col_totals())
         TP_plus_FN = sum(nchoose2(b) for b in self.iter_row_totals())
@@ -373,7 +371,7 @@ class ClusteringMetrics(ContingencyTable):
         It is Rand index adjusted for chance, and has the property that the
         resulting metric is independent of cluster size.
         """
-        return self.confusion_matrix_.kappa()
+        return self.coassoc_.kappa()
 
 
 confmat2_type = namedtuple("Table2CCW", "TP FP TN FN")
@@ -584,24 +582,35 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(self.covar(), p2 * q2)
 
     def loevinger_coeff(self):
-        """Loevinger association coefficient
+        """Loevinger two-sided coefficient of homogeneity
+
+        Given a clustering (numbers correspond to class labels, inner groups to
+        clusters) with perfect homogeneity but imperfect completeness, Loevinger
+        coefficient returns a perfect score on the corresponding pairwise
+        co-association matrix:
+
+        >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
+        ...
+        >>> cm = ClusteringMetrics.from_clusters(clusters)
+        >>> cm.coassoc_.loevinger_coeff()
+        1.0
+
+        At the same time, kappa and matthews coefficients are 0.63 and 0.68,
+        respectively. Being symmetrically defined, Loevinger coefficient will
+        also return a perfect score in the dual (opposite) situation:
+
+        >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
+        >>> cm = ClusteringMetrics.from_clusters(clusters)
+        >>> cm.coassoc_.loevinger_coeff()
+        1.0
+
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
-        a, c, d, b = self.to_ccw()
-        n = self.grand_total
-        if a == n or b == n or c == n or d == n:
-            # only one cell is non-zero
-            return np.nan
-        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
-            # one row or column is zero, another non-zero
-            return 0.0
-        else:
-            # no more than one cell is zero
-            return _div(self.covar(), min(p1 * q2, p2 * q1))
+        return _div(self.covar(), min(p1 * q2, p2 * q1))
 
     def kappa(self):
-        """Calculate Cohen's kappa of a binary confusion matrix
+        """Cohen's kappa (interrater agreement index)
 
         Kappa index comes from psychology and was originally introduced to
         measure interrater agreement. It is also appropriate for evaluating

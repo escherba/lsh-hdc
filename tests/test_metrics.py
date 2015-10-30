@@ -246,26 +246,20 @@ def test_IR_example():
     assert_almost_equal(cm.chisq_score(),     9.017647, 6)
     assert_almost_equal(cm.g_score(),        13.325845, 6)
 
-    # test confusion matrix-based metrics
-    conf = cm.confusion_matrix_
+    # test metrics that are based on pairwise co-association matrix
+    coassoc = cm.coassoc_
 
-    assert_almost_equal(conf.chisq_score(),   8.063241, 6)
-    assert_almost_equal(conf.g_score(),       7.804221, 6)
+    assert_almost_equal(coassoc.chisq_score(),   8.063241, 6)
+    assert_almost_equal(coassoc.g_score(),       7.804221, 6)
 
-    assert_almost_equal(conf.jaccard_coeff(), 0.312500, 6)
-    assert_almost_equal(conf.ochiai_coeff(),  0.476731, 6)
-    assert_almost_equal(conf.fscore(),        0.476190, 6)
-    assert_almost_equal(conf.dice_coeff(),    0.476190, 6)
+    assert_almost_equal(coassoc.jaccard_coeff(), 0.312500, 6)
+    assert_almost_equal(coassoc.ochiai_coeff(),  0.476731, 6)
+    assert_almost_equal(coassoc.fscore(),        0.476190, 6)
+    assert_almost_equal(coassoc.dice_coeff(),    0.476190, 6)
 
-    assert_almost_equal(conf.rand_index(),    0.676471, 6)
-    assert_almost_equal(conf.precision(),     0.500000, 6)
-    assert_almost_equal(conf.recall(),        0.454545, 6)
-
-    # test invariants
-    prec, recall = conf.precision(), conf.recall()
-    expected_f = harmonic_mean(prec, recall)
-    assert_almost_equal(expected_f, conf.fscore(), 6)
-    assert_almost_equal(expected_f, conf.dice_coeff(), 6)
+    assert_almost_equal(coassoc.rand_index(),    0.676471, 6)
+    assert_almost_equal(coassoc.precision(),     0.500000, 6)
+    assert_almost_equal(coassoc.recall(),        0.454545, 6)
 
 
 def test_adjustment_for_chance():
@@ -568,31 +562,40 @@ def test_2x2_invariants():
             msg="must be able to convert to tuple and create from tuple")
 
         # check informedness
-        info0 = cm.informedness()
-        info1 = cm.sensitivity() + cm.specificity() - 1.0
-        info2 = cm.TPR() - cm.FPR()
-        check_with_nans(info0, info1, 4, ensure_nans=False)
-        check_with_nans(info0, info2, 4, ensure_nans=False)
+        actual_info = cm.informedness()
+        expected_info_1 = cm.sensitivity() + cm.specificity() - 1.0
+        expected_info_2 = cm.TPR() - cm.FPR()
+        check_with_nans(actual_info, expected_info_1, 4, ensure_nans=False)
+        check_with_nans(actual_info, expected_info_2, 4, ensure_nans=False)
 
         # check markedness
-        mark0 = cm.markedness()
-        mark1 = cm.PPV() + cm.NPV() - 1.0
-        check_with_nans(mark0, mark1, 4, ensure_nans=False)
+        actual_mark = cm.markedness()
+        expected_mark = cm.PPV() + cm.NPV() - 1.0
+        check_with_nans(actual_mark, expected_mark, 4, ensure_nans=False,
+                        msg="Markedness must be equal to expected")
 
         # check matthews corr coeff
-        mcc0 = cm.matthews_corr()
-        mcc1 = geometric_mean(info0, mark0)
-        check_with_nans(mcc0, mcc1, 4, ensure_nans=False,
+        actual_mcc = cm.matthews_corr()
+        expected_mcc = geometric_mean(actual_info, actual_mark)
+        check_with_nans(actual_mcc, expected_mcc, 4, ensure_nans=False,
                         msg="MCC1 and MCC 2 must be the same")
 
         # check kappa implementations
-        check_with_nans(cm.kappa(), _kappa(*cells_ccw), 4,
+        actual_kappa = cm.kappa()
+        expected_kappa = _kappa(*cells_ccw)
+        check_with_nans(cm.kappa(), expected_kappa, 4,
                         msg="kappas must be equal")
 
         # check odds ratio implementation
-        check_with_nans(cm.DOR(), _div(cm.PLL(), cm.NLL()), 4, ensure_nans=False,
+        actual_odds_ratio = cm.DOR()
+        expected_odds_ratio = _div(cm.PLL(), cm.NLL())
+        check_with_nans(actual_odds_ratio, expected_odds_ratio, 4, ensure_nans=False,
                         msg="DOR must be equal")
 
         # check F-score and Dice
-        check_with_nans(cm.fscore(), cm.dice_coeff(), 4, ensure_nans=False,
-                        msg="Fscore must be equal")
+        expected_f = harmonic_mean(cm.precision(), cm.recall())
+        actual_f = cm.fscore()
+        check_with_nans(expected_f, actual_f, 6,
+                        msg="Fscore must be equal to expected")
+        check_with_nans(expected_f, cm.dice_coeff(), 6, ensure_nans=False,
+                        msg="Fscore must be equal to Dice")
