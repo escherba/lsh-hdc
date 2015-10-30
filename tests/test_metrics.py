@@ -248,7 +248,7 @@ def test_IR_example():
 
     assert_almost_equal(cm.adjusted_rand_index(),          0.242915, 6)
     assert_almost_equal(cm.adjusted_jaccard_coeff(),       0.217138, 6)
-    assert_almost_equal(cm.adjusted_sokal_sneath_coeff(), -0.058363, 6)
+    assert_almost_equal(cm.adjusted_sokal_sneath_coeff(),  0.128675, 6)
 
     # test metrics that are based on pairwise co-association matrix
     coassoc = cm.coassoc_

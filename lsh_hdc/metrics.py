@@ -398,9 +398,9 @@ class ClusteringMetrics(ContingencyTable):
         coassoc = self.coassoc_
         P = 2 * (coassoc.TP + coassoc.FN)
         Q = 2 * (coassoc.TP + coassoc.FP)
-        PnQn = float((P + n) * (Q + n))
-        numer = PnQn / (n ** 2) - n
-        denom = P + Q + n - PnQn / (n ** 2)
+        PnQn_over_nsq = ((P + n) * (Q + n)) / float(n ** 2)
+        numer = PnQn_over_nsq - n
+        denom = (P + Q + n) - PnQn_over_nsq
         exp_J = numer / denom
         J = coassoc.jaccard_coeff()
         CJ = (J - exp_J) / (1.0 - exp_J)
@@ -420,9 +420,9 @@ class ClusteringMetrics(ContingencyTable):
         coassoc = self.coassoc_
         P = 2 * (coassoc.TP + coassoc.FN)
         Q = 2 * (coassoc.TP + coassoc.FP)
-        PnQn = float((P + n) * (Q + n))
-        numer = PnQn / (n ** 2) - n
-        denom = (P + Q + 2 * n) - n - 3 * PnQn / (n ** 2)
+        PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
+        numer = PnQn_over_nsq - n
+        denom = 2 * (P + Q + 2 * n) - n - (3 * PnQn_over_nsq)
         exp_S = numer / denom
         S = coassoc.sokal_sneath_coeff()
         CS = (S - exp_S) / (1.0 - exp_S)
