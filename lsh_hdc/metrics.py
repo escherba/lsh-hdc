@@ -405,14 +405,22 @@ class ConfusionMatrix2(ContingencyTable):
     __metaclass__ = pretty_repr
 
     def __repr__(self):
-        return repr(self.to_ccw())
+        return repr(self.to_array())
 
     def __init__(self, TP, FN, FP, TN):
-        super(ConfusionMatrix2, self).__init__(rows=[(TP, FN), (FP, TN)])
+        super(ConfusionMatrix2, self).__init__(rows=((TP, FN), (FP, TN)))
 
     @classmethod
     def from_rows(cls, rows):
         return super(ConfusionMatrix2, cls)(rows=rows)
+
+    from_array = from_rows
+
+    def to_array(self):
+        return np.array(self.to_rows())
+
+    def to_rows(self):
+        return ((self.TP, self.FN), (self.FP, self.TN))
 
     @classmethod
     def from_cols(cls, cols):
