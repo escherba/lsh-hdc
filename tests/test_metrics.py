@@ -353,7 +353,13 @@ def test_0000():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
+
+    assert_true(np.isnan(cm.loevinger_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
+    assert_true(np.isnan(cm.yule_y()))
+
     assert_true(np.isnan(_kappa(*m)))
 
 
@@ -365,7 +371,13 @@ def test_1000():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
+
+    assert_true(np.isnan(cm.loevinger_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
+    assert_true(np.isnan(cm.yule_y()))
+
     assert_true(np.isnan(_kappa(*m)))
 
 
@@ -377,7 +389,13 @@ def test_0100():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
+
+    assert_true(np.isnan(cm.loevinger_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
+    assert_true(np.isnan(cm.yule_y()))
+
     assert_true(np.isnan(_kappa(*m)))
 
 
@@ -389,7 +407,13 @@ def test_0010():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
+
+    assert_true(np.isnan(cm.loevinger_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
+    assert_true(np.isnan(cm.yule_y()))
+
     assert_true(np.isnan(_kappa(*m)))
 
 
@@ -401,7 +425,13 @@ def test_0001():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
+
+    assert_true(np.isnan(cm.loevinger_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
+    assert_true(np.isnan(cm.yule_y()))
+
     assert_true(np.isnan(_kappa(*m)))
 
 
@@ -413,7 +443,13 @@ def test_1010():
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
     assert_almost_equal(cm.g_score(), 2.7726, 4)
     assert_almost_equal(cm.matthews_corr(), 1.0, 4)
+    assert_almost_equal(cm.mp_corr(), 1.0, 4)
     assert_almost_equal(cm.kappa(), 1.0, 4)
+
+    assert_almost_equal(cm.loevinger_coeff(), 1.0, 4)
+    assert_almost_equal(cm.yule_q(), 1.0, 4)
+    assert_almost_equal(cm.yule_y(), 1.0, 4)
+
     assert_almost_equal(_kappa(*m), 1.0, 4)
 
 
@@ -425,7 +461,13 @@ def test_1100():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
+
+    assert_true(np.isnan(cm.loevinger_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
+    assert_true(np.isnan(cm.yule_y()))
+
     assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
@@ -437,7 +479,13 @@ def test_0011():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
+
+    assert_true(np.isnan(cm.loevinger_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
+    assert_true(np.isnan(cm.yule_y()))
+
     assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
@@ -449,8 +497,50 @@ def test_0101():
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
     assert_almost_equal(cm.g_score(), 2.7726, 4)
     assert_almost_equal(cm.matthews_corr(), -1.0, 4)
+    assert_almost_equal(cm.mp_corr(), -1.0, 4)
     assert_almost_equal(cm.kappa(), -1.0, 4)
+
+    assert_almost_equal(cm.loevinger_coeff(), -1.0, 4)
+    assert_almost_equal(cm.yule_q(), -1.0, 4)
+    assert_almost_equal(cm.yule_y(), -1.0, 4)
+
     assert_almost_equal(_kappa(*m), -1.0, 4)
+
+
+def test_1001():
+    """
+    """
+    m = (1, 0, 0, 1)
+    cm = ConfusionMatrix2.from_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.mp_corr(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+
+    assert_true(np.isnan(cm.loevinger_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
+    assert_true(np.isnan(cm.yule_y()))
+
+    assert_almost_equal(_kappa(*m), 0.0, 4)
+
+
+def test_0110():
+    """
+    """
+    m = (0, 1, 1, 0)
+    cm = ConfusionMatrix2.from_ccw(*m)
+    assert_almost_equal(cm.chisq_score(), 0.0, 4)
+    assert_almost_equal(cm.g_score(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.mp_corr(), 0.0, 4)
+    assert_almost_equal(cm.kappa(), 0.0, 4)
+
+    assert_true(np.isnan(cm.loevinger_coeff()))
+    assert_true(np.isnan(cm.yule_q()))
+    assert_true(np.isnan(cm.yule_y()))
+
+    assert_almost_equal(_kappa(*m), 0.0, 4)
 
 
 def test_0111():
@@ -461,6 +551,7 @@ def test_0111():
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
     assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+    assert_almost_equal(cm.mp_corr(), -0.5, 4)
     assert_almost_equal(cm.kappa(), -0.5, 4)
     assert_almost_equal(_kappa(*m), -0.5, 4)
 
@@ -473,6 +564,7 @@ def test_1011():
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
     assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+    assert_almost_equal(cm.mp_corr(), 0.5, 4)
     assert_almost_equal(cm.kappa(), 0.4, 4)
     assert_almost_equal(_kappa(*m), 0.4, 4)
 
@@ -485,6 +577,7 @@ def test_1101():
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
     assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+    assert_almost_equal(cm.mp_corr(), -0.5, 4)
     assert_almost_equal(cm.kappa(), -0.5, 4)
     assert_almost_equal(_kappa(*m), -0.5, 4)
 
@@ -497,6 +590,7 @@ def test_1110():
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
     assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+    assert_almost_equal(cm.mp_corr(), 0.5, 4)
     assert_almost_equal(cm.kappa(), 0.4, 4)
     assert_almost_equal(_kappa(*m), 0.4, 4)
 
@@ -509,6 +603,7 @@ def test_1111():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
     assert_almost_equal(_kappa(*m), 0.0, 4)
 
@@ -583,14 +678,18 @@ def test_2x2_invariants():
         # check kappa implementations
         actual_kappa = cm.kappa()
         expected_kappa = _kappa(*cells_ccw)
-        check_with_nans(cm.kappa(), expected_kappa, 4,
+        check_with_nans(actual_kappa, expected_kappa, 4,
                         msg="kappas must be equal")
 
-        # check odds ratio implementation
+        # check odds ratio and Yule's Q
         actual_odds_ratio = cm.DOR()
+        actual_yule_q = cm.yule_q()
+        expected_yule_q = _div(actual_odds_ratio - 1.0, actual_odds_ratio + 1.0)
         expected_odds_ratio = _div(cm.PLL(), cm.NLL())
         check_with_nans(actual_odds_ratio, expected_odds_ratio, 4, ensure_nans=False,
-                        msg="DOR must be equal")
+                        msg="DOR must be equal to PLL/NLL")
+        check_with_nans(actual_yule_q, expected_yule_q, 4, ensure_nans=False,
+                        msg="Yule's Q must be equal to (DOR-1)/(DOR+1)")
 
         # check F-score and Dice
         expected_f = harmonic_mean(cm.precision(), cm.recall())

@@ -715,31 +715,19 @@ class ConfusionMatrix2(ContingencyTable):
 
     def yule_q(self):
         """Yule's Q (index of association)
-        For a table of shape
 
-        a b
-        c d
+        this index relates to the D odds ratio:
 
-        Yule's Q is (ad - bc) / (ad + bc)
-
-        It relates to odds ratio (here DOR() method):
-
-                   OR - 1
-           Q  =   --------.
-                   OR + 1
+                   DOR - 1
+           Q  =    ------- .
+                   DOR + 1
 
         """
         a, c, d, b = self.to_ccw()
         return _div(self.covar(), a * d + b * c)
 
     def yule_y(self):
-        """Colligation coefficient (Yule's Y)
-        For a table of shape
-
-        a b
-        c d
-
-        Yule's Y is (sqrt(ad) - sqrt(bc)) / (sqrt(ad) + sqrt(bc))
+        """Yule's Y (Colligation Coefficient)
         """
         a, c, d, b = self.to_ccw()
         ad = a * d
@@ -905,14 +893,8 @@ def clustering_aul_score(clusters, is_pos):
     containing more data in the positive class, while unassigned data (or
     clusters of size one) ought to belong to the negative class
     """
-    def count_pos(cluster):
-        # count negatives
-        return sum(is_pos(point) for point in cluster)
 
-    def make_sortable(cluster):
-        return len(cluster), count_pos(cluster)
-
-    sortable = [make_sortable(cluster) for cluster in clusters]
+    sortable = [(len(cluster), sum(is_pos(point) for point in cluster)) for cluster in clusters]
     # sort just by cluster size
     data = sorted(sortable, key=itemgetter(0), reverse=True)
     data = list(aggregate_tuples(data))
