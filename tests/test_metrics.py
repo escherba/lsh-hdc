@@ -246,7 +246,6 @@ def test_IR_example():
     assert_almost_equal(cm.chisq_score(),     9.017647, 6)
     assert_almost_equal(cm.g_score(),        13.325845, 6)
 
-    assert_almost_equal(cm.adjusted_rand_index(),          0.242915, 6)
     assert_almost_equal(cm.adjusted_jaccard_coeff(),       0.217138, 6)
     assert_almost_equal(cm.adjusted_sokal_sneath_coeff(),  0.128675, 6)
 
@@ -261,6 +260,7 @@ def test_IR_example():
     assert_almost_equal(coassoc.dice_coeff(),          0.476190, 6)
     assert_almost_equal(coassoc.sokal_sneath_coeff(),  0.185185, 6)
 
+    assert_almost_equal(coassoc.kappa(),               0.242915, 6)
     assert_almost_equal(coassoc.rand_index(),          0.676471, 6)
     assert_almost_equal(coassoc.precision(),           0.500000, 6)
     assert_almost_equal(coassoc.recall(),              0.454545, 6)
@@ -309,11 +309,11 @@ def test_twoway_confusion_ll():
     """
     cm = ConfusionMatrix2.from_ccw(4758, 8840, 76, 30)
     assert_almost_equal(cm.g_score(),       2.14, 2)
-    mi_info, mi_mark, mi_corr = cm.mutinf_signed()
-    assert_almost_equal(mi_corr,            0.0150, 4)
-    assert_almost_equal(mi_info,            0.0110, 4)
-    assert_almost_equal(mi_mark,            0.0415, 4)
     assert_almost_equal(cm.chisq_score(),   2.07, 2)
+
+    assert_almost_equal(cm.mi_corr(),       0.0150, 4)
+    assert_almost_equal(cm.mi_corr1(),      0.0110, 4)
+    assert_almost_equal(cm.mi_corr0(),      0.0415, 4)
     assert_almost_equal(cm.matthews_corr(), 0.0123, 4)
     assert_almost_equal(cm.informedness(),  0.0023, 4)
     assert_almost_equal(cm.markedness(),    0.0669, 4)
@@ -325,11 +325,11 @@ def test_negative_correlation():
     """
     cm = ConfusionMatrix2.from_ccw(10, 120, 8, 300)
     assert_almost_equal(cm.g_score(),        384.52, 2)
-    mi_info, mi_mark, mi_corr = cm.mutinf_signed()
-    assert_almost_equal(mi_corr,            -0.8510, 4)
-    assert_almost_equal(mi_info,            -0.8524, 4)
-    assert_almost_equal(mi_mark,            -0.8496, 4)
     assert_almost_equal(cm.chisq_score(),    355.70, 2)
+
+    assert_almost_equal(cm.mi_corr(),       -0.8510, 4)
+    assert_almost_equal(cm.mi_corr1(),      -0.8524, 4)
+    assert_almost_equal(cm.mi_corr0(),      -0.8496, 4)
     assert_almost_equal(cm.matthews_corr(), -0.9012, 4)
     assert_almost_equal(cm.informedness(),  -0.9052, 4)
     assert_almost_equal(cm.markedness(),    -0.8971, 4)
@@ -740,3 +740,15 @@ def test_2x2_invariants():
         actual_ss2 = cm.sokal_sneath_coeff()
         check_with_nans(actual_ss2, expected_ss2, 6, ensure_nans=False,
                         msg="SS2 coeff must match expected value")
+
+        # (3)
+        gl = cm.gower_legendre_coeff()
+        expected_acc = _div(gl, 2.0 - gl)
+        actual_acc = cm.accuracy()
+        check_with_nans(actual_acc, expected_acc, 6, ensure_nans=False,
+                        msg="Accuracy coeff must match expected value")
+
+        expected_rt = _div(actual_acc, 2.0 - actual_acc)
+        actual_rt = cm.rogers_tanimoto_coeff()
+        check_with_nans(actual_rt, expected_rt, 6, ensure_nans=False,
+                        msg="Rogers-Tanimoto coeff must match expected value")

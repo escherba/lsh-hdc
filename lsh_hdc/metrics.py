@@ -81,6 +81,11 @@ https://doi.org/10.1007/s11336-008-9070-3
 use, interpretation, and sample size requirements. Physical therapy, 85(3),
 257-268.
 http://www.ncbi.nlm.nih.gov/pubmed/15733050
+
+[8] Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
+Jaccard and other similarity indices for chance agreement in cluster
+analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
+https://doi.org/10.1007/s11634-011-0090-y
 """
 
 import numpy as np
@@ -304,10 +309,10 @@ class ContingencyTable(TableOfCounts):
         """Metrics based on mutual information
 
         The coefficient decomposes into regression coefficients defined
-        according to fixed-margin tables. The `mi_info` coefficient, for
+        according to fixed-margin tables. The `mi_corr1` coefficient, for
         example, is obtained by dividing the G-score by the maximum achievable
         value on a table with true class counts (in this case, row totals)
-        fixed. the `mi_mark` is its dual, defined by dividing the G-score by
+        fixed. The `mi_corr0` is its dual, defined by dividing the G-score by
         its maximum achievable value when predicted label counts (in this case,
         column totals) are fixed.
 
@@ -358,41 +363,48 @@ class ClusteringMetrics(ContingencyTable):
 
     def __init__(self, *args, **kwargs):
         super(ClusteringMetrics, self).__init__(*args, **kwargs)
-        self.coassoc_ = self.compute_coassoc()
+        self._coassoc_ = None
 
-    def compute_coassoc(self):
-        """Calculate a pairwise co-association matrix from two partitionings.
+    @property
+    def coassoc_(self):
+        """Calculate a confusion matrix describing pairs from two partitionings
+
+        Given two partitionings A and B and a co-occurence matrix of point pairs,
+
+        TP - count of pairs found in the same partition in both A and B
+        FP - count of pairs found in the same partition in A but not in B
+        FN - count of pairs found in the same partition in B but not in A
+        TN - count of pairs in different partitions in both A and B
 
         Note that although the resulting confusion matrix has the form of a
         correlation table for two binary variables, it is not symmetric if the
         original partitionings are not symmetric.
-        """
-        actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
-        called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
-        TP = sum(nchoose2(cell) for cell in self.iter_cells())
-        FN = actual_positives - TP
-        FP = called_positives - TP
-        TN = nchoose2(self.grand_total) - TP - FP - FN
-        return ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
 
-    def adjusted_rand_index(self):
-        """Calculate Adjusted Rand Index in a memory-efficient way
-
-        Adjusted Rand Index measures overall agreement between two clusterings.
-        It is Rand index adjusted for chance, and has the property that the
-        resulting metric is independent of cluster size.
         """
-        return self.coassoc_.kappa()
+        coassoc = self._coassoc_
+        if coassoc is None:
+            actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
+            called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
+            TP = sum(nchoose2(cell) for cell in self.iter_cells())
+            FN = actual_positives - TP
+            FP = called_positives - TP
+            TN = nchoose2(self.grand_total) - TP - FP - FN
+            coassoc = self._coassoc_ = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
+        return coassoc
+
+    def get_score(self, scoring_method, *args, **kwargs):
+        """Convenience method that looks up and runs a scoring method
+        """
+        try:
+            method = getattr(self, scoring_method)
+        except AttributeError:
+            method = getattr(self.coassoc_, scoring_method)
+        return method(*args, **kwargs)
 
     def adjusted_jaccard_coeff(self):
         """Jaccard similarity coefficient with correction for chance
 
-        Uses Taylor series-based correction from [0]
-
-        [0] Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
-        Jaccard and other similarity indices for chance agreement in cluster
-        analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
-        https://doi.org/10.1007/s11634-011-0090-y
+        Uses Taylor series-based correction described in [8]
         """
         n = self.grand_total
         coassoc = self.coassoc_
@@ -401,20 +413,15 @@ class ClusteringMetrics(ContingencyTable):
         PnQn_over_nsq = ((P + n) * (Q + n)) / float(n ** 2)
         numer = PnQn_over_nsq - n
         denom = (P + Q + n) - PnQn_over_nsq
-        exp_J = numer / denom
-        J = coassoc.jaccard_coeff()
-        CJ = (J - exp_J) / (1.0 - exp_J)
-        return CJ
+        expected = numer / denom
+        coeff = coassoc.jaccard_coeff()
+        adjusted = (coeff - expected) / (1.0 - expected)
+        return adjusted
 
     def adjusted_sokal_sneath_coeff(self):
         """Sokal-Sneath similarity coefficient with correction for chance
 
-        Uses Taylor series-based correction from [0]
-
-        [0] Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
-        Jaccard and other similarity indices for chance agreement in cluster
-        analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
-        https://doi.org/10.1007/s11634-011-0090-y
+        Uses Taylor series-based correction described in [8]
         """
         n = self.grand_total
         coassoc = self.coassoc_
@@ -423,10 +430,48 @@ class ClusteringMetrics(ContingencyTable):
         PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
         numer = PnQn_over_nsq - n
         denom = 2 * (P + Q + 2 * n) - n - (3 * PnQn_over_nsq)
-        exp_S = numer / denom
-        S = coassoc.sokal_sneath_coeff()
-        CS = (S - exp_S) / (1.0 - exp_S)
-        return CS
+        expected = numer / denom
+        coeff = coassoc.sokal_sneath_coeff()
+        adjusted = (coeff - expected) / (1.0 - expected)
+        return adjusted
+
+    def adjusted_rogers_tanimoto_coeff(self):
+        """Rogers-Tanimoto similarity coefficient with correction for chance
+
+        Uses Taylor series-based correction described in [8]
+        """
+        n = self.grand_total
+        coassoc = self.coassoc_
+        P = 2 * (coassoc.TP + coassoc.FN)
+        Q = 2 * (coassoc.TP + coassoc.FP)
+        PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
+        nn1 = n * (n - 1)
+        PQ2n = P + Q + 2 * n
+        numer = 2 * PnQn_over_nsq + nn1 - PQ2n
+        denom = PQ2n + nn1 - 2 * PnQn_over_nsq
+        expected = numer / denom
+        coeff = coassoc.rogers_tanimoto_coeff()
+        adjusted = (coeff - expected) / (1.0 - expected)
+        return adjusted
+
+    def adjusted_gower_legendre_coeff(self):
+        """Gower-Legendre similarity coefficient with correction for chance
+
+        Uses Taylor series-based correction described in [0]
+        """
+        n = self.grand_total
+        coassoc = self.coassoc_
+        P = 2 * (coassoc.TP + coassoc.FN)
+        Q = 2 * (coassoc.TP + coassoc.FP)
+        PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
+        nn1 = n * (n - 1)
+        PQ2n = P + Q + 2 * n
+        numer = 2 * PnQn_over_nsq + nn1 - PQ2n
+        denom = PnQn_over_nsq + nn1 - 0.5 * PQ2n
+        expected = numer / denom
+        coeff = coassoc.gower_legendre_coeff()
+        adjusted = (coeff - expected) / (1.0 - expected)
+        return adjusted
 
 
 confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
@@ -484,6 +529,12 @@ class ConfusionMatrix2(ContingencyTable):
 
     def to_ccw(self):
         return confmat2_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
+
+    def get_score(self, scoring_method, *args, **kwargs):
+        """Convenience method that looks up and runs a scoring method
+        """
+        method = getattr(self, scoring_method)
+        return method(*args, **kwargs)
 
     @property
     def TP(self):
@@ -588,6 +639,22 @@ class ConfusionMatrix2(ContingencyTable):
         a = self.TP
         return _div(2 * a, 2 * a + self.FN + self.FP)
 
+    def rogers_tanimoto_coeff(self):
+        """Rogers-Tanimoto similarity coefficient
+
+        Like Gower-Legendre but upweighs (b + c)
+        """
+        a_plus_d = self.TP + self.TN
+        return _div(a_plus_d, a_plus_d + 2 * (self.FN + self.FP))
+
+    def gower_legendre_coeff(self):
+        """Gower-Legendre similarity coefficient
+
+        Like Rogers-Tanimoto but downweighs (b + c)
+        """
+        a_plus_d = self.TP + self.TN
+        return _div(a_plus_d, a_plus_d + 0.5 * (self.FN + self.FP))
+
     def jaccard_coeff(self):
         """Jaccard similarity coefficient
 
@@ -596,9 +663,20 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(self.TP, self.TP + self.FP + self.FN)
 
     def ochiai_coeff(self):
-        """Ochiai (Cosine) similarity coefficient
+        """Ochiai similarity coefficient (Fowlkes-Mallows, Cosine similarity)
 
         Other metrics from the same family: jaccard_coeff, dice_coeff
+
+        This similarity index has an interpretation that it is the geometric
+        mean of the conditional probability of an element (in the case of
+        pairwise clustering comparison, a pair of elements) belonging to the
+        same cluster given that they belong to the same class [0].
+
+        References
+        ----------
+        [0] Ramirez, E. H., Brena, R., Magatti, D., & Stella, F. (2012). Topic
+        model validation. Neurocomputing, 76(1), 125-133.
+        http://dx.doi.org/10.1016/j.neucom.2011.04.032
         """
         a, b, c = self.TP, self.FN, self.FP
         return _div(a, sqrt((a + b) * (a + c)))
@@ -747,6 +825,10 @@ class ConfusionMatrix2(ContingencyTable):
         coefficient, Matthews') if one is looking for regression-like
         coefficients. On real-world data, k0 and k1 have a similar behavior
         to informedness and markedness.
+
+        In cluster analysis on pairwise confusion matrices, correction for
+        chance has the property of the corrected matric becoming independent of
+        cluster size.
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
@@ -812,12 +894,30 @@ class ConfusionMatrix2(ContingencyTable):
             # no more than one cell is zero
             return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
 
-    def mutinf_signed(self):
-        """Assigns a sign to mututal information-based metrics
+    def mi_corr1(self):
+        """One-sided mutual information coefficient
+
+        Roughly equivalent to informedness
         """
-        info, mark, corr = self.mutinf_metrics()
+        info, _, _ = self.mutinf_metrics()
         sgn = copysign(1, self.covar())
-        return (sgn * info, sgn * mark, sgn * corr)
+        return sgn * info
+
+    def mi_corr0(self):
+        """One-sided mutual information coefficient
+
+        Roughly equivalent to markedness
+        """
+        _, mark, _ = self.mutinf_metrics()
+        sgn = copysign(1, self.covar())
+        return sgn * mark
+
+    def mi_corr(self):
+        """Two-sided mutual information coefficient
+        """
+        _, _, corr = self.mutinf_metrics()
+        sgn = copysign(1, self.covar())
+        return sgn * corr
 
     def yule_q(self):
         """Yule's Q (index of association)
@@ -852,6 +952,7 @@ class ConfusionMatrix2(ContingencyTable):
     precision = PPV
     recall = TPR
     fallout = FPR
+    accuracy = ACC
 
     # clinical diagnostics
     sensitivity = TPR
@@ -865,9 +966,10 @@ class ConfusionMatrix2(ContingencyTable):
     sm_coeff = ACC
     phi_coeff = matthews_corr
 
-    # other
-    accuracy = ACC
+    # cluster analysis
     rand_index = ACC
+    adjusted_rand_index = kappa
+    fowlkes_mallows = ochiai_coeff
 
 
 def homogeneity_completeness_v_measure(labels_true, labels_pred):
@@ -890,7 +992,7 @@ def adjusted_rand_score(labels_true, labels_pred):
     0.313
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return ct.adjusted_rand_index()
+    return ct.coassoc_.kappa()
 
 
 class RocCurve(object):
