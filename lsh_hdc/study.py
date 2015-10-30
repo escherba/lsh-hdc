@@ -331,7 +331,7 @@ LEGEND_METRIC_KWARGS = {
 def add_incidence_metrics(args, clusters, pairs):
     """Add metrics based on incidence matrix of classes and clusters
     """
-    args_metrics = args.metrics
+    args_metrics = METRICS
     if (set(INCIDENCE_METRICS) & set(args_metrics)):
 
         from lsh_hdc.metrics import ClusteringMetrics
@@ -356,21 +356,23 @@ def add_incidence_metrics(args, clusters, pairs):
 def add_roc_metrics(args, clusters, pairs):
     """Add metrics based on ROC Curve
     """
-    if (set(ROC_METRICS) & set(args.metrics)):
+    args_metrics = METRICS
+    if (set(ROC_METRICS) & set(args_metrics)):
         from lsh_hdc.metrics import RocCurve
         rc = RocCurve.from_binary(*cluster_predictions(clusters))
-        if 'roc_auc' in args.metrics:
+        if 'roc_auc' in args_metrics:
             pairs.append(('roc_auc', rc.auc_score()))
-        if 'roc_max_info' in args.metrics:
+        if 'roc_max_info' in args_metrics:
             pairs.append(('roc_max_info', rc.max_informedness()))
 
 
 def add_lift_metrics(args, clusters, pairs):
     """Add metrics based on Lift Curve
     """
-    if (set(LIFT_METRICS) & set(args.metrics)):
+    args_metrics = METRICS
+    if (set(LIFT_METRICS) & set(args_metrics)):
         from lsh_hdc.metrics import clustering_aul_score as aul_score
-        if 'aul_score' in args.metrics:
+        if 'aul_score' in args_metrics:
             pairs.append(('aul_score', aul_score(clusters, is_pos)))
 
 
