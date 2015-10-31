@@ -34,4 +34,3 @@ __pycache__/
 
 *.bak
 *.so
- lsh_hdc/ext.cpp

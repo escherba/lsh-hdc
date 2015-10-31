@@ -364,7 +364,7 @@ class ClusteringMetrics(ContingencyTable):
 
     @property
     def coassoc_(self):
-        """Calculate a confusion matrix describing pairs from two partitionings
+        """Compute a confusion matrix describing pairs from two partitionings
 
         Given two partitionings A and B and a co-occurence matrix of point pairs,
 
@@ -754,7 +754,7 @@ class ConfusionMatrix2(ContingencyTable):
             Informedness = Sensitivity + Specificity - 1.0
                          = TPR - FPR
 
-        Synonyms: True Skill Score, Hannssen-Kuiper Score
+        Synonyms: True Skill Score, Hannssen-Kuiper Score, Attributable Risk.
         """
         p1, q1 = self.row_totals.values()
         return _div(self.covar(), p1 * q1)

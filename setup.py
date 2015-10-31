@@ -1,4 +1,5 @@
 import re
+import numpy
 import itertools
 from glob import glob
 from setuptools import setup, find_packages, Extension
@@ -146,15 +147,33 @@ setup(
     test_suite='nose.collector',
     cmdclass={'build_ext': build_ext_subclass},
     keywords=['hash', 'hashing', 'minhash', 'simhash', 'lsh', 'text', 'shingle'],
-    ext_modules=[Extension(
-        "lsh_hdc.ext",
-        [
-            "lsh_hdc/ext.pyx"
-        ],
-        depends=[],
-        language="c++",
-        extra_compile_args=CXXFLAGS,
-        include_dirs=["include"])
+    ext_modules=[
+        Extension(
+            "lsh_hdc.ext",
+            [
+                "lsh_hdc/gamma.cc",
+                "lsh_hdc/ext.pyx",
+            ],
+            depends=[
+                "include/gamma.h",
+            ],
+            language="c++",
+            extra_compile_args=CXXFLAGS,
+            include_dirs=[
+                "include",
+            ]),
+        Extension(
+            "lsh_hdc.expected_mutual_info_fast",
+            [
+                "lsh_hdc/expected_mutual_info_fast.pyx"
+            ],
+            depends=[
+            ],
+            language="c++",
+            extra_compile_args=CXXFLAGS,
+            include_dirs=[
+                numpy.get_include()
+            ])
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
