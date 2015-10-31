@@ -50,42 +50,42 @@ choose ahead of time how many galaxies there are near ours.
 References
 ----------
 
-[0] Hasenclever, D., & Scholz, M. (2013). Comparing measures of association in
+.. [0] `Hasenclever, D., & Scholz, M. (2013). Comparing measures of association in
 2x2 probability tables. arXiv preprint arXiv:1302.6161.
-http://arxiv.org/pdf/1302.6161v1.pdf
+<http://arxiv.org/pdf/1302.6161v1.pdf>`_
 
-[1] Warrens, M. J. (2008). On the equivalence of Cohen's kappa and the
+.. [1] `Warrens, M. J. (2008). On the equivalence of Cohen's kappa and the
 Hubert-Arabie adjusted Rand index. Journal of Classification, 25(2), 177-183.
-https://doi.org/10.1007/s00357-008-9023-7
+<https://doi.org/10.1007/s00357-008-9023-7>`_
 
-[2] Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering validation:
+.. [2] `Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering validation:
 results and implications for applied analyses (p. 341). World Scientific Pub Co
 Inc.
-https://doi.org/10.1142/9789812832153_0010
+<https://doi.org/10.1142/9789812832153_0010>`_
 
-[3] Sokal, R. R., & Rohlf, F. J. (2012). Biometry (4th edn). pp 742-744.
+.. [3] Sokal, R. R., & Rohlf, F. J. (2012). Biometry (4th edn). pp 742-744.
 
-[4] Dunning, T. (1993). Accurate methods for the statistics of surprise and
+.. [4] `Dunning, T. (1993). Accurate methods for the statistics of surprise and
 coincidence. Computational linguistics, 19(1), 61-74.
-http://dl.acm.org/citation.cfm?id=972454
+<http://dl.acm.org/citation.cfm?id=972454>`_
 
-[5] Ted Dunning's personal blog
-http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html
+.. [5] `Ted Dunning's personal blog
+<http://tdunning.blogspot.com/2008/03/surprise-and-coincidence.html>`_
 
-[6] Warrens, M. J. (2008). On association coefficients for 2x2 tables and
+.. [6] `Warrens, M. J. (2008). On association coefficients for 2x2 tables and
 properties that do not depend on the marginal distributions. Psychometrika,
 73(4), 777-789.
-https://doi.org/10.1007/s11336-008-9070-3
+<https://doi.org/10.1007/s11336-008-9070-3>`_
 
-[7] Sim, J., & Wright, C. C. (2005). The kappa statistic in reliability studies:
+.. [7] `Sim, J., & Wright, C. C. (2005). The kappa statistic in reliability studies:
 use, interpretation, and sample size requirements. Physical therapy, 85(3),
 257-268.
-http://www.ncbi.nlm.nih.gov/pubmed/15733050
+<http://www.ncbi.nlm.nih.gov/pubmed/15733050>`_
 
-[8] Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
+.. [8] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
 Jaccard and other similarity indices for chance agreement in cluster
 analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
-https://doi.org/10.1007/s11634-011-0090-y
+<https://doi.org/10.1007/s11634-011-0090-y>`_
 """
 
 import numpy as np
@@ -96,6 +96,7 @@ from operator import itemgetter
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples
 from pymaptools.containers import TableOfCounts
+from lsh_hdc.expected_mutual_info_fast import expected_mutual_information
 
 
 class pretty_repr(type):
@@ -269,7 +270,7 @@ class ContingencyTable(TableOfCounts):
         """Projection distance between partitions
 
         Used in graph commmunity analysis. Originally defined by van Dogen.
-        Example given in [0]:
+        Example given in [1]:
 
         >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
         >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
@@ -280,13 +281,41 @@ class ContingencyTable(TableOfCounts):
         References
         ----------
 
-        [0] Dongen, S. V. (2000). Performance criteria for graph clustering and
+        [1] Dongen, S. V. (2000). Performance criteria for graph clustering and
         Markov cluster experiments. Information Systems [INS], (R 0012), 1-36.
 
         """
         pa_B = sum(max(x) for x in self.iter_rows())
         pb_A = sum(max(x) for x in self.iter_cols())
         return 2 * self.grand_total - pa_B - pb_A
+
+    def talburt_wang_index(self):
+        """Talburt-Wang index of similarity of two partitionings
+
+        Example
+        -------
+
+        >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
+        >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
+        >>> cm = ContingencyTable.from_labels(ltrue, lpred)
+        >>> round(cm.talburt_wang_index(), 3)
+        0.816
+
+        References
+        ----------
+
+        .. [1] Talburt, J., Wang, R., Hess, K., & Kuo, E. (2007). An algebraic
+            approach to data quality metrics for entity resolution over large
+            datasets.  Information quality management: Theory and applications,
+            1-22.
+        """
+        V_card = 0
+        A_card = len(list(self.iter_row_totals()))
+        B_card = len(list(self.iter_col_totals()))
+        for row in self.iter_rows():
+            V_card += len(list(row))
+        prod = A_card * B_card
+        return np.nan if prod == 0 else sqrt(prod) / V_card
 
     def g_score(self):
         """Returns G-statistic for RxC contingency table
@@ -1005,17 +1034,79 @@ def homogeneity_completeness_v_measure(labels_true, labels_pred):
 def adjusted_rand_score(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Sklearn function
 
-    Example (given in supplement to "An empirical study on Principal Component
-    Analysis for clustering gene expression data" by K.Y. Yeung, W. L. Ruzzo
-    (2001)
+    Example
+    -------
+
+    In a supplement to [1], the following example is given::
 
     >>> classes = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
     >>> clusters = [1, 2, 1, 2, 2, 3, 3, 3, 3, 3]
     >>> round(adjusted_rand_score(classes, clusters), 3)
     0.313
+
+    References
+    ----------
+
+    .. [1] `Yeung, K. Y., & Ruzzo, W. L. (2001). Details of the adjusted Rand
+           index and clustering algorithms, supplement to the paper "An empirical
+           study on principal component analysis for clustering gene expression
+           data". Bioinformatics, 17(9), 763-774.
+           <http://faculty.washington.edu/kayee/pca/>`_
+
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
     return ct.coassoc_.kappa()
+
+
+def adjusted_mutual_info_score(labels_true, labels_pred):
+    """Adjusted Mutual Information between two clusterings
+
+    Examples (from SciKit-Learn)
+    ----------------------------
+
+    Perfect labelings are both homogeneous and complete, hence have
+    score 1.0::
+
+      >>> from sklearn.metrics.cluster import adjusted_mutual_info_score
+      >>> adjusted_mutual_info_score([0, 0, 1, 1], [0, 0, 1, 1])
+      1.0
+      >>> adjusted_mutual_info_score([0, 0, 1, 1], [1, 1, 0, 0])
+      1.0
+
+    If classes members are completely split across different clusters,
+    the assignment is totally in-complete, hence the AMI is null::
+
+      >>> adjusted_mutual_info_score([0, 0, 0, 0], [0, 1, 2, 3])
+      0.0
+
+    References
+    ----------
+    .. [1] `Vinh, Epps, and Bailey, (2010). Information Theoretic Measures for
+       Clusterings Comparison: Variants, Properties, Normalization and
+       Correction for Chance, JMLR
+       <http://jmlr.csail.mit.edu/papers/volume11/vinh10a/vinh10a.pdf>`_
+
+    """
+    #labels_true, labels_pred = check_clusterings(labels_true, labels_pred)
+    classes = np.unique(labels_true)
+    clusters = np.unique(labels_pred)
+    # Special limit cases: no clustering since the data is not split.
+    # This is a perfect match hence return 1.0.
+    if (classes.shape[0] == clusters.shape[0] == 1
+            or classes.shape[0] == clusters.shape[0] == 0):
+        return 1.0
+    contingency = ContingencyTable.from_labels(labels_true, labels_pred)
+    # Calculate the MI for the two clusterings
+    mi = contingency.mutual_information()
+    row_totals = list(contingency.iter_row_totals())
+    col_totals = list(contingency.iter_col_totals())
+    n_samples = contingency.grand_total
+    # Calculate the expected value for the mutual information
+    emi = expected_mutual_information(row_totals, col_totals, n_samples)
+    # Calculate entropy for each labeling
+    h_true, h_pred = centropy(labels_true), centropy(labels_pred)
+    ami = (mi - emi) / (max(h_true, h_pred) - emi)
+    return ami
 
 
 class RocCurve(object):

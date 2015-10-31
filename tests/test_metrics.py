@@ -1,7 +1,8 @@
 import random
 import numpy as np
 import warnings
-from itertools import chain
+from math import sqrt
+from itertools import chain, izip
 from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
@@ -64,6 +65,20 @@ def _entropy_metrics(cm):
     completeness = 0.0 if H_K <= H_KC else (H_K - H_KC) / H_K
     nmi_score = harmonic_mean(homogeneity, completeness)
     return homogeneity, completeness, nmi_score
+
+
+def _talburt_wang_index(labels_true, labels_pred):
+    """Alt. implementation of Talburt-Wang index for testing
+    """
+    V = set()
+    A = set()
+    B = set()
+    for pair in izip(labels_true, labels_pred):
+        V.add(pair)
+        A.add(pair[0])
+        B.add(pair[1])
+    prod = len(A) * len(B)
+    return np.nan if prod == 0 else sqrt(prod) / len(V)
 
 
 def _auc(fpr, tpr, reorder=False):
@@ -264,6 +279,10 @@ def test_IR_example():
     assert_almost_equal(coassoc.rand_index(),          0.676471, 6)
     assert_almost_equal(coassoc.precision(),           0.500000, 6)
     assert_almost_equal(coassoc.recall(),              0.454545, 6)
+
+    exp_tw = _talburt_wang_index(ltrue, lpred)
+    act_tw = cm.talburt_wang_index()
+    assert_almost_equal(exp_tw, act_tw, 6)
 
 
 def test_adjustment_for_chance():
