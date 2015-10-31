@@ -240,28 +240,74 @@ def load_clustering(args):
     return namespace, iter_clustering(iterator)
 
 
-def is_pos(x):
-    return ':' in x
+def is_point_pos(point):
+    return ':' in point
 
 
-def clusters_to_labels(cluster_iter, label_negatives=True):
+def is_cluster_pos(cluster):
+    return len(cluster) > 1
+
+
+def point_to_class_label(point_idx, point, neg_label=None):
+    """Return class label given a point
+    """
+    if is_point_pos(point):
+        label, _ = point.split(':')
+        label = int(label)
+    elif neg_label is None:
+        label = -point_idx
+    else:
+        label = neg_label
+    return label
+
+
+def cluster_to_cluster_label(cluster_idx, cluster, neg_label=None):
+    """Return cluster label given a cluster
+    """
+    if is_cluster_pos(cluster):
+        label = cluster_idx
+    elif neg_label is None:
+        label = -cluster_idx
+    else:
+        label = neg_label
+    return label
+
+
+def clusters_to_labels(cluster_iter, double_negs=False, join_negs=True):
+    """
+    :param double_negs: whether to exclude double negatives
+    :param join_negs:   if set to true, both negative classes and negative
+                        clusters are labeled with zero
+
+    Default behavior:
+
+    >>> clusters = [["5:6", "8", "5:1", "5:3", "7"], ["76"], ["69"]]
+    >>> clusters_to_labels(clusters, double_negs=False, join_negs=True)
+    ([5, 0, 5, 5, 0], [1, 1, 1, 1, 1])
+
+    Other behaviors:
+
+    >>> clusters_to_labels(clusters, double_negs=True, join_negs=True)
+    ([5, 0, 5, 5, 0, 0, 0], [1, 1, 1, 1, 1, 0, 0])
+    >>> clusters_to_labels(clusters, double_negs=True, join_negs=False)
+    ([5, -2, 5, 5, -5, -6, -7], [1, 1, 1, 1, 1, -2, -3])
+    >>> clusters_to_labels(clusters, double_negs=False, join_negs=False)
+    ([5, -2, 5, 5, -5], [1, 1, 1, 1, 1])
+    """
     labels_true = []
     labels_pred = []
-    for idx, cluster in enumerate(cluster_iter):
-        if len(cluster) == 1:
-            pred_cluster = 0
-        else:
-            pred_cluster = idx
+    neg_label = 0 if join_negs else None
+    point_idx = 1
+    for cluster_idx, cluster in enumerate(cluster_iter, start=1):
+        cluster_label = cluster_to_cluster_label(cluster_idx, cluster, neg_label=neg_label)
         for point in cluster:
-            if is_pos(point):
-                true_cluster, _ = point.split(':')
-                true_cluster = int(true_cluster)
-            else:
-                true_cluster = 0
-            if (not label_negatives) and true_cluster == pred_cluster == 0:
-                continue
-            labels_true.append(true_cluster)
-            labels_pred.append(pred_cluster)
+            # Both negative classes and negative clusters are labeled with
+            # either a zero or a negative cluster index.
+            class_label = point_to_class_label(point_idx, point, neg_label=neg_label)
+            if double_negs or (class_label > 0 or cluster_label > 0):
+                labels_true.append(class_label)
+                labels_pred.append(cluster_label)
+                point_idx += 1
     return labels_true, labels_pred
 
 
@@ -271,7 +317,7 @@ def cluster_predictions(cluster_iter):
     for idx, cluster in enumerate(cluster_iter):
         pred_cluster = len(cluster)
         for point in cluster:
-            true_cluster = is_pos(point)
+            true_cluster = is_point_pos(point)
             y_true.append(true_cluster)
             y_score.append(pred_cluster)
     return y_true, y_score
@@ -306,13 +352,16 @@ BENCHMARKS = ['time_cpu']
 ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
 
 PAIRWISE_METRICS = [
-    'adjusted_rand_index',
-    'mi_corr1', 'mi_corr0', 'mi_corr',
+    # correlation triples
+    'adjusted_rand_index', 'kappa1', 'kappa0',
+    'mi_corr', 'mi_corr1', 'mi_corr0',
     'matthews_corr', 'informedness', 'markedness',
-    'jaccard_coeff', 'ochiai_coeff', 'fscore',
+    'fscore', 'precision', 'recall',
+
+    # other
+    'jaccard_coeff', 'ochiai_coeff', 'sokal_sneath_coeff',
     'adjusted_jaccard_coeff', 'adjusted_sokal_sneath_coeff',
     'adjusted_gower_legendre_coeff', 'adjusted_rogers_tanimoto_coeff',
-    'kappa0', 'kappa1'
 ]
 
 INCIDENCE_METRICS = PAIRWISE_METRICS + ENTROPY_METRICS
@@ -331,12 +380,15 @@ LEGEND_METRIC_KWARGS = {
 def add_incidence_metrics(args, clusters, pairs):
     """Add metrics based on incidence matrix of classes and clusters
     """
-    args_metrics = args.metrics
+    args_metrics = METRICS
     if (set(INCIDENCE_METRICS) & set(args_metrics)):
 
         from lsh_hdc.metrics import ClusteringMetrics
         labels = clusters_to_labels(
-            clusters, label_negatives=bool(args.label_negatives))
+            clusters,
+            double_negs=bool(args.double_negs),
+            join_negs=bool(args.join_negs)
+        )
         cm = ClusteringMetrics.from_labels(*labels)
 
         if (set(ENTROPY_METRICS) & set(args_metrics)):
@@ -356,22 +408,24 @@ def add_incidence_metrics(args, clusters, pairs):
 def add_roc_metrics(args, clusters, pairs):
     """Add metrics based on ROC Curve
     """
-    if (set(ROC_METRICS) & set(args.metrics)):
+    args_metrics = METRICS
+    if (set(ROC_METRICS) & set(args_metrics)):
         from lsh_hdc.metrics import RocCurve
         rc = RocCurve.from_binary(*cluster_predictions(clusters))
-        if 'roc_auc' in args.metrics:
+        if 'roc_auc' in args_metrics:
             pairs.append(('roc_auc', rc.auc_score()))
-        if 'roc_max_info' in args.metrics:
+        if 'roc_max_info' in args_metrics:
             pairs.append(('roc_max_info', rc.max_informedness()))
 
 
 def add_lift_metrics(args, clusters, pairs):
     """Add metrics based on Lift Curve
     """
-    if (set(LIFT_METRICS) & set(args.metrics)):
+    args_metrics = METRICS
+    if (set(LIFT_METRICS) & set(args_metrics)):
         from lsh_hdc.metrics import clustering_aul_score as aul_score
-        if 'aul_score' in args.metrics:
-            pairs.append(('aul_score', aul_score(clusters, is_pos)))
+        if 'aul_score' in args_metrics:
+            pairs.append(('aul_score', aul_score(clusters, is_point_pos)))
 
 
 def perform_clustering(args, data):
@@ -543,8 +597,11 @@ def add_analy_args(parser):
         '--trial', type=str, default='seed',
         help='Which column to average')
     parser.add_argument(
-        '--label_negatives', type=int, default=0,
-        help='Whether to label negatives as their own cluster')
+        '--double_negs', type=int, default=0,
+        help='exclude points that are negatives in source and clustering')
+    parser.add_argument(
+        '--join_negs', type=int, default=1,
+        help='label negative classes and clusters with the same label')
     parser.add_argument(
         '--metrics', type=str, nargs='*', choices=METRICS,
         default=('roc_auc', 'nmi_score', 'time_cpu'),

@@ -138,11 +138,8 @@ def jaccard_similarity(set1, set2):
     :returns: Jaccard similarity of two sets
     :rtype: float
     """
-    if not isinstance(set1, Set):
-        set1 = set(set1)
-    if not isinstance(set2, Set):
-        set2 = set(set2)
-    return _div(len(set1 & set2), len(set1 | set2))
+    cm = ConfusionMatrix2.from_sets(set1, set2)
+    return cm.jaccard_coeff()
 
 
 def centropy(counts):
@@ -507,6 +504,18 @@ class ConfusionMatrix2(ContingencyTable):
 
     from_array = from_rows
 
+    @classmethod
+    def from_sets(cls, set1, set2):
+        if not isinstance(set1, Set):
+            set1 = set(set1)
+        if not isinstance(set2, Set):
+            set2 = set(set2)
+        TP = len(set1 & set2)
+        FP = len(set2) - TP
+        FN = len(set1) - TP
+        TN = 0
+        return cls(TP, FN, FP, TN)
+
     def to_array(self):
         return np.array(self.to_rows())
 
@@ -750,7 +759,7 @@ class ConfusionMatrix2(ContingencyTable):
     def kappa0(self):
         """One-sided component of Kappa, Matthews, and Loevinger indices
 
-        Roughly corresponds to markedness
+        Roughly corresponds to precision
         """
         _, q1 = self.row_totals.values()
         p2, _ = self.col_totals.values()
@@ -759,7 +768,7 @@ class ConfusionMatrix2(ContingencyTable):
     def kappa1(self):
         """One-sided component of Kappa, Matthews, and Loevinger indices
 
-        Roughly corresponds to informedness
+        Roughly corresponds to recall
         """
         p1, _ = self.row_totals.values()
         _, q2 = self.col_totals.values()
@@ -814,8 +823,8 @@ class ConfusionMatrix2(ContingencyTable):
         Kappa can be decomposed into a harmonic mean of two components
         (regression coefficients for a problem and its dual):
 
-            k0 = cov / (p2 * q1)       # markedness-like
-            k1 = cov / (p1 * q2)       # informedness-like
+            k0 = cov / (p2 * q1)       # precision-like
+            k1 = cov / (p1 * q2)       # recall-like
 
         From these components, it turns out, one can also derive Matthews'
         correlation coefficient simply by calculating a geometric mean.  However
