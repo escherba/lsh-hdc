@@ -1,13 +1,15 @@
 import random
 import numpy as np
 import warnings
-from itertools import chain
+from math import sqrt
+from itertools import chain, izip
 from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
     jaccard_similarity, clustering_aul_score, ClusteringMetrics, \
     ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
-    matthews_corr
+    matthews_corr, expected_mutual_information, mutual_info_score, \
+    adjusted_mutual_info_score
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true, assert_equal
 
@@ -66,6 +68,20 @@ def _entropy_metrics(cm):
     return homogeneity, completeness, nmi_score
 
 
+def _talburt_wang_index(labels_true, labels_pred):
+    """Alt. implementation of Talburt-Wang index for testing
+    """
+    V = set()
+    A = set()
+    B = set()
+    for pair in izip(labels_true, labels_pred):
+        V.add(pair)
+        A.add(pair[0])
+        B.add(pair[1])
+    prod = len(A) * len(B)
+    return np.nan if prod == 0 else sqrt(prod) / len(V)
+
+
 def _auc(fpr, tpr, reorder=False):
     """Compute area under ROC curve
 
@@ -94,27 +110,6 @@ def _auc(fpr, tpr, reorder=False):
         reorder=reorder)
 
 
-def simulate_predictions(n=100, seed=None):
-    """simulate classifier predictions for data size of n
-    """
-    if seed is None:
-        seed = random_seed()
-    random.seed(seed)
-    probas = [random.random() for _ in xrange(n)]
-    classes = [discrete_sample({0: (1 - p), 1: p}) for p in probas]
-    return classes, probas
-
-
-def test_roc_curve():
-    # Test Area under Receiver Operating Characteristic (ROC) curve
-    for _ in range(10):
-        y_true, probas_pred = simulate_predictions(1000, seed=random_seed())
-        rc = RocCurve.from_binary(y_true, probas_pred)
-        expected_auc = _auc(rc.fprs, rc.tprs)
-        score = rc.auc_score()
-        assert_almost_equal(expected_auc, score, 2)
-
-
 def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
                              seed=42):
     # Compute score for random uniform cluster labelings
@@ -126,6 +121,67 @@ def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
             labels_b = random_labels(low=0, high=k - 1, size=n_samples)
             scores[i, j] = score_func(labels_a, labels_b)
     return scores
+
+
+def simulate_predictions(n=100, seed=None):
+    """simulate classifier predictions for data size of n
+    """
+    if seed is None:
+        seed = random_seed()
+    random.seed(seed)
+    probas = [random.random() for _ in xrange(n)]
+    classes = [discrete_sample({0: (1 - p), 1: p}) for p in probas]
+    return classes, probas
+
+
+def test_adjusted_mutual_info_score():
+    # Compute the Adjusted Mutual Information and test against known values
+    labels_a = np.array([1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3])
+    labels_b = np.array([1, 1, 1, 1, 2, 1, 2, 2, 2, 2, 3, 1, 3, 3, 3, 2, 2])
+
+    # Mutual information
+    mi_1 = mutual_info_score(labels_a, labels_b)
+    assert_almost_equal(mi_1, 0.41022, 5)
+    mi_2 = mutual_info_score(labels_b, labels_a)
+    assert_almost_equal(mi_2, 0.41022, 5)
+
+    # Expected mutual information
+    cm = ClusteringMetrics.from_labels(labels_a, labels_b)
+    n_samples = cm.grand_total
+    row_totals = list(cm.iter_row_totals())
+    col_totals = list(cm.iter_col_totals())
+    emi_1 = expected_mutual_information(row_totals, col_totals, n_samples)
+    assert_almost_equal(emi_1, 0.15042, 5)
+    emi_2 = expected_mutual_information(col_totals, row_totals, n_samples)
+    assert_almost_equal(emi_2, 0.15042, 5)
+
+    # Adjusted mutual information (1)
+    ami_1 = adjusted_mutual_info_score(labels_a, labels_b)
+    assert_almost_equal(ami_1, 0.27502, 5)
+    ami_2 = adjusted_mutual_info_score(labels_a, labels_b)
+    assert_almost_equal(ami_2, 0.27502, 5)
+
+    # Adjusted mutual information (2)
+    ami_1 = adjusted_mutual_info_score([1, 1, 2, 2], [2, 2, 3, 3])
+    assert_equal(ami_1, 1.0)
+    ami_2 = adjusted_mutual_info_score([2, 2, 3, 3], [1, 1, 2, 2])
+    assert_equal(ami_2, 1.0)
+
+    # Test AMI with a very large array
+    a110 = np.array([list(labels_a) * 110]).flatten()
+    b110 = np.array([list(labels_b) * 110]).flatten()
+    ami = adjusted_mutual_info_score(a110, b110)
+    assert_almost_equal(ami, 0.37, 2)  # not accurate to more than 2 places
+
+
+def test_roc_curve():
+    # Test Area under Receiver Operating Characteristic (ROC) curve
+    for _ in range(10):
+        y_true, probas_pred = simulate_predictions(1000, seed=random_seed())
+        rc = RocCurve.from_binary(y_true, probas_pred)
+        expected_auc = _auc(rc.fprs, rc.tprs)
+        score = rc.auc_score()
+        assert_almost_equal(expected_auc, score, 2)
 
 
 def test_jaccard_nan():
@@ -264,6 +320,10 @@ def test_IR_example():
     assert_almost_equal(coassoc.rand_index(),          0.676471, 6)
     assert_almost_equal(coassoc.precision(),           0.500000, 6)
     assert_almost_equal(coassoc.recall(),              0.454545, 6)
+
+    exp_tw = _talburt_wang_index(ltrue, lpred)
+    act_tw = cm.talburt_wang_index()
+    assert_almost_equal(exp_tw, act_tw, 6)
 
 
 def test_adjustment_for_chance():

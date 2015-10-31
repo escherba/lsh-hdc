@@ -1,4 +1,5 @@
 import re
+import numpy
 import itertools
 from glob import glob
 from setuptools import setup, find_packages, Extension
@@ -125,7 +126,7 @@ CXXFLAGS = u"""
 -Wno-unused-function
 """.split()
 
-VERSION = '0.1.5'
+VERSION = '0.2.0'
 URL = 'https://github.com/escherba/lsh-hdc'
 
 
@@ -133,7 +134,7 @@ setup(
     name="lsh-hdc",
     version=VERSION,
     author="Eugene Scherba",
-    license="MIT",
+    license="BSD",
     author_email="escherba@gmail.com",
     description=("Algorithms for locality-sensitive hashing on text data"),
     url=URL,
@@ -146,19 +147,37 @@ setup(
     test_suite='nose.collector',
     cmdclass={'build_ext': build_ext_subclass},
     keywords=['hash', 'hashing', 'minhash', 'simhash', 'lsh', 'text', 'shingle'],
-    ext_modules=[Extension(
-        "lsh_hdc.ext",
-        [
-            "lsh_hdc/ext.pyx"
-        ],
-        depends=[],
-        language="c++",
-        extra_compile_args=CXXFLAGS,
-        include_dirs=["include"])
+    ext_modules=[
+        Extension(
+            "lsh_hdc.ext",
+            [
+                "lsh_hdc/gamma.cc",
+                "lsh_hdc/ext.pyx",
+            ],
+            depends=[
+                "include/gamma.h",
+            ],
+            language="c++",
+            extra_compile_args=CXXFLAGS,
+            include_dirs=[
+                "include",
+            ]),
+        Extension(
+            "lsh_hdc.expected_mutual_info_fast",
+            [
+                "lsh_hdc/expected_mutual_info_fast.pyx"
+            ],
+            depends=[
+            ],
+            language="c++",
+            extra_compile_args=CXXFLAGS,
+            include_dirs=[
+                numpy.get_include()
+            ])
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: BSD License',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
         'Operating System :: OS Independent',
