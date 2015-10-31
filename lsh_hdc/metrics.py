@@ -93,6 +93,7 @@ from operator import itemgetter
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples
 from pymaptools.containers import TableOfCounts
+from lsh_hdc.fixes import bincount
 from lsh_hdc.expected_mutual_info_fast import expected_mutual_information
 
 
@@ -163,6 +164,19 @@ def centropy(counts):
             n += c
             sum_c_logn_c += c * logn(c)
     return 0.0 if n == 0 else n * logn(n) - sum_c_logn_c
+
+
+def lentropy(labels):
+    """Calculates the entropy for a labeling."""
+    if len(labels) == 0:
+        return 1.0
+    label_idx = np.unique(labels, return_inverse=True)[1]
+    pi = bincount(label_idx).astype(np.float)
+    pi = pi[pi > 0]
+    pi_sum = np.sum(pi)
+    # log(a / b) should be calculated as log(a) - log(b) for
+    # possible loss of precision
+    return -np.sum((pi / pi_sum) * (np.log(pi) - logn(pi_sum)))
 
 
 def ratio2weights(ratio):
@@ -297,6 +311,12 @@ class ContingencyTable(TableOfCounts):
         >>> round(cm.talburt_wang_index(), 3)
         0.816
 
+        >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
+        ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
+        >>> cm = ContingencyTable.from_clusters(clusters)
+        >>> round(cm.talburt_wang_index(), 2)
+        0.49
+
         References
         ----------
 
@@ -312,6 +332,17 @@ class ContingencyTable(TableOfCounts):
             V_card += len(list(row))
         prod = A_card * B_card
         return np.nan if prod == 0 else sqrt(prod) / V_card
+
+    def mutual_info_score(self):
+        """Mutual Information Score
+
+        Mutual Information (divided by N).
+
+        The metric is equal to the Kullback-Leibler divergence of the joint
+        distribution with the product distribution of the marginals
+        """
+        _, _, I_CK = self._entropies()
+        return I_CK / self.grand_total
 
     def g_score(self):
         """Returns G-statistic for RxC contingency table
@@ -1006,8 +1037,7 @@ class ConfusionMatrix2(ContingencyTable):
         Roughly equivalent to informedness
         """
         h, _, _ = self.entropy_metrics()
-        sgn = copysign(1, self.covar())
-        return sgn * sqrt(h)
+        return copysign(1, self.covar()) * sqrt(h)
 
     def mi_corr0(self):
         """One-sided regression coefficient based on mutual information
@@ -1015,8 +1045,7 @@ class ConfusionMatrix2(ContingencyTable):
         Roughly equivalent to markedness
         """
         _, c, _ = self.entropy_metrics()
-        sgn = copysign(1, self.covar())
-        return sgn * sqrt(c)
+        return copysign(1, self.covar()) * sqrt(c)
 
     def mi_corr(self):
         """Two-sided correlation coefficient based on mutual information
@@ -1029,9 +1058,8 @@ class ConfusionMatrix2(ContingencyTable):
         G-score by its maximum achievable value with fixed predicted label
         counts (here represented as column totals).
         """
-        _, _, r = self.entropy_metrics()
-        sgn = copysign(1, self.covar())
-        return sgn * sqrt(r)
+        _, _, rsquare = self.entropy_metrics()
+        return copysign(1, self.covar()) * sqrt(rsquare)
 
     def yule_q(self):
         """Yule's Q (index of association)
@@ -1098,6 +1126,13 @@ class ConfusionMatrix2(ContingencyTable):
     fowlkes_mallows = ochiai_coeff
 
 
+def mutual_info_score(labels_true, labels_pred):
+    """Memory-efficeint replacement for equivalently named Sklean function
+    """
+    ct = ContingencyTable.from_labels(labels_true, labels_pred)
+    return ct.mutual_info_score()
+
+
 def homogeneity_completeness_v_measure(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Sklearn function
     """
@@ -1141,7 +1176,6 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
     Perfect labelings are both homogeneous and complete, hence have
     score 1.0::
 
-      >>> from sklearn.metrics.cluster import adjusted_mutual_info_score
       >>> adjusted_mutual_info_score([0, 0, 1, 1], [0, 0, 1, 1])
       1.0
       >>> adjusted_mutual_info_score([0, 0, 1, 1], [1, 1, 0, 0])
@@ -1155,30 +1189,35 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
 
     References
     ----------
+
     .. [1] `Vinh, Epps, and Bailey, (2010). Information Theoretic Measures for
        Clusterings Comparison: Variants, Properties, Normalization and
        Correction for Chance, JMLR
        <http://jmlr.csail.mit.edu/papers/volume11/vinh10a/vinh10a.pdf>`_
 
     """
-    #labels_true, labels_pred = check_clusterings(labels_true, labels_pred)
+    # labels_true, labels_pred = check_clusterings(labels_true, labels_pred)
     classes = np.unique(labels_true)
     clusters = np.unique(labels_pred)
+
     # Special limit cases: no clustering since the data is not split.
     # This is a perfect match hence return 1.0.
     if (classes.shape[0] == clusters.shape[0] == 1
             or classes.shape[0] == clusters.shape[0] == 0):
         return 1.0
-    contingency = ContingencyTable.from_labels(labels_true, labels_pred)
+
     # Calculate the MI for the two clusterings
-    mi = contingency.mutual_information()
-    row_totals = list(contingency.iter_row_totals())
-    col_totals = list(contingency.iter_col_totals())
-    n_samples = contingency.grand_total
+    cm = ContingencyTable.from_labels(labels_true, labels_pred)
+    mi = cm.mutual_info_score()
+    row_totals = list(cm.iter_row_totals())
+    col_totals = list(cm.iter_col_totals())
+    n_samples = cm.grand_total
+
     # Calculate the expected value for the mutual information
     emi = expected_mutual_information(row_totals, col_totals, n_samples)
+
     # Calculate entropy for each labeling
-    h_true, h_pred = centropy(labels_true), centropy(labels_pred)
+    h_true, h_pred = lentropy(labels_true), lentropy(labels_pred)
     ami = (mi - emi) / (max(h_true, h_pred) - emi)
     return ami
 
