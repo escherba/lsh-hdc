@@ -505,7 +505,15 @@ class ConfusionMatrix2(ContingencyTable):
     from_array = from_rows
 
     @classmethod
-    def from_sets(cls, set1, set2):
+    def from_sets(cls, set1, set2, universe_size=None):
+        """Create a confusion matrix for comparison of two sets
+
+        Accepts an optional universe_size parameter which allows us to take into
+        account TN class and use probability-based similarity metrics.  Most of
+        the time, however, set comparisons are performed ignoring this parameter
+        and relying instead on non-probabilistic indices such as Jaccard's or
+        Dice.
+        """
         if not isinstance(set1, Set):
             set1 = set(set1)
         if not isinstance(set2, Set):
@@ -513,7 +521,13 @@ class ConfusionMatrix2(ContingencyTable):
         TP = len(set1 & set2)
         FP = len(set2) - TP
         FN = len(set1) - TP
-        TN = 0
+        if universe_size is None:
+            TN = 0
+        else:
+            TN = universe_size - TP - FP - FN
+            if TN < 0:
+                raise ValueError(
+                    "universe_size must be at least as large as set union")
         return cls(TP, FN, FP, TN)
 
     def to_array(self):
