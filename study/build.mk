@@ -4,16 +4,12 @@
 # Experiment-independent defaults
 METRICS := \
 	homogeneity completeness nmi_score \
-	adjusted_rand_index kappa0 kappa1 \
-	mi_corr1 mi_corr0 mi_corr \
-	adjusted_jaccard_coeff adjusted_sokal_sneath_coeff \
-	adjusted_rogers_tanimoto_coeff adjusted_gower_legendre_coeff \
-	informedness markedness matthews_corr \
-	roc_max_info aul_score roc_auc \
-	jaccard_coeff \
-	time_cpu
+	adjusted_rand_index mi_corr1 jaccard_coeff \
+	informedness markedness \
+	aul_score roc_max_info roc_auc \
+	time_cpu \
 
-SIMUL_CLUST_ANALY_ARGS := --label_negatives 1 --sim_size 100000 --metrics $(METRICS)
+SIMUL_CLUST_ANALY_ARGS := --sim_size 100000 --metrics $(METRICS)
 
 TRIAL_FIELD := seed
 TRIALS := $(shell seq 10 15)
