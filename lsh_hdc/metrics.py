@@ -1070,13 +1070,15 @@ class ConfusionMatrix2(ContingencyTable):
         """Matthews Correlation Coefficient (Phi coefficient)
 
         MCC is directly related to the Chi-square statitstic. Its value is equal
-        to the the Chi-square value normalized by the maximum value Chi-Square
+        to the Chi-square value normalized by the maximum value Chi-Square
         can achieve with given margins (for a 2x2 table, the maximum Chi-square
         score is equal to the grand total N) transformed to correlation space by
-        taking a square root. MCC is a also a geometric mean of informedness and
-        markedness (the regression coefficients of the problem and its dual).
+        taking a square root.
 
-        MCC is laso known as Phi Coefficient or as Yule's Q with correction for
+        MCC is a also a geometric mean of informedness and markedness (the
+        regression coefficients of the problem and its dual).
+
+        Other names for MCC are Phi Coefficient and Yule's Q with correction for
         chance.
         """
         p1, q1 = self.row_totals.values()
