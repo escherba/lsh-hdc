@@ -7,7 +7,8 @@ from pymaptools.containers import clusters_to_labels
 from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
-    jaccard_similarity, clustering_aul_score, ClusteringMetrics, \
+    jaccard_similarity, aul_score_from_clusters, aul_score_from_labels, \
+    ClusteringMetrics, \
     ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
     matthews_corr, expected_mutual_information, mutual_info_score, \
     adjusted_mutual_info_score
@@ -343,36 +344,50 @@ def test_clustering_aul_empty():
     """Empty clusterings have AUL=0.0
     """
     clusters = []
-    labels = clusters_to_labels(clusters)
-    score = clustering_aul_score(*labels)
-    assert_almost_equal(score, 0.0, 4)
+    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    score2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(score1, 0.0, 4)
+    assert_almost_equal(score2, 0.0, 4)
 
 
 def test_clustering_aul_perfect():
     """Perfect clusterings have AUL=1.0
     """
     clusters = [[1, 1, 1, 1, 1], [0], [0]]
-    labels = clusters_to_labels(clusters)
-    score = clustering_aul_score(*labels)
-    assert_almost_equal(score, 1.0, 4)
+    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    score2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(score1, 1.0, 4)
+    assert_almost_equal(score2, 1.0, 4)
+
+
+def test_clustering_aul_bad():
+    """Bad clusterings have have AUL=0.5
+    """
+    clusters = [[1, 1, 0, 0], [0]]
+    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    score2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(score1, 0.5, 4)
+    assert_almost_equal(score2, 0.5, 4)
 
 
 def test_clustering_aul_perverse():
     """Perverese cases are 0.0 < AUL < 0.5
     """
     clusters = [[1], [0, 0]]
-    labels = clusters_to_labels(clusters)
-    score = clustering_aul_score(*labels)
-    assert_almost_equal(score, 0.1111, 4)
+    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    score2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(score1, 0.1111, 4)
+    assert_almost_equal(score2, 0.1111, 4)
 
 
 def test_clustering_aul_precalculated():
     """A decent clustering should have a high score`
     """
     clusters = [[1, 1, 1], [1, 1], [0], [0]]
-    labels = clusters_to_labels(clusters)
-    score = clustering_aul_score(*labels)
-    assert_almost_equal(score, 0.8286, 4)
+    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    score2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(score1, 0.8286, 4)
+    assert_almost_equal(score2, 0.8286, 4)
 
 
 def test_twoway_confusion_ll():

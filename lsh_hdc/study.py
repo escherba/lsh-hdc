@@ -23,8 +23,6 @@ from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 from pymaptools.benchmark import PMTimer
-from pymaptools.containers import clusters_to_labels \
-    as clusters_to_labels_simple
 
 
 ALPHABET = string.letters + string.digits
@@ -425,11 +423,11 @@ def add_lift_metrics(args, clusters, pairs):
     """
     args_metrics = METRICS
     if (set(LIFT_METRICS) & set(args_metrics)):
-        from lsh_hdc.metrics import clustering_aul_score as aul_score
-        simple_cluster_gen = ([is_point_pos(point) for point in cluster] for cluster in clusters)
-        lift_labels = clusters_to_labels_simple(simple_cluster_gen)
+        from lsh_hdc.metrics import aul_score_from_clusters as aul_score
+        clusters_2xc = ([is_point_pos(point) for point in cluster]
+                        for cluster in clusters)
         if 'aul_score' in args_metrics:
-            pairs.append(('aul_score', aul_score(*lift_labels)))
+            pairs.append(('aul_score', aul_score(clusters_2xc)))
 
 
 def perform_clustering(args, data):

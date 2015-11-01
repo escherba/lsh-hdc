@@ -36,9 +36,11 @@ all involving contingency tables.
 
 * Under Model III, both rows and column totals are fixed.
 
-Model O is rarely employed in practice because the researchers almost always
-have a certain number of samples they are interesting in drawing before they
-begin the experiment. An example of a Model O study would be astronomy research
+Model O is rarely employed in practice because researchers almost always have
+some rough total number of samples in mind that they would like to measure
+before they begin the actual measuring. However, Model O situation might occur
+when the grand total is not up to researchers to fix, and so they are forced to
+treat it as a random variable. An example of this would be astronomy research
 that tests a hypothesis about a generalizable property such as dark matter
 content by looking at all galaxies in the Local Group, and the researchers
 obviously don't get to choose ahead of time how many galaxies there are near
@@ -50,9 +52,9 @@ an example of Model I approach. A replication study, if performed by the
 original author, is a Model I study, but if performed by another group of
 researchers, becomes a Model II study.
 
-Fisher's classic example of tea-tasting is an example of Model III study [2]_.
+Fisher's classic example of tea tasting is an example of a Model III study [2]_.
 The key differnce from a Model II study here is that the subject was asked to
-select 4 cups prepared by one method, not any number of cups. The subject was
+call four cups as prepared by one method and four by the other. The subject was
 not free to say, for example, that none of the cups were prepared by adding milk
 first. The hypergeometric distribution used in the subsequent Fisher's exact
 test shares the assumption of the experiment that both row and column counts are
@@ -68,10 +70,10 @@ components seem more suited to judging association.
 
 Additionally, if there is implied causality relationship, one-sided measures
 might be preferred. For example, when performing feature selection, it seems
-logical to conclude that the presence of features should bee seen as influencing
-the class label, not the other way around.
+logical to measure the influence of features on the class label, not the other
+way around.
 
-Using Monte-Carlo methods, it should be possible to test the validity of the
+Using Monte Carlo methods, it should be possible to test the validity of the
 above two propositions as well as to visualize the effect of the assumptions
 made.
 
@@ -87,6 +89,7 @@ References
 """
 
 import numpy as np
+import warnings
 from math import log as logn, sqrt, copysign
 from collections import Mapping, Set, namedtuple
 from itertools import izip
@@ -1306,16 +1309,24 @@ def cohen_kappa(*args, **kwargs):
 
 
 def _plot_lift(xs, ys):  # pragma: no cover
-    """Shortcut to plot a lift chart (for clustering_aul_score debugging)
+    """Shortcut to plot a lift chart (for aul_score debugging)
     """
-    from matplotlib import pyplot
-    pyplot.plot(xs, ys, marker="o", linestyle='-')
-    pyplot.xlim(xmin=0.0, xmax=1.0)
-    pyplot.ylim(ymin=0.0, ymax=1.0)
-    pyplot.show()
+    from matplotlib import pyplot as plt
+    fig, ax = plt.subplots()
+    ax.plot(xs, ys, marker="o", linestyle='-')
+    ax.fill([0.0] + xs + [1.0], [0.0] + ys + [0.0], 'b', alpha=0.2)
+    ax.plot([0.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
+    ax.plot([0.0, 1.0], [1.0, 1.0], linestyle='--', color='grey')
+    ax.plot([1.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
+    ax.set_xlim(xmin=0.0, xmax=1.1)
+    ax.set_ylim(ymin=0.0, ymax=1.1)
+    ax.set_xlabel("portion total")
+    ax.set_ylabel("portion positive")
+    ax.set_title("Lift Curve")
+    fig.show()
 
 
-def clustering_aul_score(y_true, labels_pred):
+def aul_score(scores_true, scores_pred):
     """Area under Lift Curve (AUL) for cluster-size correlated classification
 
     The AUL measure here is similar to Gini coefficient of inequality [1]_
@@ -1388,46 +1399,43 @@ def clustering_aul_score(y_true, labels_pred):
     ----------
 
     .. [1] `Wikipedia entry for Gini coefficient of inequality
-            <https://en.wikipedia.org/wiki/Gini_coefficient>`_
+           <https://en.wikipedia.org/wiki/Gini_coefficient>`_
 
     .. [2] `Whissell, J. S., & Clarke, C. L. (2011, September). Clustering for
-            semi-supervised spam filtering. In Proceedings of the 8th Annual
-            Collaboration, Electronic messaging, Anti-Abuse and Spam Conference (pp.
-            125-134). ACM.
-            <https://doi.org/10.1145/2030376.2030391>`_
+           semi-supervised spam filtering. In Proceedings of the 8th Annual
+           Collaboration, Electronic messaging, Anti-Abuse and Spam Conference
+           (pp.  125-134). ACM.
+           <https://doi.org/10.1145/2030376.2030391>`_
 
     """
 
-    # form clusters from label pairs
-    data = labels_to_clusters(y_true, labels_pred)
+    # convert input to a series of tuples
+    score_groups = izip(scores_pred, scores_true)
 
-    # sort by cluster size
-    data = sorted(
-        ((len(truth_vals), sum(truth_vals)) for truth_vals in data),
-        key=itemgetter(0),
-        reverse=True
-    )
+    # sort tuples by predicted score in descending order
+    score_groups = sorted(score_groups, key=itemgetter(0), reverse=True)
 
-    # aggregate groups of clusters by size so that we could handle ties
-    data = list(aggregate_tuples(data))
+    # group tuples by predicted score so as to handle ties correctly
+    score_groups = list(aggregate_tuples(score_groups))
 
-    total_pos = 0
+    total_height = 0
     max_horizontal = 0
     max_vertical = 0
 
-    # in the first pass, calculate some totals
-    for cluster_size, pos_counts in data:
-        num_clusters = len(pos_counts)
-        total_pos += sum(pos_counts)
-        total_in_group = cluster_size * num_clusters
-        max_horizontal += total_in_group
+    # first pass: calculate some totals
+    for pred_score, true_scores in score_groups:
+        group_height = sum(true_scores)
+        group_width = pred_score * len(true_scores)
+        total_height += group_height
+        max_horizontal += group_width
 
-        if cluster_size > 1:
-            max_vertical += total_in_group
+        if pred_score > 1:
+            max_vertical += group_width
         else:
-            max_vertical += sum(pos_counts)
+            max_vertical += group_height
 
-    assert max_horizontal >= total_pos
+    if total_height > max_horizontal:
+        warnings.warn("Number of positives exceeds total count")
 
     aul_score = 0.0
     bin_height = 0.0
@@ -1436,17 +1444,17 @@ def clustering_aul_score(y_true, labels_pred):
     # xs = []
     # ys = []
 
-    # in the second pass, calculate the AUL metric:
-    # for each group of clusters of the same size...
-    for cluster_size, pos_counts in data:
-        avg_pos_count = sum(pos_counts) / float(len(pos_counts))
+    # second pass: iterate over each group of predicted scores of the same size
+    # and calculate the AUL metric
+    for pred_score, true_scores in score_groups:
+        avg_true_score = sum(true_scores) / float(len(true_scores))
 
-        for _ in pos_counts:
+        for _ in true_scores:
 
             # xs.append(bin_right_edge / float(max_horizontal))
 
-            bin_width = cluster_size
-            bin_height += avg_pos_count
+            bin_width = pred_score
+            bin_height += avg_true_score
             bin_right_edge += bin_width
             aul_score += bin_height * bin_width
 
@@ -1455,9 +1463,25 @@ def clustering_aul_score(y_true, labels_pred):
             # ys.append(bin_height / float(max_vertical))
 
     assert max_horizontal == bin_right_edge
-    denom = max_vertical * max_horizontal
+    rect_area = max_vertical * max_horizontal
 
-    # Special case: since we define the AUL to be always smaller than or equal
-    # to the surrounding rectangle, when the rectangle area (the denominator) is
-    # zero, the AUL score is also zero.
-    return 0.0 if denom == 0 else aul_score / denom
+    # special case: since normalizing the AUL defines it as always smaller than
+    # the bounding rectangle, when denominator in the expression below is zero,
+    # the AUL score is also equal to zero.
+    return 0.0 if rect_area == 0 else aul_score / rect_area
+
+
+def aul_score_from_clusters(clusters):
+    """Alternative interface for AUL metric
+    """
+    # score clusters by size and number of ground truth positives
+    data = ((len(cluster), sum(bool(val) for val in cluster)) for cluster in clusters)
+    scores_pred, scores_true = zip(*data) or ([], [])
+    return aul_score(scores_true, scores_pred)
+
+
+def aul_score_from_labels(y_true, labels_pred):
+    """Alternative interface for AUL metric
+    """
+    clusters = labels_to_clusters(y_true, labels_pred)
+    return aul_score_from_clusters(clusters)
