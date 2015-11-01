@@ -11,6 +11,8 @@ import numpy as np
 cimport numpy as np
 cimport cython
 from lsh_hdc.ext cimport lgamma
+from lsh_hdc.fixes import isclose
+
 
 np.import_array()
 
