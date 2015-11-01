@@ -96,15 +96,17 @@ def consistent_sampler(pool_length=24, step=3, sample_size=8):
 
 def create_hash_factory(hashfun, complex_types=False, universe_size=None):
     """Create a function to make hash functions
+
     :param hashfun: hash function to use
     :type hashfun: callable
     :param complex_types: whether hash function supports hashing of complex
-                          types, either through native support or through repr
+    types, either through native support or through repr
     :type complex_types: bool
     :param universe_size: upper limit to hash value
     :type universe_size: int, long
     :returns: a hash factory
     :rtype: callable
+
     """
     def hash_factory(seed):
         if complex_types:
@@ -129,6 +131,7 @@ def create_getters(lot):
     :type lot: list
     :returns: a generator of item getters
     :rtype: generator
+
     """
     for tup in lot:
         yield itemgetter(*tup) if tup else lambda x: ()
@@ -143,6 +146,7 @@ def cntuples(m, n):
     :type n: int
     :returns: a sequence of n-tuples
     :rtype : list
+
     """
     vec = range(m)
     iterable = izip(*[chain(islice(vec, i, None), islice(vec, None, i)) for i in xrange(n)])
@@ -160,6 +164,7 @@ def cntuplesx(m, n, kmin=1):
     :type kmin: int
     :returns: a sequence of n-tuples
     :rtype : list
+
     """
     vec = range(m)
     nvec = (i * kmin for i in xrange(n))
@@ -174,13 +179,13 @@ def lsh_combinations(width, bandwidth, ramp):
     :type width: int
     :param bandwidth: band size
     :type bandwidth: int
-    :param ramp: For each integer value between 1 and bandwidth,
-                 return (preferably uniformly) sampled combinations
-                 such that their number corresponds to (width choose ramp)
-                 combinations
+    :param ramp: For each integer value between 1 and bandwidth, return
+    (preferably uniformly) sampled combinations such that their number
+    corresponds to (width choose ramp) combinations
     :type ramp: int
     :return: a sequence of tuples with elements representing indices
     :rtype: list
+
     """
     master = list(combinations(range(width), bandwidth))
     cols = set(range(bandwidth))
@@ -204,7 +209,7 @@ def create_lsh_bands(width, bandwidth):
     :param bandwidth: band size
     :type bandwidth: int
     :return: a sequence of tuples with elements representing indices in
-             signature vector
+    signature vector
     :rtype: list
 
     >>> create_lsh_bands(6, 2)
@@ -227,6 +232,7 @@ def create_sig_selectors(width, bandwidth, scheme):
     :type scheme: str
     :return:
     :rtype: tuple
+
     """
     split_res = re.split(r'\b([a-zA-Z]+)(?=\d+\b)', scheme)
     _, scheme_code, ramp = split_res
@@ -284,6 +290,7 @@ class Shingler(object):
         :type tokenizer: Tokenizer
         :param normalizer: instance of Normalizer class
         :type normalizer: Normalizer
+
         """
         self._algorithm = algorithm
         self._shinglify = self._algorithms[algorithm]
@@ -303,6 +310,7 @@ class Shingler(object):
         :type prefix: object
         :return: A set of shingles (tuples)
         :rtype: set, list
+
         """
         normalizer = self._normalizer
         text = input_text \
@@ -329,13 +337,11 @@ class Shingler(object):
 def get_bandwidth(width, threshold):
     """Approximates the bandwidth needed to achieve a threshold.
 
-    Threshold t = (1/bands) ** (1/rows) where
-    bands = #bands
-    rows = #rows per band
-    width = bands * rows = #elements in signature
-
-    :returns: number of rows per band
+    :param width:     = bands * rows  # = elements in signature
+    :param threshold: = (1/bands) ** (1/rows) where
+    :returns:         number of rows per band
     :rtype: int
+
     """
 
     best = width
@@ -359,6 +365,7 @@ def get_threshold(rows, bands):
     :param bands: number of bands
     :return: threshold value
     :rtype: float
+
     """
     return (1. / bands) ** (1. / rows)
 
@@ -370,6 +377,7 @@ class Signature(object):
     def create_hash_functions(self):
         """Returns an array of length self.width consisting of different hash functions
         :rtype : list
+
         """
 
     @abstractmethod
@@ -378,6 +386,7 @@ class Signature(object):
         :param vec: vector for which to return signature
         :type vec: collections.Iterable
         :rtype : list
+
         """
 
 

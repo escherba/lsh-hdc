@@ -72,3 +72,6 @@ tests/out/
 .domino/
 results/
 .noLock
+
+# ignore Sphinx build dir
+docs/_build/
