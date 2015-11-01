@@ -456,10 +456,10 @@ class ClusteringMetrics(ContingencyTable):
 
         Given two partitionings A and B and a co-occurence matrix of point pairs,
 
-        TP - count of pairs found in the same partition in both A and B
-        FP - count of pairs found in the same partition in A but not in B
-        FN - count of pairs found in the same partition in B but not in A
-        TN - count of pairs in different partitions in both A and B
+            * TP - count of pairs found in the same partition in both A and B
+            * FP - count of pairs found in the same partition in A but not in B
+            * FN - count of pairs found in the same partition in B but not in A
+            * TN - count of pairs in different partitions in both A and B
 
         Note that although the resulting confusion matrix has the form of a
         correlation table for two binary variables, it is not symmetric if the
@@ -752,8 +752,12 @@ class ConfusionMatrix2(ContingencyTable):
         """F-score
 
         As beta tends to infinity, F-score will approach recall.  As beta tends
-        to zero, F-score will approach precision. For a similarity coefficient
-        see dice_coeff.
+        to zero, F-score will approach precision. A similarity coefficient that
+        uses a similar definition is called Dice coefficient.
+
+        See Also
+        --------
+        dice_coeff
         """
         return harmonic_mean_weighted(self.precision(), self.recall(), beta ** 2)
 
@@ -766,8 +770,7 @@ class ConfusionMatrix2(ContingencyTable):
 
         See Also
         --------
-        jaccard_coeff, ochiai_coeff
-
+        fscore, jaccard_coeff, ochiai_coeff
         """
         a = self.TP
         return _div(2 * a, 2 * a + self.FN + self.FP)
@@ -891,11 +894,6 @@ class ConfusionMatrix2(ContingencyTable):
                          = TPR - FPR
 
         Synonyms: True Skill Score, Hannssen-Kuiper Score, Attributable Risk.
-
-        See Also
-        --------
-        markedness
-
         """
         p1, q1 = self.row_totals.values()
         return _div(self.covar(), p1 * q1)
@@ -907,9 +905,6 @@ class ConfusionMatrix2(ContingencyTable):
 
             Markedness = PPV + NPV - 1.0
 
-        See Also
-        --------
-        informedness
         """
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
