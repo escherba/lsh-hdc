@@ -561,7 +561,7 @@ struct __pyx_obj_7lsh_hdc_3ext_PHashCombiner {
  * 
  * cdef class VarlenHash(object):             # <<<<<<<<<<<<<<
  *     """Create a hash function of arbitrary output length
- *     :param scale: integer or long indicating roughly how large should the
+ *     """
  */
 struct __pyx_obj_7lsh_hdc_3ext_VarlenHash {
   PyObject_HEAD
@@ -3385,12 +3385,12 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_16hash_builtin_128(CYTHON_UNUSED PyObjec
   return __pyx_r;
 }
 
-/* "lsh_hdc/ext.pyx":142
+/* "lsh_hdc/ext.pyx":134
  *     cdef _mask
  * 
  *     def __cinit__(self, bits=64):             # <<<<<<<<<<<<<<
- *         self._mask = (1 << bits) - 1
- * 
+ *         """
+ *         :param bits: number of bits in hashed values
  */
 
 /* Python wrapper */
@@ -3424,7 +3424,7 @@ static int __pyx_pw_7lsh_hdc_3ext_10VarlenHash_1__cinit__(PyObject *__pyx_v_self
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -3437,7 +3437,7 @@ static int __pyx_pw_7lsh_hdc_3ext_10VarlenHash_1__cinit__(PyObject *__pyx_v_self
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__cinit__", 0, 0, 1, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("__cinit__", 0, 0, 1, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("lsh_hdc.ext.VarlenHash.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -3460,16 +3460,16 @@ static int __pyx_pf_7lsh_hdc_3ext_10VarlenHash___cinit__(struct __pyx_obj_7lsh_h
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "lsh_hdc/ext.pyx":143
+  /* "lsh_hdc/ext.pyx":140
  * 
- *     def __cinit__(self, bits=64):
+ *         """
  *         self._mask = (1 << bits) - 1             # <<<<<<<<<<<<<<
  * 
  *     def __call__(self, value, seed=0):
  */
-  __pyx_t_1 = PyNumber_Lshift(__pyx_int_1, __pyx_v_bits); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyNumber_Lshift(__pyx_int_1, __pyx_v_bits); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 140; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_SubtractObjC(__pyx_t_1, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyInt_SubtractObjC(__pyx_t_1, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 140; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_GIVEREF(__pyx_t_2);
@@ -3478,12 +3478,12 @@ static int __pyx_pf_7lsh_hdc_3ext_10VarlenHash___cinit__(struct __pyx_obj_7lsh_h
   __pyx_v_self->_mask = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "lsh_hdc/ext.pyx":142
+  /* "lsh_hdc/ext.pyx":134
  *     cdef _mask
  * 
  *     def __cinit__(self, bits=64):             # <<<<<<<<<<<<<<
- *         self._mask = (1 << bits) - 1
- * 
+ *         """
+ *         :param bits: number of bits in hashed values
  */
 
   /* function exit code */
@@ -3499,17 +3499,17 @@ static int __pyx_pf_7lsh_hdc_3ext_10VarlenHash___cinit__(struct __pyx_obj_7lsh_h
   return __pyx_r;
 }
 
-/* "lsh_hdc/ext.pyx":145
+/* "lsh_hdc/ext.pyx":142
  *         self._mask = (1 << bits) - 1
  * 
  *     def __call__(self, value, seed=0):             # <<<<<<<<<<<<<<
- *         """A variable-length version of Python's builtin hash"""
- *         if isinstance(value, unicode):
+ *         """A variable-length version of Python's builtin hash
+ *         """
  */
 
 /* Python wrapper */
 static PyObject *__pyx_pw_7lsh_hdc_3ext_10VarlenHash_3__call__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_7lsh_hdc_3ext_10VarlenHash_2__call__[] = "A variable-length version of Python's builtin hash";
+static char __pyx_doc_7lsh_hdc_3ext_10VarlenHash_2__call__[] = "A variable-length version of Python's builtin hash\n        ";
 #if CYTHON_COMPILING_IN_CPYTHON
 struct wrapperbase __pyx_wrapperbase_7lsh_hdc_3ext_10VarlenHash_2__call__;
 #endif
@@ -3547,7 +3547,7 @@ static PyObject *__pyx_pw_7lsh_hdc_3ext_10VarlenHash_3__call__(PyObject *__pyx_v
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__call__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 145; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__call__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -3562,7 +3562,7 @@ static PyObject *__pyx_pw_7lsh_hdc_3ext_10VarlenHash_3__call__(PyObject *__pyx_v
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__call__", 0, 1, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 145; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("__call__", 0, 1, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("lsh_hdc.ext.VarlenHash.__call__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -3597,9 +3597,9 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
   __Pyx_RefNannySetupContext("__call__", 0);
   __Pyx_INCREF(__pyx_v_value);
 
-  /* "lsh_hdc/ext.pyx":147
- *     def __call__(self, value, seed=0):
- *         """A variable-length version of Python's builtin hash"""
+  /* "lsh_hdc/ext.pyx":145
+ *         """A variable-length version of Python's builtin hash
+ *         """
  *         if isinstance(value, unicode):             # <<<<<<<<<<<<<<
  *             value = value.encode("utf-8")
  *         elif isinstance(value, str):
@@ -3608,24 +3608,24 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
   __pyx_t_2 = (__pyx_t_1 != 0);
   if (__pyx_t_2) {
 
-    /* "lsh_hdc/ext.pyx":148
- *         """A variable-length version of Python's builtin hash"""
+    /* "lsh_hdc/ext.pyx":146
+ *         """
  *         if isinstance(value, unicode):
  *             value = value.encode("utf-8")             # <<<<<<<<<<<<<<
  *         elif isinstance(value, str):
  *             pass
  */
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_value, __pyx_n_s_encode); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 148; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_value, __pyx_n_s_encode); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 148; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_DECREF_SET(__pyx_v_value, __pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "lsh_hdc/ext.pyx":147
- *     def __call__(self, value, seed=0):
- *         """A variable-length version of Python's builtin hash"""
+    /* "lsh_hdc/ext.pyx":145
+ *         """A variable-length version of Python's builtin hash
+ *         """
  *         if isinstance(value, unicode):             # <<<<<<<<<<<<<<
  *             value = value.encode("utf-8")
  *         elif isinstance(value, str):
@@ -3633,7 +3633,7 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
     goto __pyx_L3;
   }
 
-  /* "lsh_hdc/ext.pyx":149
+  /* "lsh_hdc/ext.pyx":147
  *         if isinstance(value, unicode):
  *             value = value.encode("utf-8")
  *         elif isinstance(value, str):             # <<<<<<<<<<<<<<
@@ -3646,7 +3646,7 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
     goto __pyx_L3;
   }
 
-  /* "lsh_hdc/ext.pyx":152
+  /* "lsh_hdc/ext.pyx":150
  *             pass
  *         else:
  *             value = repr(value)             # <<<<<<<<<<<<<<
@@ -3654,24 +3654,24 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
  *         if length_of_v > 0:
  */
   /*else*/ {
-    __pyx_t_4 = PyObject_Repr(__pyx_v_value); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = PyObject_Repr(__pyx_v_value); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 150; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF_SET(__pyx_v_value, __pyx_t_4);
     __pyx_t_4 = 0;
   }
   __pyx_L3:;
 
-  /* "lsh_hdc/ext.pyx":153
+  /* "lsh_hdc/ext.pyx":151
  *         else:
  *             value = repr(value)
  *         length_of_v = len(value)             # <<<<<<<<<<<<<<
  *         if length_of_v > 0:
  *             item = ord(value[0]) << 7
  */
-  __pyx_t_5 = PyObject_Length(__pyx_v_value); if (unlikely(__pyx_t_5 == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 153; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_5 = PyObject_Length(__pyx_v_value); if (unlikely(__pyx_t_5 == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 151; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_length_of_v = __pyx_t_5;
 
-  /* "lsh_hdc/ext.pyx":154
+  /* "lsh_hdc/ext.pyx":152
  *             value = repr(value)
  *         length_of_v = len(value)
  *         if length_of_v > 0:             # <<<<<<<<<<<<<<
@@ -3681,23 +3681,23 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
   __pyx_t_1 = ((__pyx_v_length_of_v > 0) != 0);
   if (__pyx_t_1) {
 
-    /* "lsh_hdc/ext.pyx":155
+    /* "lsh_hdc/ext.pyx":153
  *         length_of_v = len(value)
  *         if length_of_v > 0:
  *             item = ord(value[0]) << 7             # <<<<<<<<<<<<<<
  *             mask = self._mask
  *             for char in value:
  */
-    __pyx_t_4 = __Pyx_GetItemInt(__pyx_v_value, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(__pyx_t_4 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    __pyx_t_4 = __Pyx_GetItemInt(__pyx_v_value, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(__pyx_t_4 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 153; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_6 = __Pyx_PyObject_Ord(__pyx_t_4); if (unlikely(__pyx_t_6 == (long)(Py_UCS4)-1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_6 = __Pyx_PyObject_Ord(__pyx_t_4); if (unlikely(__pyx_t_6 == (long)(Py_UCS4)-1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 153; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PyInt_From_long((__pyx_t_6 << 7)); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_PyInt_From_long((__pyx_t_6 << 7)); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 153; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_v_item = __pyx_t_4;
     __pyx_t_4 = 0;
 
-    /* "lsh_hdc/ext.pyx":156
+    /* "lsh_hdc/ext.pyx":154
  *         if length_of_v > 0:
  *             item = ord(value[0]) << 7
  *             mask = self._mask             # <<<<<<<<<<<<<<
@@ -3709,7 +3709,7 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
     __pyx_v_mask = __pyx_t_4;
     __pyx_t_4 = 0;
 
-    /* "lsh_hdc/ext.pyx":157
+    /* "lsh_hdc/ext.pyx":155
  *             item = ord(value[0]) << 7
  *             mask = self._mask
  *             for char in value:             # <<<<<<<<<<<<<<
@@ -3720,26 +3720,26 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
       __pyx_t_4 = __pyx_v_value; __Pyx_INCREF(__pyx_t_4); __pyx_t_5 = 0;
       __pyx_t_7 = NULL;
     } else {
-      __pyx_t_5 = -1; __pyx_t_4 = PyObject_GetIter(__pyx_v_value); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_5 = -1; __pyx_t_4 = PyObject_GetIter(__pyx_v_value); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_7 = Py_TYPE(__pyx_t_4)->tp_iternext; if (unlikely(!__pyx_t_7)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_7 = Py_TYPE(__pyx_t_4)->tp_iternext; if (unlikely(!__pyx_t_7)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     for (;;) {
       if (likely(!__pyx_t_7)) {
         if (likely(PyList_CheckExact(__pyx_t_4))) {
           if (__pyx_t_5 >= PyList_GET_SIZE(__pyx_t_4)) break;
           #if CYTHON_COMPILING_IN_CPYTHON
-          __pyx_t_3 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_5); __Pyx_INCREF(__pyx_t_3); __pyx_t_5++; if (unlikely(0 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+          __pyx_t_3 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_5); __Pyx_INCREF(__pyx_t_3); __pyx_t_5++; if (unlikely(0 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
           #else
-          __pyx_t_3 = PySequence_ITEM(__pyx_t_4, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+          __pyx_t_3 = PySequence_ITEM(__pyx_t_4, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
           __Pyx_GOTREF(__pyx_t_3);
           #endif
         } else {
           if (__pyx_t_5 >= PyTuple_GET_SIZE(__pyx_t_4)) break;
           #if CYTHON_COMPILING_IN_CPYTHON
-          __pyx_t_3 = PyTuple_GET_ITEM(__pyx_t_4, __pyx_t_5); __Pyx_INCREF(__pyx_t_3); __pyx_t_5++; if (unlikely(0 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+          __pyx_t_3 = PyTuple_GET_ITEM(__pyx_t_4, __pyx_t_5); __Pyx_INCREF(__pyx_t_3); __pyx_t_5++; if (unlikely(0 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
           #else
-          __pyx_t_3 = PySequence_ITEM(__pyx_t_4, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+          __pyx_t_3 = PySequence_ITEM(__pyx_t_4, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
           __Pyx_GOTREF(__pyx_t_3);
           #endif
         }
@@ -3749,7 +3749,7 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
           PyObject* exc_type = PyErr_Occurred();
           if (exc_type) {
             if (likely(exc_type == PyExc_StopIteration || PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-            else {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+            else {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
           }
           break;
         }
@@ -3758,29 +3758,29 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
       __Pyx_XDECREF_SET(__pyx_v_char, __pyx_t_3);
       __pyx_t_3 = 0;
 
-      /* "lsh_hdc/ext.pyx":158
+      /* "lsh_hdc/ext.pyx":156
  *             mask = self._mask
  *             for char in value:
  *                 item = ((item * 1000003) ^ ord(char)) & mask             # <<<<<<<<<<<<<<
  *             item ^= length_of_v
  *             if item == -1:
  */
-      __pyx_t_3 = PyNumber_Multiply(__pyx_v_item, __pyx_int_1000003); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_3 = PyNumber_Multiply(__pyx_v_item, __pyx_int_1000003); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 156; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_6 = __Pyx_PyObject_Ord(__pyx_v_char); if (unlikely(__pyx_t_6 == (long)(Py_UCS4)-1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-      __pyx_t_8 = __Pyx_PyInt_From_long(__pyx_t_6); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_6 = __Pyx_PyObject_Ord(__pyx_v_char); if (unlikely(__pyx_t_6 == (long)(Py_UCS4)-1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 156; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_8 = __Pyx_PyInt_From_long(__pyx_t_6); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 156; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_8);
-      __pyx_t_9 = PyNumber_Xor(__pyx_t_3, __pyx_t_8); if (unlikely(!__pyx_t_9)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_9 = PyNumber_Xor(__pyx_t_3, __pyx_t_8); if (unlikely(!__pyx_t_9)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 156; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_9);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      __pyx_t_8 = PyNumber_And(__pyx_t_9, __pyx_v_mask); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_8 = PyNumber_And(__pyx_t_9, __pyx_v_mask); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 156; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF_SET(__pyx_v_item, __pyx_t_8);
       __pyx_t_8 = 0;
 
-      /* "lsh_hdc/ext.pyx":157
+      /* "lsh_hdc/ext.pyx":155
  *             item = ord(value[0]) << 7
  *             mask = self._mask
  *             for char in value:             # <<<<<<<<<<<<<<
@@ -3790,35 +3790,35 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
     }
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-    /* "lsh_hdc/ext.pyx":159
+    /* "lsh_hdc/ext.pyx":157
  *             for char in value:
  *                 item = ((item * 1000003) ^ ord(char)) & mask
  *             item ^= length_of_v             # <<<<<<<<<<<<<<
  *             if item == -1:
  *                 item = -2
  */
-    __pyx_t_4 = PyInt_FromSsize_t(__pyx_v_length_of_v); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 159; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = PyInt_FromSsize_t(__pyx_v_length_of_v); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_8 = PyNumber_InPlaceXor(__pyx_v_item, __pyx_t_4); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 159; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_8 = PyNumber_InPlaceXor(__pyx_v_item, __pyx_t_4); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF_SET(__pyx_v_item, __pyx_t_8);
     __pyx_t_8 = 0;
 
-    /* "lsh_hdc/ext.pyx":160
+    /* "lsh_hdc/ext.pyx":158
  *                 item = ((item * 1000003) ^ ord(char)) & mask
  *             item ^= length_of_v
  *             if item == -1:             # <<<<<<<<<<<<<<
  *                 item = -2
  *             return hash_combine_boost(item, seed)
  */
-    __pyx_t_8 = __Pyx_PyInt_EqObjC(__pyx_v_item, __pyx_int_neg_1, -1L, 0); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_8 = __Pyx_PyInt_EqObjC(__pyx_v_item, __pyx_int_neg_1, -1L, 0); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_1 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_1 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     if (__pyx_t_1) {
 
-      /* "lsh_hdc/ext.pyx":161
+      /* "lsh_hdc/ext.pyx":159
  *             item ^= length_of_v
  *             if item == -1:
  *                 item = -2             # <<<<<<<<<<<<<<
@@ -3828,7 +3828,7 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
       __Pyx_INCREF(__pyx_int_neg_2);
       __Pyx_DECREF_SET(__pyx_v_item, __pyx_int_neg_2);
 
-      /* "lsh_hdc/ext.pyx":160
+      /* "lsh_hdc/ext.pyx":158
  *                 item = ((item * 1000003) ^ ord(char)) & mask
  *             item ^= length_of_v
  *             if item == -1:             # <<<<<<<<<<<<<<
@@ -3837,7 +3837,7 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
  */
     }
 
-    /* "lsh_hdc/ext.pyx":162
+    /* "lsh_hdc/ext.pyx":160
  *             if item == -1:
  *                 item = -2
  *             return hash_combine_boost(item, seed)             # <<<<<<<<<<<<<<
@@ -3845,13 +3845,13 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
  *             return 0
  */
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_8 = __pyx_f_7lsh_hdc_3ext_hash_combine_boost(__pyx_v_item, __pyx_v_seed, 0); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 162; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_8 = __pyx_f_7lsh_hdc_3ext_hash_combine_boost(__pyx_v_item, __pyx_v_seed, 0); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_8);
     __pyx_r = __pyx_t_8;
     __pyx_t_8 = 0;
     goto __pyx_L0;
 
-    /* "lsh_hdc/ext.pyx":154
+    /* "lsh_hdc/ext.pyx":152
  *             value = repr(value)
  *         length_of_v = len(value)
  *         if length_of_v > 0:             # <<<<<<<<<<<<<<
@@ -3860,7 +3860,7 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
  */
   }
 
-  /* "lsh_hdc/ext.pyx":164
+  /* "lsh_hdc/ext.pyx":162
  *             return hash_combine_boost(item, seed)
  *         else:
  *             return 0             # <<<<<<<<<<<<<<
@@ -3874,12 +3874,12 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
     goto __pyx_L0;
   }
 
-  /* "lsh_hdc/ext.pyx":145
+  /* "lsh_hdc/ext.pyx":142
  *         self._mask = (1 << bits) - 1
  * 
  *     def __call__(self, value, seed=0):             # <<<<<<<<<<<<<<
- *         """A variable-length version of Python's builtin hash"""
- *         if isinstance(value, unicode):
+ *         """A variable-length version of Python's builtin hash
+ *         """
  */
 
   /* function exit code */
@@ -3900,7 +3900,7 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_10VarlenHash_2__call__(struct __pyx_obj_
   return __pyx_r;
 }
 
-/* "lsh_hdc/ext.pyx":167
+/* "lsh_hdc/ext.pyx":165
  * 
  * 
  * cpdef long2int(num):             # <<<<<<<<<<<<<<
@@ -3920,45 +3920,45 @@ static PyObject *__pyx_f_7lsh_hdc_3ext_long2int(PyObject *__pyx_v_num, CYTHON_UN
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("long2int", 0);
 
-  /* "lsh_hdc/ext.pyx":176
+  /* "lsh_hdc/ext.pyx":175
  *     """
  * 
  *     smi1 = sys.maxint + 1             # <<<<<<<<<<<<<<
  *     return int(num % (smi1 + smi1) - smi1)
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_sys); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 176; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_sys); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_maxint); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 176; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_maxint); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_AddObjC(__pyx_t_2, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 176; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_AddObjC(__pyx_t_2, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_smi1 = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "lsh_hdc/ext.pyx":177
+  /* "lsh_hdc/ext.pyx":176
  * 
  *     smi1 = sys.maxint + 1
  *     return int(num % (smi1 + smi1) - smi1)             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyNumber_Add(__pyx_v_smi1, __pyx_v_smi1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 177; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyNumber_Add(__pyx_v_smi1, __pyx_v_smi1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 176; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = PyNumber_Remainder(__pyx_v_num, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 177; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = PyNumber_Remainder(__pyx_v_num, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 176; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyNumber_Subtract(__pyx_t_2, __pyx_v_smi1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 177; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyNumber_Subtract(__pyx_t_2, __pyx_v_smi1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 176; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = PyNumber_Int(__pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 177; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = PyNumber_Int(__pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 176; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
   goto __pyx_L0;
 
-  /* "lsh_hdc/ext.pyx":167
+  /* "lsh_hdc/ext.pyx":165
  * 
  * 
  * cpdef long2int(num):             # <<<<<<<<<<<<<<
@@ -3981,7 +3981,7 @@ static PyObject *__pyx_f_7lsh_hdc_3ext_long2int(PyObject *__pyx_v_num, CYTHON_UN
 
 /* Python wrapper */
 static PyObject *__pyx_pw_7lsh_hdc_3ext_19long2int(PyObject *__pyx_self, PyObject *__pyx_v_num); /*proto*/
-static char __pyx_doc_7lsh_hdc_3ext_18long2int[] = "Lossily map a long type to the range of int\n\n    :param num: input long variable\n    :type num: long\n    :return: input mapped to int range\n    :rtype : int\n    ";
+static char __pyx_doc_7lsh_hdc_3ext_18long2int[] = "Lossily map a long type to the range of int\n\n    :param num: input long variable\n    :type num: long\n    :return: input mapped to int range\n    :rtype : int\n\n    ";
 static PyObject *__pyx_pw_7lsh_hdc_3ext_19long2int(PyObject *__pyx_self, PyObject *__pyx_v_num) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
@@ -4002,7 +4002,7 @@ static PyObject *__pyx_pf_7lsh_hdc_3ext_18long2int(CYTHON_UNUSED PyObject *__pyx
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("long2int", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_7lsh_hdc_3ext_long2int(__pyx_v_num, 0); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 167; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __pyx_f_7lsh_hdc_3ext_long2int(__pyx_v_num, 0); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 165; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -4214,7 +4214,7 @@ static PyTypeObject __pyx_type_7lsh_hdc_3ext_VarlenHash = {
   0, /*tp_setattro*/
   0, /*tp_as_buffer*/
   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_VERSION_TAG|Py_TPFLAGS_CHECKTYPES|Py_TPFLAGS_HAVE_NEWBUFFER|Py_TPFLAGS_BASETYPE|Py_TPFLAGS_HAVE_GC, /*tp_flags*/
-  "Create a hash function of arbitrary output length\n    :param scale: integer or long indicating roughly how large should the\n                  hashe values be\n    :type scale: int,long\n\n    Note: the return value of this function increases as the length of the\n    text to be hashed increases. So the fuction has terrible distribution\n    properties.\n    ", /*tp_doc*/
+  "Create a hash function of arbitrary output length\n    ", /*tp_doc*/
   __pyx_tp_traverse_7lsh_hdc_3ext_VarlenHash, /*tp_traverse*/
   __pyx_tp_clear_7lsh_hdc_3ext_VarlenHash, /*tp_clear*/
   0, /*tp_richcompare*/
@@ -4568,14 +4568,14 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "lsh_hdc/ext.pyx":148
- *         """A variable-length version of Python's builtin hash"""
+  /* "lsh_hdc/ext.pyx":146
+ *         """
  *         if isinstance(value, unicode):
  *             value = value.encode("utf-8")             # <<<<<<<<<<<<<<
  *         elif isinstance(value, str):
  *             pass
  */
-  __pyx_tuple_ = PyTuple_Pack(1, __pyx_kp_s_utf_8); if (unlikely(!__pyx_tuple_)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 148; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_tuple_ = PyTuple_Pack(1, __pyx_kp_s_utf_8); if (unlikely(!__pyx_tuple_)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
   __Pyx_RefNannyFinishContext();

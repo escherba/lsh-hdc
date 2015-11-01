@@ -1,5 +1,5 @@
 include tests/data/*
 include scripts/*
 include include/*.h
-include requirements*.txt
+include *requirements.txt
 include LICENSE

@@ -28,11 +28,12 @@ be represented as rows and columns in a table.  Roughly adhering to the
 terminology proposed in [1]_, we distinguish four types of experimental design
 all involving contingency tables.
 
-* Sampling in a Model O study is entirely random. Neither columns nor rows, nor
-the grand total are fixed.
-* Under Model I, random sampling occurs both row- and column-wise, but the grand
-total is fixed.
+* Under Model O, sampling is entirely random. Columns, rows, and the grand total are variable.
+
+* Under Model I, random sampling occurs both row- and column-wise, but the grand total is fixed.
+
 * Under Model II, one side (either row or column totals) is fixed.
+
 * Under Model III, both rows and column totals are fixed.
 
 Model O is rarely employed in practice because the researchers almost always
@@ -57,8 +58,8 @@ first. The hypergeometric distribution used in the subsequent Fisher's exact
 test shares the assumption of the experiment that both row and column counts are
 fixed.
 
-Relevance of Experimental Design to the Choice of Association Metric
---------------------------------------------------------------------
+Choosing an Association Metric
+------------------------------
 
 Given the types of experimental design listed above, some metrics seem to be
 more appropriate than others. For example, two-way correlation coefficients
@@ -92,7 +93,7 @@ from itertools import izip
 from operator import itemgetter
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples
-from pymaptools.containers import TableOfCounts
+from pymaptools.containers import TableOfCounts, labels_to_clusters
 from lsh_hdc.fixes import bincount
 from lsh_hdc.expected_mutual_info_fast import expected_mutual_information
 
@@ -130,7 +131,7 @@ def _div(numer, denom):
 
 
 def jaccard_similarity(set1, set2):
-    """Return Jaccard similarity between two sets
+    """Jaccard similarity between two sets
 
     :param set1: set 1
     :param set2: set 2
@@ -142,15 +143,15 @@ def jaccard_similarity(set1, set2):
 
 
 def centropy(counts):
-    """Returns centropy of an iterable of counts
+    """Entropy of an iterable of counts
 
     Assumes every entry in the list belongs to a different class.
 
     The parameter `counts` is expected to be an list or tuple-like iterable.
     For convenience, it can also be a dict/mapping type, in which case its
-    values will be used to calculate centropy.
+    values will be used to calculate entropy.
 
-    The centropy is calculated using natural base, which may not be what you
+    The entropy is calculated using natural base, which may not be what you
     want, so caveat emptor.
 
     """
@@ -190,10 +191,10 @@ def ratio2weights(ratio):
 
 
 def geometric_mean(x, y):
-    """Geometric mean of two numbers. Returns a float
+    """Geometric mean of two numbers. Always returns a float
 
     Although geometric mean is defined for negative numbers, Scipy function
-    doesn't allow it... sigh
+    doesn't allow it. Hence this function
     """
     prod = x * y
     if prod < 0.0:
@@ -220,7 +221,7 @@ def geometric_mean_weighted(x, y, ratio=1.0):
 
 
 def harmonic_mean(x, y):
-    """Harmonic mean of two numbers. Returns a float
+    """Harmonic mean of two numbers. Always returns a float
     """
     return float(x) if x == y else 2.0 * (x * y) / (x + y)
 
@@ -280,7 +281,7 @@ class ContingencyTable(TableOfCounts):
         """Projection distance between partitions
 
         Used in graph commmunity analysis. Originally defined by van Dogen.
-        Example given in [1]:
+        Example given in [1]_::
 
         >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
         >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
@@ -291,8 +292,9 @@ class ContingencyTable(TableOfCounts):
         References
         ----------
 
-        [1] Dongen, S. V. (2000). Performance criteria for graph clustering and
-        Markov cluster experiments. Information Systems [INS], (R 0012), 1-36.
+        .. [1] Dongen, S. V. (2000). Performance criteria for graph clustering
+               and Markov cluster experiments. Information Systems [INS],
+               (R 0012), 1-36.
 
         """
         pa_B = sum(max(x) for x in self.iter_rows())
@@ -300,10 +302,7 @@ class ContingencyTable(TableOfCounts):
         return 2 * self.grand_total - pa_B - pb_A
 
     def talburt_wang_index(self):
-        """Talburt-Wang index of similarity of two partitionings
-
-        Example
-        -------
+        """Talburt-Wang index of similarity of two partitionings [1]_
 
         >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
         >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
@@ -345,7 +344,7 @@ class ContingencyTable(TableOfCounts):
         return I_CK / self.grand_total
 
     def g_score(self):
-        """Returns G-statistic for RxC contingency table
+        """G-statistic for RxC contingency table
 
         This method does not perform any corrections to this statistic (e.g.
         Williams', Yates' corrections).
@@ -454,7 +453,7 @@ class ClusteringMetrics(ContingencyTable):
     def adjusted_jaccard_coeff(self):
         """Jaccard similarity coefficient with correction for chance
 
-        Uses Taylor series-based correction described in [1]
+        Uses Taylor series-based correction described in [1]_.
 
         .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
            Jaccard and other similarity indices for chance agreement in cluster
@@ -476,12 +475,13 @@ class ClusteringMetrics(ContingencyTable):
     def adjusted_sokal_sneath_coeff(self):
         """Sokal-Sneath similarity coefficient with correction for chance
 
-        Uses Taylor series-based correction described in [1]
+        Uses Taylor series-based correction.
 
-        .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
-           Jaccard and other similarity indices for chance agreement in cluster
-           analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
-           <https://doi.org/10.1007/s11634-011-0090-y>`_
+        See Also
+        --------
+
+        adjusted_jaccard_index
+
         """
         n = self.grand_total
         coassoc = self.coassoc_
@@ -498,12 +498,13 @@ class ClusteringMetrics(ContingencyTable):
     def adjusted_rogers_tanimoto_coeff(self):
         """Rogers-Tanimoto similarity coefficient with correction for chance
 
-        Uses Taylor series-based correction described in [1]
+        Uses Taylor series-based correction.
 
-        .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
-           Jaccard and other similarity indices for chance agreement in cluster
-           analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
-           <https://doi.org/10.1007/s11634-011-0090-y>`_
+        See Also
+        --------
+
+        adjusted_jaccard_index
+
         """
         n = self.grand_total
         coassoc = self.coassoc_
@@ -522,12 +523,13 @@ class ClusteringMetrics(ContingencyTable):
     def adjusted_gower_legendre_coeff(self):
         """Gower-Legendre similarity coefficient with correction for chance
 
-        Uses Taylor series-based correction described in [1]
+        Uses Taylor series-based correction.
 
-        .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
-           Jaccard and other similarity indices for chance agreement in cluster
-           analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
-           <https://doi.org/10.1007/s11634-011-0090-y>`_
+        See Also
+        --------
+
+        adjusted_jaccard_index
+
         """
         n = self.grand_total
         coassoc = self.coassoc_
@@ -769,13 +771,14 @@ class ConfusionMatrix2(ContingencyTable):
         This similarity index has an interpretation that it is the geometric
         mean of the conditional probability of an element (in the case of
         pairwise clustering comparison, a pair of elements) belonging to the
-        same cluster given that they belong to the same class [0].
+        same cluster given that they belong to the same class [1]_.
 
         References
         ----------
-        [0] Ramirez, E. H., Brena, R., Magatti, D., & Stella, F. (2012). Topic
-        model validation. Neurocomputing, 76(1), 125-133.
-        http://dx.doi.org/10.1016/j.neucom.2011.04.032
+
+        .. [1] `Ramirez, E. H., Brena, R., Magatti, D., & Stella, F. (2012).
+               Topic model validation. Neurocomputing, 76(1), 125-133.
+               <http://dx.doi.org/10.1016/j.neucom.2011.04.032>`_
         """
         a, b, c = self.TP, self.FN, self.FP
         return _div(a, sqrt((a + b) * (a + c)))
@@ -950,25 +953,25 @@ class ConfusionMatrix2(ContingencyTable):
         ----------
 
         .. [1] `Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering
-               validation: results and implications for applied analyses (p.
-               341).  World Scientific Pub Co Inc.
-               <https://doi.org/10.1142/9789812832153_0010>`_
+                validation: results and implications for applied analyses (p.
+                341).  World Scientific Pub Co Inc.
+                <https://doi.org/10.1142/9789812832153_0010>`_
 
         .. [2] `Sim, J., & Wright, C. C. (2005). The kappa statistic in
-               reliability studies: use, interpretation, and sample size
-               requirements.  Physical therapy, 85(3), 257-268.
-               <http://www.ncbi.nlm.nih.gov/pubmed/15733050>`_
+                reliability studies: use, interpretation, and sample size
+                requirements.  Physical therapy, 85(3), 257-268.
+                <http://www.ncbi.nlm.nih.gov/pubmed/15733050>`_
 
         .. [3] `Warrens, M. J. (2008). On the equivalence of Cohen's kappa and
-               the Hubert-Arabie adjusted Rand index. Journal of Classification,
-               25(2), 177-183.
-               <https://doi.org/10.1007/s00357-008-9023-7>`_
+                the Hubert-Arabie adjusted Rand index. Journal of Classification,
+                25(2), 177-183.
+                <https://doi.org/10.1007/s00357-008-9023-7>`_
 
         .. [4] `Santos, J. M., & Embrechts, M. (2009). On the use of the
-               adjusted rand index as a metric for evaluating supervised
-               classification. In Artificial neural networks - ICANN 2009 (pp.
-               175-184).  Springer Berlin Heidelberg.
-               <https://doi.org/10.1007/978-3-642-04277-5_18>`_
+                adjusted rand index as a metric for evaluating supervised
+                classification. In Artificial neural networks - ICANN 2009 (pp.
+                175-184).  Springer Berlin Heidelberg.
+                <https://doi.org/10.1007/978-3-642-04277-5_18>`_
 
         """
         p1, q1 = self.row_totals.values()
@@ -1084,9 +1087,9 @@ class ConfusionMatrix2(ContingencyTable):
         ----------
 
         .. [1] `Hasenclever, D., & Scholz, M. (2013). Comparing measures of
-               association in 2x2 probability tables. arXiv preprint
-               arXiv:1302.6161.
-               <http://arxiv.org/pdf/1302.6161v1.pdf>`_
+                association in 2x2 probability tables. arXiv preprint
+                arXiv:1302.6161.
+                <http://arxiv.org/pdf/1302.6161v1.pdf>`_
 
         """
         a, c, d, b = self.to_ccw()
@@ -1143,10 +1146,7 @@ def homogeneity_completeness_v_measure(labels_true, labels_pred):
 def adjusted_rand_score(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Sklearn function
 
-    Example
-    -------
-
-    In a supplement to [1], the following example is given::
+    In a supplement to [1]_, the following example is given::
 
     >>> classes = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
     >>> clusters = [1, 2, 1, 2, 2, 3, 3, 3, 3, 3]
@@ -1157,10 +1157,10 @@ def adjusted_rand_score(labels_true, labels_pred):
     ----------
 
     .. [1] `Yeung, K. Y., & Ruzzo, W. L. (2001). Details of the adjusted Rand
-           index and clustering algorithms, supplement to the paper "An empirical
-           study on principal component analysis for clustering gene expression
-           data". Bioinformatics, 17(9), 763-774.
-           <http://faculty.washington.edu/kayee/pca/>`_
+            index and clustering algorithms, supplement to the paper "An empirical
+            study on principal component analysis for clustering gene expression
+            data". Bioinformatics, 17(9), 763-774.
+            <http://faculty.washington.edu/kayee/pca/>`_
 
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
@@ -1168,10 +1168,7 @@ def adjusted_rand_score(labels_true, labels_pred):
 
 
 def adjusted_mutual_info_score(labels_true, labels_pred):
-    """Adjusted Mutual Information between two clusterings
-
-    Examples (from SciKit-Learn)
-    ----------------------------
+    """Adjusted Mutual Information between two clusterings [1]_
 
     Perfect labelings are both homogeneous and complete, hence have
     score 1.0::
@@ -1191,10 +1188,10 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
     ----------
 
     .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
-           measures for clusterings comparison: Variants, properties,
-           normalization and correction for chance. The Journal of Machine
-           Learning Research, 11, 2837-2854.
-           <http://www.jmlr.org/papers/v11/vinh10a.html>`_
+            measures for clusterings comparison: Variants, properties,
+            normalization and correction for chance. The Journal of Machine
+            Learning Research, 11, 2837-2854.
+            <http://www.jmlr.org/papers/v11/vinh10a.html>`_
 
     """
     # labels_true, labels_pred = check_clusterings(labels_true, labels_pred)
@@ -1224,10 +1221,7 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
 
 class RocCurve(object):
 
-    """
-
-    Example
-    -------
+    """Receiver Operating Characteristic (ROC)
 
     >>> rc = RocCurve.from_binary([0, 0, 1, 1],
     ...                           [0.1, 0.4, 0.35, 0.8])
@@ -1280,8 +1274,15 @@ class RocCurve(object):
         return tpr - fpr
 
     def max_informedness(self):
-        """Calculates maximum value of Informedness (Youden's Index)
-        https://en.wikipedia.org/wiki/Youden%27s_J_statistic
+        """Calculates maximum value of Informedness on a ROC curve
+
+        This is also known as Youden's J [1]_
+
+        References
+        ----------
+
+        .. [1] `Wikipedia entry for Youden's J statitic
+               <https://en.wikipedia.org/wiki/Youden%27s_J_statistic>`_
         """
         return self.optimal_cutoff(self._informedness)[1]
 
@@ -1314,47 +1315,100 @@ def _plot_lift(xs, ys):  # pragma: no cover
     pyplot.show()
 
 
-def clustering_aul_score(clusters, is_pos):
-    """Area under Lift Curve (AUL) for 2 classes and n clusters
+def clustering_aul_score(y_true, labels_pred):
+    """Area under Lift Curve (AUL) for cluster-size correlated classification
 
-    Assume that we have a large data set of mostly unique samples where some
-    underlying binary property is correlated to similarity of those samples to
-    one another (i.e. whether the samples can form clusters). Assume also that
-    we are not interested in whether the clusters were assigned correctly, only
-    in whether our clustering is able to gather as many positive samples as
-    possible, preferably (but not necessarily) in very few homogeneous clusters.
-    In other words, we want our clusters to contain samples that belong to the
-    positive class, while the unclustered samples (or those found in smaller
-    clusters) should be negative.
+    The AUL measure here is similar to Gini coefficient of inequality [1]_
+    except we plot the corresponding curve in the opposite direction (from
+    "richest" to "poorest"), and do not subtract 0.5 from the resulting score.
 
-    After clustering is performed, we order the clusters from the largest one to
-    the smallest one, and plot a cumulative step function where the width of the
-    bin under the step is proportional to cluster size, and the height of the
-    bin is proportional to the cumulative number of positive samples seen so
-    far. A perfect clustering (only one cluster covers the entire set of
-    positives in the sample set) will have the AUL of 1.0. A failure to cluster
-    or a clustering that is completely unrelated to the attribute studied will
-    have AUL of 0.5.
+    Assume that there is a large data set of mostly unique samples where a
+    hidden binary variable is dependent on the number of similar samples that
+    exist in the set (i.e. a sample is called positive if it has many neighbors)
+    and that our goal is to label all samples in this set. It is easy to see
+    that, given sparse enough data, if a clustering method relies on the same
+    sample property on which the ground truth similarity space is defined, it
+    will naturally separate the samples into two groups -- those found in
+    clusters and containing mostly positives, and those found outside clusters
+    and containing mostly negatives.  There would exist only one possible
+    perfect clustering -- the one with a single, entirely homogeneous cluster C
+    that covers all positives present in the data set. If one were to obtain
+    such clustering, one could correctly label all positive samples in one step
+    with the simple rule, "all positive samples belong to cluster C". Under an
+    imperfect clustering, on the other hand, the presence of the given sample in
+    a cluster of size two or more implies the sample is only likely to be
+    positive, with the confidence of the positive call monotonously increasing
+    with the size of the cluster. Furthermore, under imperfect conditions, a
+    possibility is introduced that a cluster could predominantly or even
+    entirely consist of negatives, and one would have to perform additional work
+    labeling samples. To minimize the amount of work performed, we would like
+    the metric to penalize situations with many small clusters (even if they are
+    perfectly homogeneous), with maximum penalty applied to the clustering where
+    all clusters are of size one.
 
-    The application that inspired this metric was mining for positive spam
-    examples in large sets of short user-generated content. Spammy content tends
-    to form clusters either because creative rewriting of every single
-    individual spam message is too expensive to employ in a spam campaign, or
-    because, even if human or algorithmic rewriting is applied, one can still
-    find features that link individual spam messages to one another because they
-    all promote the same product or service or originate from the same
-    geographic area.
+    The application that inspired the design of this metric was mining for
+    positive spam examples in large data sets of short user-generated content.
+    Given large enough data sets, spam content naturally forms clusters either
+    because creative rewriting of every single individual spam message is too
+    expensive for spammers to employ, or because, even if human or algorithmic
+    rewriting is applied, one can still find features that link individual spam
+    messages to their creator or to the product or service being promoted in the
+    spam campaign. The finding was consistent with what is reported in
+    literature [2]_.
 
-    The AUL score calculated is very similar to the Gini index of inequality
-    (area between equality and the Lorenz curve) except we do not subtract 0.5.
+    Given a clustering, we order the clusters from the largest one to the
+    smallest one. We then plot a cumulative step function where the width of the
+    bin under a given "step" is proportional to cluster size, and the height of
+    the bin is proportional to the cumulative number of positive samples seen so
+    far. After two-way normalization, a perfect clustering (i.e. where a single
+    perfectly homogeneous cluster covers the entire set of positives) will have
+    the AUL score of 1.0. A failure to cluster or a clustering based on a
+    property completely unrelated with the ground truth labeling will have the
+    AUL of 0.5. A perverse clustering, i.e. where predominantely negative
+    samples fall into large clusters and positive ones remain unclustered or
+    fall into smaller clusters will have the AUL somewhere between 0.0 and 0.5.
+
+    A special treatment is necessary for cases where clusters are tied by size.
+    If one were to treat tied clusters as a single group, one would obtain AUL
+    of 1.0 when no clusters at all are present, which is against our desiderata.
+    On the other hand, if one were to treat tied clusters entirely separately,
+    one would obtain different results depending on the properties of the
+    sorting algorithm, also an undesirable situation. Always placing "heavy"
+    clusters (i.e. those containig more positives) towards the beginnning or
+    towards the end of the tied group will result in, respectively,
+    overestimating or underestimating the true AUL. The solution here is to
+    average the positive counts among all clusters in a tied group, and then
+    walk through them one by one, with the stepwise cumulative function
+    asymptotically approaching a diagonal from the group's bottom left corner to
+    the top right one. This way, a complete absence of clustering (i.e. all
+    clusters are of size one) will always result in AUL of 0.5, which is also
+    the AUL for a random clustering uncorrelated with the ground truth labeling.
+
+    References
+    ----------
+
+    .. [1] `Wikipedia entry for Gini coefficient of inequality
+            <https://en.wikipedia.org/wiki/Gini_coefficient>`_
+
+    .. [2] `Whissell, J. S., & Clarke, C. L. (2011, September). Clustering for
+            semi-supervised spam filtering. In Proceedings of the 8th Annual
+            Collaboration, Electronic messaging, Anti-Abuse and Spam Conference (pp.
+            125-134). ACM.
+            <https://doi.org/10.1145/2030376.2030391>`_
+
     """
 
-    # TODO: don't use is_pos() function and instead provide the same interface
-    # as Scikit-Learn functions that take (labels_true, labels_pred) tuple
+    # form clusters from label pairs
+    data = labels_to_clusters(y_true, labels_pred)
 
-    sortable = [(len(cluster), sum(is_pos(point) for point in cluster)) for cluster in clusters]
-    # sort just by cluster size
-    data = sorted(sortable, key=itemgetter(0), reverse=True)
+    # sort by cluster size
+    data = sorted(
+        ((len(truth_vals), sum(truth_vals)) for truth_vals in data),
+        key=itemgetter(0),
+        reverse=True
+    )
+
+    # aggregate groups of clusters by size so that we could handle ties
     data = list(aggregate_tuples(data))
 
     total_pos = 0
@@ -1374,9 +1428,6 @@ def clustering_aul_score(clusters, is_pos):
             max_vertical += sum(pos_counts)
 
     assert max_horizontal >= total_pos
-
-    if max_vertical == 0:
-        return np.nan
 
     aul_score = 0.0
     bin_height = 0.0
@@ -1404,5 +1455,9 @@ def clustering_aul_score(clusters, is_pos):
             # ys.append(bin_height / float(max_vertical))
 
     assert max_horizontal == bin_right_edge
-    aul_score /= (max_vertical * max_horizontal)
-    return aul_score
+    denom = max_vertical * max_horizontal
+
+    # Special case: since we define the AUL to be always smaller than or equal
+    # to the surrounding rectangle, when the rectangle area (the denominator) is
+    # zero, the AUL score is also zero.
+    return 0.0 if denom == 0 else aul_score / denom

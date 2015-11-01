@@ -18,32 +18,6 @@ class BinaryDistribution(Distribution):
         return False
 
 
-class build_ext_subclass(build_ext):
-    """
-    This class is an ugly hack to a problem that arises when one must force
-    a compiler to use specific flags by adding to the environment somethiing
-    like the following:
-
-        CXX="clang --some_flagA --some_flagB -I/usr/bin/include/mylibC"
-
-    (as opposed to setting CXXFLAGS). Distutils in that case will complain
-    that it cannot run the entire command as given because it is not
-    found as an executable (specific error message is: "unable to execute...
-    ... no such file or directory").
-
-    This subclass of ``build_ext`` will extract the compiler name from the
-    command line and insert any remaining arguments right after it.
-    """
-    def build_extensions(self):
-        ccm = self.compiler.compiler
-        if ' ' in ccm[0]:
-            self.compiler.compiler = ccm[0].split(' ') + ccm[1:]
-        cxx = self.compiler.compiler_cxx
-        if ' ' in cxx[0]:
-            self.compiler.compiler_cxx = cxx[0].split(' ') + cxx[1:]
-        build_ext.build_extensions(self)
-
-
 # dependency links
 SKIP_RE = re.compile(r'^\s*--find-links\s+(.*)$')
 
@@ -145,7 +119,7 @@ setup(
     dependency_links=DEPENDENCY_LINKS,
     zip_safe=False,
     test_suite='nose.collector',
-    cmdclass={'build_ext': build_ext_subclass},
+    cmdclass={'build_ext': build_ext},
     keywords=['hash', 'hashing', 'minhash', 'simhash', 'lsh', 'text', 'shingle'],
     ext_modules=[
         Extension(

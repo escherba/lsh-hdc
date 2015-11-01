@@ -3,6 +3,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal
 from math import sqrt
 from itertools import chain, izip
+from pymaptools.containers import clusters_to_labels
 from pymaptools.sample import discrete_sample, random_seed
 from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
@@ -339,25 +340,38 @@ def test_adjustment_for_chance():
 
 
 def test_clustering_aul_empty():
-    """Test empty clustering first
+    """Empty clusterings have AUL=0.0
     """
-    score = clustering_aul_score([], bool)
-    assert_true(np.isnan(score))
+    clusters = []
+    labels = clusters_to_labels(clusters)
+    score = clustering_aul_score(*labels)
+    assert_almost_equal(score, 0.0, 4)
 
 
 def test_clustering_aul_perfect():
-    """Test empty clustering first
+    """Perfect clusterings have AUL=1.0
     """
     clusters = [[1, 1, 1, 1, 1], [0], [0]]
-    score = clustering_aul_score(clusters, bool)
+    labels = clusters_to_labels(clusters)
+    score = clustering_aul_score(*labels)
     assert_almost_equal(score, 1.0, 4)
 
 
+def test_clustering_aul_perverse():
+    """Perverese cases are 0.0 < AUL < 0.5
+    """
+    clusters = [[1], [0, 0]]
+    labels = clusters_to_labels(clusters)
+    score = clustering_aul_score(*labels)
+    assert_almost_equal(score, 0.1111, 4)
+
+
 def test_clustering_aul_precalculated():
-    """Test empty clustering first
+    """A decent clustering should have a high score`
     """
     clusters = [[1, 1, 1], [1, 1], [0], [0]]
-    score = clustering_aul_score(clusters, bool)
+    labels = clusters_to_labels(clusters)
+    score = clustering_aul_score(*labels)
     assert_almost_equal(score, 0.8286, 4)
 
 
