@@ -90,7 +90,7 @@ References
 
 import numpy as np
 import warnings
-from math import log as logn, sqrt, copysign
+from math import log, sqrt, copysign
 from collections import Mapping, Set, namedtuple
 from itertools import izip
 from operator import itemgetter
@@ -166,8 +166,8 @@ def centropy(counts):
     for c in counts:
         if c != 0:
             n += c
-            sum_c_logn_c += c * logn(c)
-    return 0.0 if n == 0 else n * logn(n) - sum_c_logn_c
+            sum_c_logn_c += c * log(c)
+    return 0.0 if n == 0 else n * log(n) - sum_c_logn_c
 
 
 def lentropy(labels):
@@ -180,7 +180,7 @@ def lentropy(labels):
     pi_sum = np.sum(pi)
     # log(a / b) should be calculated as log(a) - log(b) for
     # possible loss of precision
-    return -np.sum((pi / pi_sum) * (np.log(pi) - logn(pi_sum)))
+    return -np.sum((pi / pi_sum) * (np.log(pi) - log(pi_sum)))
 
 
 def ratio2weights(ratio):
@@ -278,7 +278,7 @@ class ContingencyTable(TableOfCounts):
         """
         H_C, H_K, I_CK = self._entropies()
         VI_CK = (H_C - I_CK) + (H_K - I_CK)
-        return VI_CK / (logn(base) * self.grand_total)
+        return _div(VI_CK, log(base) * self.grand_total)
 
     def split_join_distance(self):
         """Projection distance between partitions

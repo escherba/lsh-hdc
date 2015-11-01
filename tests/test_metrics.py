@@ -299,6 +299,7 @@ def test_IR_example():
     assert_almost_equal(c, 0.357908, 6)
     assert_almost_equal(v, 0.364562, 6)
 
+    assert_almost_equal(cm.vi_distance(),     1.971,    3)
     assert_almost_equal(cm.chisq_score(),     9.017647, 6)
     assert_almost_equal(cm.g_score(),        13.325845, 6)
 
