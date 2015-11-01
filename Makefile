@@ -2,6 +2,7 @@
 
 SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 PYMODULE := lsh_hdc
+AUTHOR := Eugene Scherba
 SHELL_PRELOAD := $(SRC_ROOT)/$(PYMODULE)/metrics.py
 EXTENSION := $(PYMODULE)/ext.so
 EXTENSION_INTERMEDIATE := $(PYMODULE)/ext.cpp
@@ -16,6 +17,9 @@ PIP := $(PYENV) pip
 
 
 include study/build.mk
+
+docs:
+	sphinx-apidoc -A "$(AUTHOR)" -e -F -o docs $(PYMODULE)
 
 package: env build_ext
 	$(PYTHON) setup.py $(DISTRIBUTE)

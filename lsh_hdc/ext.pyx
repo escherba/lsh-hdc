@@ -128,22 +128,20 @@ cpdef hash_builtin_128(x, seed=0):
 
 cdef class VarlenHash(object):
     """Create a hash function of arbitrary output length
-    :param scale: integer or long indicating roughly how large should the
-                  hashe values be
-    :type scale: int,long
-
-    Note: the return value of this function increases as the length of the
-    text to be hashed increases. So the fuction has terrible distribution
-    properties.
     """
-
     cdef _mask
 
     def __cinit__(self, bits=64):
+        """
+        :param bits: number of bits in hashed values
+        :type bits: int,long
+
+        """
         self._mask = (1 << bits) - 1
 
     def __call__(self, value, seed=0):
-        """A variable-length version of Python's builtin hash"""
+        """A variable-length version of Python's builtin hash
+        """
         if isinstance(value, unicode):
             value = value.encode("utf-8")
         elif isinstance(value, str):
@@ -171,6 +169,7 @@ cpdef long2int(num):
     :type num: long
     :return: input mapped to int range
     :rtype : int
+
     """
 
     smi1 = sys.maxint + 1

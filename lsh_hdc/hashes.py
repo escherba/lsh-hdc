@@ -151,16 +151,14 @@ def hash_builtin_128(x, seed=0):
 
 class VarlenHash(object):
     """Create a hash function of arbitrary output length
-    :param scale: integer or long indicating roughly how large should the
-                  hashe values be
-    :type scale: int,long
-
-    Note: the return value of this function increases as the length of the
-    text to be hashed increases. So the fuction has terrible distribution
-    properties.
     """
-    def __init__(self, scale=sys.maxint):
-        self.scale = scale
+    def __init__(self, bits=sys.maxint):
+        """
+        :param bits: number of bits in hashed values
+        :type bits: int,long
+
+        """
+        self._mask = (1 << bits) - 1
 
     def __call__(self, value, seed=0):
         """A variable-length version of Python's builtin hash"""
@@ -173,7 +171,7 @@ class VarlenHash(object):
         length_of_v = len(value)
         if length_of_v > 0:
             item = ord(value[0]) << 7
-            mask = self.scale - 1
+            mask = self._mask
             for char in value:
                 item = ((item * 1000003) ^ ord(char)) & mask
             item ^= length_of_v
