@@ -381,8 +381,8 @@ class ContingencyTable(TableOfCounts):
     def split_join_distance(self):
         """Projection distance between partitions
 
-        Used in graph commmunity analysis. Originally defined by van Dogen.
-        Example given in [1]_::
+        Used in graph commmunity analysis. Originally defined in [1]_.
+        Example::
 
             >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
             >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
@@ -393,9 +393,10 @@ class ContingencyTable(TableOfCounts):
         References
         ----------
 
-        .. [1] Dongen, S. V. (2000). Performance criteria for graph clustering
+        .. [1] `Dongen, S. V. (2000). Performance criteria for graph clustering
                and Markov cluster experiments. Information Systems [INS],
                (R 0012), 1-36.
+               <http://dl.acm.org/citation.cfm?id=868979>`_
 
         """
         pa_B = sum(max(x) for x in self.iter_rows())
@@ -424,10 +425,11 @@ class ContingencyTable(TableOfCounts):
         References
         ----------
 
-        .. [1] Talburt, J., Wang, R., Hess, K., & Kuo, E. (2007). An algebraic
-            approach to data quality metrics for entity resolution over large
-            datasets.  Information quality management: Theory and applications,
-            1-22.
+        .. [1] `Talburt, J., Wang, R., Hess, K., & Kuo, E. (2007). An algebraic
+               approach to data quality metrics for entity resolution over large
+               datasets.  Information quality management: Theory and
+               applications, 1-22.
+               <http://www.igi-global.com/chapter/algebraic-approach-data-quality-metrics/23022>`_
         """
         V_card = 0
         A_card = len(list(self.iter_row_totals()))
@@ -490,6 +492,9 @@ class ClusteringMetrics(ContingencyTable):
         """Jaccard similarity coefficient with correction for chance
 
         Uses Taylor series-based correction described in [1]_.
+
+        References
+        ----------
 
         .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
            Jaccard and other similarity indices for chance agreement in cluster
@@ -802,6 +807,10 @@ class ConfusionMatrix2(ContingencyTable):
     def jaccard_coeff(self):
         """Jaccard similarity coefficient
 
+        Jaccard coefficient has an interesting property in that in L-shaped
+        matrices where either FP or FN are close to zero, its scale becomes
+        equivalent to the scale of either recall or precision respectively.
+
         See Also
         --------
         dice_coeff, ochiai_coeff
@@ -886,25 +895,27 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(abs(self.FN - self.FP), self.grand_total)
 
     def informedness(self):
-        """Informedness (Recall corrected for chance, DeltaP')
+        """Informedness (Recall corrected for chance)
 
         Alternative formulations::
 
             Informedness = Sensitivity + Specificity - 1.0
                          = TPR - FPR
 
-        Synonyms: True Skill Score, Hannssen-Kuiper Score, Attributable Risk.
+        Synonyms: True Skill Score, Hannssen-Kuiper Score, Attributable Risk,
+        DeltaP'.
         """
         p1, q1 = self.row_totals.values()
         return _div(self.covar(), p1 * q1)
 
     def markedness(self):
-        """Markedness (Precision corrected for chance, DeltaP)
+        """Markedness (Precision corrected for chance)
 
         Alternative formulation::
 
             Markedness = PPV + NPV - 1.0
 
+        Synonyms: DeltaP
         """
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
