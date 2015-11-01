@@ -1,6 +1,6 @@
-import random
-import numpy as np
 import warnings
+import numpy as np
+from numpy.testing import assert_array_almost_equal
 from math import sqrt
 from itertools import chain, izip
 from pymaptools.sample import discrete_sample, random_seed
@@ -10,7 +10,6 @@ from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
     ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
     matthews_corr, expected_mutual_information, mutual_info_score, \
     adjusted_mutual_info_score
-from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true, assert_equal
 
 
@@ -128,8 +127,8 @@ def simulate_predictions(n=100, seed=None):
     """
     if seed is None:
         seed = random_seed()
-    random.seed(seed)
-    probas = [random.random() for _ in xrange(n)]
+    np.random.seed(seed % (2 ** 32))
+    probas = [np.random.random() for _ in xrange(n)]
     classes = [discrete_sample({0: (1 - p), 1: p}) for p in probas]
     return classes, probas
 
@@ -147,12 +146,11 @@ def test_adjusted_mutual_info_score():
 
     # Expected mutual information
     cm = ClusteringMetrics.from_labels(labels_a, labels_b)
-    n_samples = cm.grand_total
-    row_totals = list(cm.iter_row_totals())
-    col_totals = list(cm.iter_col_totals())
-    emi_1 = expected_mutual_information(row_totals, col_totals, n_samples)
+    row_totals = np.fromiter(cm.iter_row_totals(), dtype=np.int32)
+    col_totals = np.fromiter(cm.iter_col_totals(), dtype=np.int32)
+    emi_1 = expected_mutual_information(row_totals, col_totals)
     assert_almost_equal(emi_1, 0.15042, 5)
-    emi_2 = expected_mutual_information(col_totals, row_totals, n_samples)
+    emi_2 = expected_mutual_information(col_totals, row_totals)
     assert_almost_equal(emi_2, 0.15042, 5)
 
     # Adjusted mutual information (1)
@@ -715,100 +713,3 @@ def test_kappa_precalculated():
                         0.191111, 6)
     assert_almost_equal(matthews_corr(1, 2, 96, 5),
                         0.203746, 6)
-
-
-def test_clusterings_randomize():
-    """Alternative implementations should coincide for a random sample
-    """
-
-    for _ in xrange(1000):
-        ltrue = np.random.randint(low=0, high=5, size=(20,))
-        lpred = np.random.randint(low=0, high=5, size=(20,))
-        cm = ClusteringMetrics.from_labels(ltrue, lpred)
-
-        for m1, m2 in zip(cm.entropy_metrics(), _entropy_metrics(cm)):
-            check_with_nans(m1, m2, 4)
-
-
-def test_2x2_invariants():
-    """Alternative implementations should coincide for a random sample
-    """
-
-    for _ in xrange(10000):
-        cm = ConfusionMatrix2.from_random_counts(low=0, high=10)
-        cells_ccw = cm.to_ccw()
-
-        # check dogfood
-        assert_equal(
-            cm.to_ccw(),
-            ConfusionMatrix2.from_ccw(*cm.to_ccw()).to_ccw(),
-            msg="must be able to convert to tuple and create from tuple")
-
-        # check informedness
-        actual_info = cm.informedness()
-        expected_info_1 = cm.sensitivity() + cm.specificity() - 1.0
-        expected_info_2 = cm.TPR() - cm.FPR()
-        check_with_nans(actual_info, expected_info_1, 4, ensure_nans=False)
-        check_with_nans(actual_info, expected_info_2, 4, ensure_nans=False)
-
-        # check markedness
-        actual_mark = cm.markedness()
-        expected_mark = cm.PPV() + cm.NPV() - 1.0
-        check_with_nans(actual_mark, expected_mark, 4, ensure_nans=False,
-                        msg="Markedness must be equal to expected")
-
-        # check matthews corr coeff
-        actual_mcc = cm.matthews_corr()
-        expected_mcc = geometric_mean(actual_info, actual_mark)
-        check_with_nans(actual_mcc, expected_mcc, 4, ensure_nans=False,
-                        msg="MCC1 and MCC 2 must be the same")
-
-        # check kappa implementations
-        actual_kappa = cm.kappa()
-        expected_kappa = _kappa(*cells_ccw)
-        check_with_nans(actual_kappa, expected_kappa, 4,
-                        msg="kappas must be equal")
-
-        # check odds ratio and Yule's Q
-        actual_odds_ratio = cm.DOR()
-        actual_yule_q = cm.yule_q()
-        expected_yule_q = _div(actual_odds_ratio - 1.0, actual_odds_ratio + 1.0)
-        expected_odds_ratio = _div(cm.PLL(), cm.NLL())
-        check_with_nans(actual_odds_ratio, expected_odds_ratio, 4, ensure_nans=False,
-                        msg="DOR must be equal to PLL/NLL")
-        check_with_nans(actual_yule_q, expected_yule_q, 4, ensure_nans=False,
-                        msg="Yule's Q must be equal to (DOR-1)/(DOR+1)")
-
-        # check F-score and Dice
-        expected_f = harmonic_mean(cm.precision(), cm.recall())
-        actual_f = cm.fscore()
-        check_with_nans(expected_f, actual_f, 6,
-                        msg="Fscore must be equal to expected")
-        check_with_nans(expected_f, cm.dice_coeff(), 6, ensure_nans=False,
-                        msg="Fscore must be equal to Dice")
-
-        # check association coefficients (1)
-        dice = cm.dice_coeff()
-        expected_jaccard = _div(dice, 2.0 - dice)
-        actual_jaccard = cm.jaccard_coeff()
-        check_with_nans(actual_jaccard, expected_jaccard, 6, ensure_nans=False,
-                        msg="Jaccard coeff must match expected value")
-
-        # check association coefficients (2)
-        jaccard = cm.jaccard_coeff()
-        expected_ss2 = _div(jaccard, 2.0 - jaccard)
-        actual_ss2 = cm.sokal_sneath_coeff()
-        check_with_nans(actual_ss2, expected_ss2, 6, ensure_nans=False,
-                        msg="SS2 coeff must match expected value")
-
-        # (3)
-        gl = cm.gower_legendre_coeff()
-        expected_acc = _div(gl, 2.0 - gl)
-        actual_acc = cm.accuracy()
-        check_with_nans(actual_acc, expected_acc, 6, ensure_nans=False,
-                        msg="Accuracy coeff must match expected value")
-
-        expected_rt = _div(actual_acc, 2.0 - actual_acc)
-        actual_rt = cm.rogers_tanimoto_coeff()
-        check_with_nans(actual_rt, expected_rt, 6, ensure_nans=False,
-                        msg="Rogers-Tanimoto coeff must match expected value")

@@ -22,7 +22,7 @@ __all__     = [
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef expected_mutual_information(row_counts, col_counts, int n_samples):
+cpdef expected_mutual_information(row_counts, col_counts):
     """Calculate the expected mutual information for two labelings.
     """
     cdef int R, C
@@ -37,7 +37,9 @@ cpdef expected_mutual_information(row_counts, col_counts, int n_samples):
     R = len(a)
     C = len(b)
     #R, C = contingency.shape
-    N = float(n_samples)
+    N = np.sum(a)
+    if not np.isclose(N, np.sum(b)):
+        raise ValueError("Input sums must be equal")
     #a = np.sum(contingency, axis=1).astype(np.int32)
     #b = np.sum(contingency, axis=0).astype(np.int32)
     # There are three major terms to the EMI equation, which are multiplied to

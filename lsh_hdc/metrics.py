@@ -80,7 +80,7 @@ References
 .. [1] `Sokal, R. R., & Rohlf, F. J. (2012). Biometry (4th edn). pp. 742-744.
        <http://www.amazon.com/dp/0716786044>`_
 
-.. [2] Wikipedia entry on Fisher's "Lady Tasting Tea" experiment
+.. [2] `Wikipedia entry on Fisher's "Lady Tasting Tea" experiment
        <https://en.wikipedia.org/wiki/Lady_tasting_tea>`_
 
 """
@@ -1190,10 +1190,11 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
     References
     ----------
 
-    .. [1] `Vinh, Epps, and Bailey, (2010). Information Theoretic Measures for
-       Clusterings Comparison: Variants, Properties, Normalization and
-       Correction for Chance, JMLR
-       <http://jmlr.csail.mit.edu/papers/volume11/vinh10a/vinh10a.pdf>`_
+    .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
+           measures for clusterings comparison: Variants, properties,
+           normalization and correction for chance. The Journal of Machine
+           Learning Research, 11, 2837-2854.
+           <http://www.jmlr.org/papers/v11/vinh10a.html>`_
 
     """
     # labels_true, labels_pred = check_clusterings(labels_true, labels_pred)
@@ -1209,12 +1210,11 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
     # Calculate the MI for the two clusterings
     cm = ContingencyTable.from_labels(labels_true, labels_pred)
     mi = cm.mutual_info_score()
-    row_totals = list(cm.iter_row_totals())
-    col_totals = list(cm.iter_col_totals())
-    n_samples = cm.grand_total
+    row_totals = np.fromiter(cm.iter_row_totals(), dtype=np.int32)
+    col_totals = np.fromiter(cm.iter_col_totals(), dtype=np.int32)
 
     # Calculate the expected value for the mutual information
-    emi = expected_mutual_information(row_totals, col_totals, n_samples)
+    emi = expected_mutual_information(row_totals, col_totals)
 
     # Calculate entropy for each labeling
     h_true, h_pred = lentropy(labels_true), lentropy(labels_pred)
