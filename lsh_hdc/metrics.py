@@ -92,7 +92,7 @@ from itertools import izip
 from operator import itemgetter
 from sklearn.metrics.ranking import roc_curve, auc
 from pymaptools.iter import aggregate_tuples
-from pymaptools.containers import TableOfCounts
+from pymaptools.containers import TableOfCounts, labels_to_clusters
 from lsh_hdc.fixes import bincount
 from lsh_hdc.expected_mutual_info_fast import expected_mutual_information
 
@@ -1314,47 +1314,106 @@ def _plot_lift(xs, ys):  # pragma: no cover
     pyplot.show()
 
 
-def clustering_aul_score(clusters, is_pos):
-    """Area under Lift Curve (AUL) for 2 classes and n clusters
+def clustering_aul_score(y_true, labels_pred):
+    """Area under Lift Curve (AUL) for cluster-size correlated classification
 
-    Assume that we have a large data set of mostly unique samples where some
-    underlying binary property is correlated to similarity of those samples to
-    one another (i.e. whether the samples can form clusters). Assume also that
-    we are not interested in whether the clusters were assigned correctly, only
-    in whether our clustering is able to gather as many positive samples as
-    possible, preferably (but not necessarily) in very few homogeneous clusters.
-    In other words, we want our clusters to contain samples that belong to the
-    positive class, while the unclustered samples (or those found in smaller
-    clusters) should be negative.
+    The AUL measure here is similar to Gini coefficient of inequality [1]_
+    except we plot the corresponding curve in the opposite direction (from
+    "richest" to "poorest"), and do not subtract 0.5 from the resulting score.
 
-    After clustering is performed, we order the clusters from the largest one to
-    the smallest one, and plot a cumulative step function where the width of the
-    bin under the step is proportional to cluster size, and the height of the
-    bin is proportional to the cumulative number of positive samples seen so
-    far. A perfect clustering (only one cluster covers the entire set of
-    positives in the sample set) will have the AUL of 1.0. A failure to cluster
-    or a clustering that is completely unrelated to the attribute studied will
-    have AUL of 0.5.
+    Problem Statement
+    -----------------
 
-    The application that inspired this metric was mining for positive spam
-    examples in large sets of short user-generated content. Spammy content tends
-    to form clusters either because creative rewriting of every single
-    individual spam message is too expensive to employ in a spam campaign, or
-    because, even if human or algorithmic rewriting is applied, one can still
-    find features that link individual spam messages to one another because they
-    all promote the same product or service or originate from the same
-    geographic area.
+    Assume that there is a large data set of mostly unique samples where a
+    hidden binary variable is dependent on the number of similar samples that
+    exist in the set (i.e. a sample is called positive if it has many neighbors)
+    and that our goal is to label all samples in this set. It is easy to see
+    that, given sparse enough data, if a clustering method relies on the same
+    sample property on which the ground truth similarity space is defined, it
+    will naturally separate the samples into two groups -- those found in
+    clusters and containing mostly positives, and those found outside clusters
+    and containing mostly negatives.  There would exist only one possible
+    perfect clustering -- the one with a single, entirely homogeneous cluster C
+    that covers all positives present in the data set. If one were to obtain
+    such clustering, one could correctly label all positive samples in one step
+    with the simple rule, "all positive samples belong to cluster C". Under an
+    imperfect clustering, on the other hand, the presence of the given sample in
+    a cluster of size two or more implies the sample is only likely to be
+    positive, with the confidence of the positive call monotonously increasing
+    with the size of the cluster. Furthermore, under imperfect conditions, a
+    possibility is introduced that a cluster could predominantly or even
+    entirely consist of negatives, and one would have to perform additional work
+    labeling samples. To minimize the amount of work performed, we would like
+    the metric to penalize situations with many small clusters (even if they are
+    perfectly homogeneous), with maximum penalty applied to the clustering where
+    all clusters are of size one.
 
-    The AUL score calculated is very similar to the Gini index of inequality
-    (area between equality and the Lorenz curve) except we do not subtract 0.5.
+    The application that inspired the design of this metric was mining for
+    positive spam examples in large data sets of short user-generated content.
+    Given large enough data sets, spam content naturally forms clusters either
+    because creative rewriting of every single individual spam message is too
+    expensive for spammers to employ, or because, even if human or algorithmic
+    rewriting is applied, one can still find features that link individual spam
+    messages to their creator or to the product or service being promoted in the
+    spam campaign. The finding was consistent with what is reported in
+    literature [2]_.
+
+    Algorithm
+    ---------
+
+    Given a clustering, we order the clusters from the largest one to the
+    smallest one. We then plot a cumulative step function where the width of the
+    bin under a given "step" is proportional to cluster size, and the height of
+    the bin is proportional to the cumulative number of positive samples seen so
+    far. After two-way normalization, a perfect clustering (i.e. where a single
+    perfectly homogeneous cluster covers the entire set of positives) will have
+    the AUL score of 1.0. A failure to cluster or a clustering based on a
+    property completely unrelated with the ground truth labeling will have the
+    AUL of 0.5. A perverse clustering, i.e. where predominantely negative
+    samples fall into large clusters and positive ones remain unclustered or
+    fall into smaller clusters will have the AUL somewhere between 0.0 and 0.5.
+
+    A special treatment is necessary for cases where clusters are tied by size.
+    If one were to treat tied clusters as a single group, one would obtain AUL
+    of 1.0 when no clusters at all are present, which is against our desiderata.
+    On the other hand, if one were to treat tied clusters entirely separately,
+    one would obtain different results depending on the properties of the
+    sorting algorithm, also an undesirable situation. Always placing "heavy"
+    clusters (i.e. those containig more positives) towards the beginnning or
+    towards the end of the tied group will result in, respectively,
+    overestimating or underestimating the true AUL. The solution here is to
+    average the positive counts among all clusters in a tied group, and then
+    walk through them one by one, with the stepwise cumulative function
+    asymptotically approaching a diagonal from the group's bottom left corner to
+    the top right one. This way, a complete absence of clustering (i.e. all
+    clusters are of size one) will always result in AUL of 0.5, which is also
+    the AUL for a random clustering uncorrelated with the ground truth labeling.
+
+    References
+    ----------
+
+    [1] `Wikipedia entry for Gini coefficient of inequality`
+        <https://en.wikipedia.org/wiki/Gini_coefficient>`_
+
+    [2] `Whissell, J. S., & Clarke, C. L. (2011, September). Clustering for
+        semi-supervised spam filtering. In Proceedings of the 8th Annual
+        Collaboration, Electronic messaging, Anti-Abuse and Spam Conference (pp.
+        125-134). ACM.
+        <https://doi.org/10.1145/2030376.2030391>`_
+
     """
 
-    # TODO: don't use is_pos() function and instead provide the same interface
-    # as Scikit-Learn functions that take (labels_true, labels_pred) tuple
+    # form clusters from label pairs
+    data = labels_to_clusters(y_true, labels_pred)
 
-    sortable = [(len(cluster), sum(is_pos(point) for point in cluster)) for cluster in clusters]
-    # sort just by cluster size
-    data = sorted(sortable, key=itemgetter(0), reverse=True)
+    # sort by cluster size
+    data = sorted(
+        ((len(truth_vals), sum(truth_vals)) for truth_vals in data),
+        key=itemgetter(0),
+        reverse=True
+    )
+
+    # aggregate groups of clusters by size so that we could handle ties
     data = list(aggregate_tuples(data))
 
     total_pos = 0
@@ -1374,9 +1433,6 @@ def clustering_aul_score(clusters, is_pos):
             max_vertical += sum(pos_counts)
 
     assert max_horizontal >= total_pos
-
-    if max_vertical == 0:
-        return np.nan
 
     aul_score = 0.0
     bin_height = 0.0
@@ -1404,5 +1460,9 @@ def clustering_aul_score(clusters, is_pos):
             # ys.append(bin_height / float(max_vertical))
 
     assert max_horizontal == bin_right_edge
-    aul_score /= (max_vertical * max_horizontal)
-    return aul_score
+    denom = max_vertical * max_horizontal
+
+    # Special case: since we define the AUL to be always smaller than or equal
+    # to the surrounding rectangle, when the rectangle area (the denominator) is
+    # zero, the AUL score is also zero.
+    return 0.0 if denom == 0 else aul_score / denom
