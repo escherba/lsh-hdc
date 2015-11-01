@@ -591,7 +591,7 @@ class ConfusionMatrix2(ContingencyTable):
 
         >>> ConfusionMatrix2(TP=20, FN=31, FP=14, TN=156)
         array([[ 20,  31],
-            [ 14, 156]])
+               [ 14, 156]])
 
     For a nominal variable, the negative class becomes a distinct label, and
     TP/FP/FN/TN terminology does not apply, although the algorithms should work
