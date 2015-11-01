@@ -1,4 +1,4 @@
-.PHONY: clean coverage develop env extras package release test virtualenv build_ext shell
+.PHONY: clean coverage develop env extras package release test virtualenv build_ext shell docs
 
 SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 PYMODULE := lsh_hdc
@@ -18,8 +18,11 @@ PIP := $(PYENV) pip
 
 include study/build.mk
 
-docs:
+doc_setup:
 	sphinx-apidoc -A "$(AUTHOR)" -e -F -o docs $(PYMODULE)
+
+docs:
+	cd docs; make html; cd ..
 
 package: env build_ext
 	$(PYTHON) setup.py $(DISTRIBUTE)

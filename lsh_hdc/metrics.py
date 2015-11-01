@@ -36,9 +36,11 @@ all involving contingency tables.
 
 * Under Model III, both rows and column totals are fixed.
 
-Model O is rarely employed in practice because the researchers almost always
-have a certain number of samples they are interesting in drawing before they
-begin the experiment. An example of a Model O study would be astronomy research
+Model O is rarely employed in practice because researchers almost always have
+some rough total number of samples in mind that they would like to measure
+before they begin the actual measuring. However, Model O situation might occur
+when the grand total is not up to researchers to fix, and so they are forced to
+treat it as a random variable. An example of this would be astronomy research
 that tests a hypothesis about a generalizable property such as dark matter
 content by looking at all galaxies in the Local Group, and the researchers
 obviously don't get to choose ahead of time how many galaxies there are near
@@ -50,9 +52,9 @@ an example of Model I approach. A replication study, if performed by the
 original author, is a Model I study, but if performed by another group of
 researchers, becomes a Model II study.
 
-Fisher's classic example of tea-tasting is an example of Model III study [2]_.
+Fisher's classic example of tea tasting is an example of a Model III study [2]_.
 The key differnce from a Model II study here is that the subject was asked to
-select 4 cups prepared by one method, not any number of cups. The subject was
+call four cups as prepared by one method and four by the other. The subject was
 not free to say, for example, that none of the cups were prepared by adding milk
 first. The hypergeometric distribution used in the subsequent Fisher's exact
 test shares the assumption of the experiment that both row and column counts are
@@ -68,10 +70,10 @@ components seem more suited to judging association.
 
 Additionally, if there is implied causality relationship, one-sided measures
 might be preferred. For example, when performing feature selection, it seems
-logical to conclude that the presence of features should bee seen as influencing
-the class label, not the other way around.
+logical to measure the influence of features on the class label, not the other
+way around.
 
-Using Monte-Carlo methods, it should be possible to test the validity of the
+Using Monte Carlo methods, it should be possible to test the validity of the
 above two propositions as well as to visualize the effect of the assumptions
 made.
 
@@ -87,7 +89,8 @@ References
 """
 
 import numpy as np
-from math import log as logn, sqrt, copysign
+import warnings
+from math import log, sqrt, copysign
 from collections import Mapping, Set, namedtuple
 from itertools import izip
 from operator import itemgetter
@@ -96,11 +99,6 @@ from pymaptools.iter import aggregate_tuples
 from pymaptools.containers import TableOfCounts, labels_to_clusters
 from lsh_hdc.fixes import bincount
 from lsh_hdc.expected_mutual_info_fast import expected_mutual_information
-
-
-class pretty_repr(type):
-    def _repr_pretty_(self, p, cycle):
-        p.text(repr(self))
 
 
 def nchoose2(n):
@@ -163,12 +161,13 @@ def centropy(counts):
     for c in counts:
         if c != 0:
             n += c
-            sum_c_logn_c += c * logn(c)
-    return 0.0 if n == 0 else n * logn(n) - sum_c_logn_c
+            sum_c_logn_c += c * log(c)
+    return 0.0 if n == 0 else n * log(n) - sum_c_logn_c
 
 
 def lentropy(labels):
-    """Calculates the entropy for a labeling."""
+    """Calculates the entropy for a labeling.
+    """
     if len(labels) == 0:
         return 1.0
     label_idx = np.unique(labels, return_inverse=True)[1]
@@ -177,7 +176,7 @@ def lentropy(labels):
     pi_sum = np.sum(pi)
     # log(a / b) should be calculated as log(a) - log(b) for
     # possible loss of precision
-    return -np.sum((pi / pi_sum) * (np.log(pi) - logn(pi_sum)))
+    return -np.sum((pi / pi_sum) * (np.log(pi) - log(pi_sum)))
 
 
 def ratio2weights(ratio):
@@ -205,12 +204,14 @@ def geometric_mean(x, y):
 def geometric_mean_weighted(x, y, ratio=1.0):
     """Geometric mean of two numbers with a weight ratio. Returns a float
 
-    >>> geometric_mean_weighted(1, 4, ratio=1.0)
-    2.0
-    >>> geometric_mean_weighted(1, 4, ratio=0.0)
-    1.0
-    >>> geometric_mean_weighted(1, 4, ratio=float('inf'))
-    4.0
+    ::
+
+        >>> geometric_mean_weighted(1, 4, ratio=1.0)
+        2.0
+        >>> geometric_mean_weighted(1, 4, ratio=0.0)
+        1.0
+        >>> geometric_mean_weighted(1, 4, ratio=float('inf'))
+        4.0
     """
     lweight, rweight = ratio2weights(ratio)
     lsign = copysign(1, x)
@@ -229,12 +230,14 @@ def harmonic_mean(x, y):
 def harmonic_mean_weighted(x, y, ratio=1.0):
     """Harmonic mean of two numbers with a weight ratio. Returns a float
 
-    >>> harmonic_mean_weighted(1, 3, ratio=1.0)
-    1.5
-    >>> harmonic_mean_weighted(1, 3, ratio=0.0)
-    1.0
-    >>> harmonic_mean_weighted(1, 3, ratio=float('inf'))
-    3.0
+    ::
+
+        >>> harmonic_mean_weighted(1, 3, ratio=1.0)
+        1.5
+        >>> harmonic_mean_weighted(1, 3, ratio=0.0)
+        1.0
+        >>> harmonic_mean_weighted(1, 3, ratio=float('inf'))
+        3.0
     """
     lweight, rweight = ratio2weights(ratio)
     return float(x) if x == y else (x * y) / (lweight * x + rweight * y)
@@ -242,7 +245,7 @@ def harmonic_mean_weighted(x, y, ratio=1.0):
 
 class ContingencyTable(TableOfCounts):
 
-    # TODO: subclass pandas.DataFrame instead
+    # TODO: subclass pandas.DataFrame instead?
 
     def chisq_score(self):
         """Pearson's chi-square statistic
@@ -255,93 +258,6 @@ class ContingencyTable(TableOfCounts):
                 expected = numer / N
                 score += (observed - expected) ** 2 / expected
         return score
-
-    def _entropies(self):
-        """Return H_C, H_K, and mutual information
-
-        Not normalized by N
-        """
-        H_C = centropy(self.row_totals)
-        H_K = centropy(self.col_totals)
-        H_actual = centropy(self.iter_cells())
-        H_expected = H_C + H_K
-        I_CK = H_expected - H_actual
-        return H_C, H_K, I_CK
-
-    def vi_distance(self, base=2.0):
-        """Variation of Information distance
-
-        Normalized to log base 2
-        """
-        H_C, H_K, I_CK = self._entropies()
-        VI_CK = (H_C - I_CK) + (H_K - I_CK)
-        return VI_CK / (logn(base) * self.grand_total)
-
-    def split_join_distance(self):
-        """Projection distance between partitions
-
-        Used in graph commmunity analysis. Originally defined by van Dogen.
-        Example given in [1]_::
-
-        >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
-        >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
-        >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-        >>> cm.split_join_distance()
-        11
-
-        References
-        ----------
-
-        .. [1] Dongen, S. V. (2000). Performance criteria for graph clustering
-               and Markov cluster experiments. Information Systems [INS],
-               (R 0012), 1-36.
-
-        """
-        pa_B = sum(max(x) for x in self.iter_rows())
-        pb_A = sum(max(x) for x in self.iter_cols())
-        return 2 * self.grand_total - pa_B - pb_A
-
-    def talburt_wang_index(self):
-        """Talburt-Wang index of similarity of two partitionings [1]_
-
-        >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
-        >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
-        >>> cm = ContingencyTable.from_labels(ltrue, lpred)
-        >>> round(cm.talburt_wang_index(), 3)
-        0.816
-
-        >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
-        ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
-        >>> cm = ContingencyTable.from_clusters(clusters)
-        >>> round(cm.talburt_wang_index(), 2)
-        0.49
-
-        References
-        ----------
-
-        .. [1] Talburt, J., Wang, R., Hess, K., & Kuo, E. (2007). An algebraic
-            approach to data quality metrics for entity resolution over large
-            datasets.  Information quality management: Theory and applications,
-            1-22.
-        """
-        V_card = 0
-        A_card = len(list(self.iter_row_totals()))
-        B_card = len(list(self.iter_col_totals()))
-        for row in self.iter_rows():
-            V_card += len(list(row))
-        prod = A_card * B_card
-        return np.nan if prod == 0 else sqrt(prod) / V_card
-
-    def mutual_info_score(self):
-        """Mutual Information Score
-
-        Mutual Information (divided by N).
-
-        The metric is equal to the Kullback-Leibler divergence of the joint
-        distribution with the product distribution of the marginals
-        """
-        _, _, I_CK = self._entropies()
-        return I_CK / self.grand_total
 
     def g_score(self):
         """G-statistic for RxC contingency table
@@ -370,28 +286,89 @@ class ContingencyTable(TableOfCounts):
         _, _, I_CK = self._entropies()
         return 2.0 * I_CK
 
+    def _entropies(self):
+        """Return H_C, H_K, and mutual information
+
+        Not normalized by N
+        """
+        H_C = centropy(self.row_totals)
+        H_K = centropy(self.col_totals)
+        H_actual = centropy(self.iter_cells())
+        H_expected = H_C + H_K
+        I_CK = H_expected - H_actual
+        return H_C, H_K, I_CK
+
+    def vi_distance(self):
+        """Variation of Information distance
+
+        The distance metric calculated here is one of several possible entropy-
+        based distance metrics that could be defined on a RxC matrix. Per Table
+        2 in [1]_, the given measure is equivalent to ``2 * D_sum``.
+
+        Note that the entropy variables H below are calculated using natural
+        logs, so a base correction may be necessary if you need your result in
+        base 2 for example.
+
+        References
+        ----------
+
+        .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
+               measures for clusterings comparison: Variants, properties,
+               normalization and correction for chance. The Journal of Machine
+               Learning Research, 11, 2837-2854.
+               <http://www.jmlr.org/papers/v11/vinh10a.html>`_
+
+        """
+        H_C, H_K, I_CK = self._entropies()
+        VI_CK = (H_C - I_CK) + (H_K - I_CK)
+        return _div(VI_CK, self.grand_total)
+
+    def mutual_info_score(self):
+        """Mutual Information Score
+
+        Mutual Information (divided by N).
+
+        The metric is equal to the Kullback-Leibler divergence of the joint
+        distribution with the product distribution of the marginals.
+        """
+        _, _, I_CK = self._entropies()
+        return I_CK / self.grand_total
+
     def entropy_metrics(self):
         """Calculate three entropy-based metrics used for clustering evaluation
 
         The metrics are: Homogeneity, Completeness, and V-measure
 
         The V-measure metric is also known as Normalized Mutual Information
-        (NMI), and is defined here as the harmonic mean of Homogeneity and
-        Completeness.  Homogeneity and Completeness are duals of each other and
-        can be thought of as squared regression coefficients of a given
-        clustering vs true labels (homogeneity) and of the dual problem of true
-        labels vs given clustering (completeness). Because of the dual property,
-        in a symmetric matrix, all three scores are the same.
+        (NMI), and is calculated here as the harmonic mean of Homogeneity and
+        Completeness (``NMI_sum``). There exist other definitions of NMI (see
+        Table 2 in [1]_ for a good review).
 
-        This code is replaces an equivalent function in Scikit-Learn known as
+        Homogeneity and Completeness are duals of each other and can be thought
+        of (although this is not technically accurate) as squared regression
+        coefficients of a given clustering vs true labels (homogeneity) and of
+        the dual problem of true labels vs given clustering (completeness).
+        Because of the dual property, in a symmetric matrix, all three scores
+        are the same.
+
+        This method replaces the equivalent function in Scikit-Learn known as
         `homogeneity_completeness_v_measure` (the Scikit-Learn version takes up
         O(n^2) space because it stores data in a dense NumPy array) while the
         given version is subquadratic because of sparse underlying storage.
 
-        Note that the entropy variables as used directly in the code below are
-        improperly defined because they ought to be divided by N (the grand
-        total for the contigency table). However, the N variable cancels out
-        during normalization.
+        Note that the entropy variables H in the code below are improperly
+        defined because they ought to be divided by N (the grand total for the
+        contigency table). However, the N variable cancels out during
+        normalization.
+
+        References
+        ----------
+
+        .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
+               measures for clusterings comparison: Variants, properties,
+               normalization and correction for chance. The Journal of Machine
+               Learning Research, 11, 2837-2854.
+               <http://www.jmlr.org/papers/v11/vinh10a.html>`_
 
         """
         # ensure non-negative values by taking max of 0 and given value
@@ -400,6 +377,67 @@ class ContingencyTable(TableOfCounts):
         c = 1.0 if H_K == 0.0 else max(0.0, I_CK / H_K)
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
+
+    def split_join_distance(self):
+        """Projection distance between partitions
+
+        Used in graph commmunity analysis. Originally defined in [1]_.
+        Example::
+
+            >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
+            >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
+            >>> cm = ClusteringMetrics.from_partitions(p1, p2)
+            >>> cm.split_join_distance()
+            11
+
+        References
+        ----------
+
+        .. [1] `Dongen, S. V. (2000). Performance criteria for graph clustering
+               and Markov cluster experiments. Information Systems [INS],
+               (R 0012), 1-36.
+               <http://dl.acm.org/citation.cfm?id=868979>`_
+
+        """
+        pa_B = sum(max(x) for x in self.iter_rows())
+        pb_A = sum(max(x) for x in self.iter_cols())
+        return 2 * self.grand_total - pa_B - pb_A
+
+    def talburt_wang_index(self):
+        """Talburt-Wang index of similarity of two partitionings
+
+        Example 1::
+
+            >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
+            >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
+            >>> cm = ContingencyTable.from_labels(ltrue, lpred)
+            >>> round(cm.talburt_wang_index(), 3)
+            0.816
+
+        Example 2 (from [1]_)::
+
+            >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
+            ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
+            >>> cm = ContingencyTable.from_clusters(clusters)
+            >>> round(cm.talburt_wang_index(), 2)
+            0.49
+
+        References
+        ----------
+
+        .. [1] `Talburt, J., Wang, R., Hess, K., & Kuo, E. (2007). An algebraic
+               approach to data quality metrics for entity resolution over large
+               datasets.  Information quality management: Theory and
+               applications, 1-22.
+               <http://www.igi-global.com/chapter/algebraic-approach-data-quality-metrics/23022>`_
+        """
+        V_card = 0
+        A_card = len(list(self.iter_row_totals()))
+        B_card = len(list(self.iter_col_totals()))
+        for row in self.iter_rows():
+            V_card += len(list(row))
+        prod = A_card * B_card
+        return np.nan if prod == 0 else sqrt(prod) / V_card
 
 
 class ClusteringMetrics(ContingencyTable):
@@ -420,10 +458,10 @@ class ClusteringMetrics(ContingencyTable):
 
         Given two partitionings A and B and a co-occurence matrix of point pairs,
 
-        TP - count of pairs found in the same partition in both A and B
-        FP - count of pairs found in the same partition in A but not in B
-        FN - count of pairs found in the same partition in B but not in A
-        TN - count of pairs in different partitions in both A and B
+            * TP - count of pairs found in the same partition in both A and B
+            * FP - count of pairs found in the same partition in A but not in B
+            * FN - count of pairs found in the same partition in B but not in A
+            * TN - count of pairs in different partitions in both A and B
 
         Note that although the resulting confusion matrix has the form of a
         correlation table for two binary variables, it is not symmetric if the
@@ -455,6 +493,9 @@ class ClusteringMetrics(ContingencyTable):
 
         Uses Taylor series-based correction described in [1]_.
 
+        References
+        ----------
+
         .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
            Jaccard and other similarity indices for chance agreement in cluster
            analysis. Advances in Data Analysis and Classification, 5(3), 179-200.
@@ -479,8 +520,7 @@ class ClusteringMetrics(ContingencyTable):
 
         See Also
         --------
-
-        adjusted_jaccard_index
+        adjusted_jaccard_coeff
 
         """
         n = self.grand_total
@@ -502,8 +542,7 @@ class ClusteringMetrics(ContingencyTable):
 
         See Also
         --------
-
-        adjusted_jaccard_index
+        adjusted_jaccard_coeff
 
         """
         n = self.grand_total
@@ -527,8 +566,7 @@ class ClusteringMetrics(ContingencyTable):
 
         See Also
         --------
-
-        adjusted_jaccard_index
+        adjusted_jaccard_coeff
 
         """
         n = self.grand_total
@@ -554,18 +592,17 @@ class ConfusionMatrix2(ContingencyTable):
 
     For a binary variable (where one is measuring either presence vs absence of
     a particular feature), a confusion matrix where the ground truth levels are
-    rows looks like:
+    rows looks like this::
 
-        TP  FN
-        FP  TN
+        >>> ConfusionMatrix2(TP=20, FN=31, FP=14, TN=156)
+        array([[ 20,  31],
+               [ 14, 156]])
 
     For a nominal variable, the negative class becomes a distinct label, and
     TP/FP/FN/TN terminology does not apply, although the algorithms should work
     the same way (with the obvious distinction that different assumptions will
     be made).
     """
-
-    __metaclass__ = pretty_repr
 
     def __repr__(self):
         return repr(self.to_array())
@@ -720,8 +757,12 @@ class ConfusionMatrix2(ContingencyTable):
         """F-score
 
         As beta tends to infinity, F-score will approach recall.  As beta tends
-        to zero, F-score will approach precision. For a similarity coefficient
-        see dice_coeff.
+        to zero, F-score will approach precision. A similarity coefficient that
+        uses a similar definition is called Dice coefficient.
+
+        See Also
+        --------
+        dice_coeff
         """
         return harmonic_mean_weighted(self.precision(), self.recall(), beta ** 2)
 
@@ -734,8 +775,7 @@ class ConfusionMatrix2(ContingencyTable):
 
         See Also
         --------
-        jaccard_coeff, ochiai_coeff
-
+        fscore, jaccard_coeff, ochiai_coeff
         """
         a = self.TP
         return _div(2 * a, 2 * a + self.FN + self.FP)
@@ -743,7 +783,11 @@ class ConfusionMatrix2(ContingencyTable):
     def rogers_tanimoto_coeff(self):
         """Rogers-Tanimoto similarity coefficient
 
-        Like Gower-Legendre but upweighs 'b + c'
+        Like Gower-Legendre but upweighs ``b + c``
+
+        See Also
+        --------
+        gower_legendre_coeff
         """
         a_plus_d = self.TP + self.TN
         return _div(a_plus_d, a_plus_d + 2 * (self.FN + self.FP))
@@ -751,7 +795,11 @@ class ConfusionMatrix2(ContingencyTable):
     def gower_legendre_coeff(self):
         """Gower-Legendre similarity coefficient
 
-        Like Rogers-Tanimoto but downweighs 'b + c'
+        Like Rogers-Tanimoto but downweighs ``b + c``
+
+        See Also
+        --------
+        rogers_tanimoto_coeff
         """
         a_plus_d = self.TP + self.TN
         return _div(a_plus_d, a_plus_d + 0.5 * (self.FN + self.FP))
@@ -759,19 +807,27 @@ class ConfusionMatrix2(ContingencyTable):
     def jaccard_coeff(self):
         """Jaccard similarity coefficient
 
-        Other metrics from the same family: dice_coeff, ochiai_coeff
+        Jaccard coefficient has an interesting property in that in L-shaped
+        matrices where either FP or FN are close to zero, its scale becomes
+        equivalent to the scale of either recall or precision respectively.
+
+        See Also
+        --------
+        dice_coeff, ochiai_coeff
         """
         return _div(self.TP, self.TP + self.FP + self.FN)
 
     def ochiai_coeff(self):
         """Ochiai similarity coefficient (Fowlkes-Mallows, Cosine similarity)
 
-        Other metrics from the same family: jaccard_coeff, dice_coeff
-
         This similarity index has an interpretation that it is the geometric
         mean of the conditional probability of an element (in the case of
         pairwise clustering comparison, a pair of elements) belonging to the
         same cluster given that they belong to the same class [1]_.
+
+        See Also
+        --------
+        jaccard_coeff, dice_coeff
 
         References
         ----------
@@ -786,13 +842,19 @@ class ConfusionMatrix2(ContingencyTable):
     def sokal_sneath_coeff(self):
         """Sokal and Sneath similarity index
 
-        In a 2x2 matrix
+        In a 2x2 matrix,
+
+        ::
 
             a b
             c d,
 
         Dice places more weight on 'a' component, Jaccard places equal weight on
         'a' and 'b + c', while Sokal and Sneath places more weight on 'b + c'.
+
+        See Also
+        --------
+        dice_coeff, jaccard_coeff
         """
         a = self.TP
         return _div(a, a + 2 * (self.FN + self.FP))
@@ -803,7 +865,7 @@ class ConfusionMatrix2(ContingencyTable):
         In interrater agreement studies, prevalence is high when the proportion
         of agreements on the positive classification differs from that of the
         negative classification.  Example of a confusion matrix with high
-        prevalence:
+        prevalence::
 
             3   27
             28  132
@@ -819,7 +881,7 @@ class ConfusionMatrix2(ContingencyTable):
 
         In interrater agreement studies, bias is the extent to which the raters
         disagree on the positive-negative ratio of the binary variable studied.
-        Example of a confusion matrix with high bias:
+        Example of a confusion matrix with high bias::
 
             17  14
             78  81
@@ -835,12 +897,13 @@ class ConfusionMatrix2(ContingencyTable):
     def informedness(self):
         """Informedness (Recall corrected for chance)
 
-        Alternative formulations:
+        Alternative formulations::
 
             Informedness = Sensitivity + Specificity - 1.0
                          = TPR - FPR
 
-        Synonyms: True Skill Score, Hannssen-Kuiper Score, Attributable Risk.
+        Synonyms: True Skill Score, Hannssen-Kuiper Score, Attributable Risk,
+        DeltaP'.
         """
         p1, q1 = self.row_totals.values()
         return _div(self.covar(), p1 * q1)
@@ -848,10 +911,11 @@ class ConfusionMatrix2(ContingencyTable):
     def markedness(self):
         """Markedness (Precision corrected for chance)
 
-        Alternative formulation:
+        Alternative formulation::
 
             Markedness = PPV + NPV - 1.0
 
+        Synonyms: DeltaP
         """
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
@@ -882,19 +946,19 @@ class ConfusionMatrix2(ContingencyTable):
         coefficient returns a perfect score on the corresponding pairwise
         co-association matrix::
 
-        >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
-        >>> cm = ClusteringMetrics.from_clusters(clusters)
-        >>> cm.coassoc_.loevinger_coeff()
-        1.0
+            >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
+            >>> cm = ClusteringMetrics.from_clusters(clusters)
+            >>> cm.coassoc_.loevinger_coeff()
+            1.0
 
         At the same time, kappa and matthews coefficients are 0.63 and 0.68,
         respectively. Being symmetrically defined, Loevinger coefficient will
         also return a perfect score in the dual (opposite) situation::
 
-        >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
-        >>> cm = ClusteringMetrics.from_clusters(clusters)
-        >>> cm.coassoc_.loevinger_coeff()
-        1.0
+            >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
+            >>> cm = ClusteringMetrics.from_clusters(clusters)
+            >>> cm.coassoc_.loevinger_coeff()
+            1.0
 
         Loevinger's coefficient has a unique property: all relevant two-way
         correlation coefficients on a 2x2 table (including Kappa and Matthews'
@@ -924,18 +988,19 @@ class ConfusionMatrix2(ContingencyTable):
 
         Kappa can be derived by correcting Accuracy (Simple Matching
         Coefficient, Rand Index) for chance. Tbe general formula for chance
-        correction of an association measure ``M`` is:
+        correction of an association measure M is::
 
                       M - E(M)
             M_adj = ------------ ,
                     M_max - E(M)
 
-        where ``M_max`` is the maximum value a measure ``M`` can achieve, and
-        ``E(M)`` is the expected value of ``M`` under statistical independence
-        given fixed table margins.
+        where M_max is the maximum value a measure M can achieve, and E(M) is
+        the expected value of M under statistical independence given fixed table
+        margins.
 
         Kappa can be decomposed into a pair of components (regression
-        coefficients for a problem and its dual) of which it is a harmonic mean:
+        coefficients for a problem and its dual), of which it is a harmonic
+        mean::
 
             k1 = cov / (p1 * q2)       # recall-like
             k0 = cov / (p2 * q1)       # precision-like
@@ -1011,13 +1076,15 @@ class ConfusionMatrix2(ContingencyTable):
         """Matthews Correlation Coefficient (Phi coefficient)
 
         MCC is directly related to the Chi-square statitstic. Its value is equal
-        to the the Chi-square value normalized by the maximum value Chi-Square
+        to the Chi-square value normalized by the maximum value Chi-Square
         can achieve with given margins (for a 2x2 table, the maximum Chi-square
         score is equal to the grand total N) transformed to correlation space by
-        taking a square root. MCC is a also a geometric mean of informedness and
-        markedness (the regression coefficients of the problem and its dual).
+        taking a square root.
 
-        MCC is laso known as Phi Coefficient or as Yule's Q with correction for
+        MCC is a also a geometric mean of informedness and markedness (the
+        regression coefficients of the problem and its dual).
+
+        Other names for MCC are Phi Coefficient and Yule's Q with correction for
         chance.
         """
         p1, q1 = self.row_totals.values()
@@ -1067,7 +1134,7 @@ class ConfusionMatrix2(ContingencyTable):
     def yule_q(self):
         """Yule's Q (index of association)
 
-        this index relates to the D odds ratio:
+        this index relates to the D odds ratio::
 
                    DOR - 1
            Q  =    ------- .
@@ -1148,10 +1215,10 @@ def adjusted_rand_score(labels_true, labels_pred):
 
     In a supplement to [1]_, the following example is given::
 
-    >>> classes = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
-    >>> clusters = [1, 2, 1, 2, 2, 3, 3, 3, 3, 3]
-    >>> round(adjusted_rand_score(classes, clusters), 3)
-    0.313
+        >>> classes = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
+        >>> clusters = [1, 2, 1, 2, 2, 3, 3, 3, 3, 3]
+        >>> round(adjusted_rand_score(classes, clusters), 3)
+        0.313
 
     References
     ----------
@@ -1173,25 +1240,25 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
     Perfect labelings are both homogeneous and complete, hence have
     score 1.0::
 
-      >>> adjusted_mutual_info_score([0, 0, 1, 1], [0, 0, 1, 1])
-      1.0
-      >>> adjusted_mutual_info_score([0, 0, 1, 1], [1, 1, 0, 0])
-      1.0
+        >>> adjusted_mutual_info_score([0, 0, 1, 1], [0, 0, 1, 1])
+        1.0
+        >>> adjusted_mutual_info_score([0, 0, 1, 1], [1, 1, 0, 0])
+        1.0
 
     If classes members are completely split across different clusters,
     the assignment is totally in-complete, hence the AMI is null::
 
-      >>> adjusted_mutual_info_score([0, 0, 0, 0], [0, 1, 2, 3])
-      0.0
+        >>> adjusted_mutual_info_score([0, 0, 0, 0], [0, 1, 2, 3])
+        0.0
 
     References
     ----------
 
     .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
-            measures for clusterings comparison: Variants, properties,
-            normalization and correction for chance. The Journal of Machine
-            Learning Research, 11, 2837-2854.
-            <http://www.jmlr.org/papers/v11/vinh10a.html>`_
+           measures for clusterings comparison: Variants, properties,
+           normalization and correction for chance. The Journal of Machine
+           Learning Research, 11, 2837-2854.
+           <http://www.jmlr.org/papers/v11/vinh10a.html>`_
 
     """
     # labels_true, labels_pred = check_clusterings(labels_true, labels_pred)
@@ -1223,12 +1290,14 @@ class RocCurve(object):
 
     """Receiver Operating Characteristic (ROC)
 
-    >>> rc = RocCurve.from_binary([0, 0, 1, 1],
-    ...                           [0.1, 0.4, 0.35, 0.8])
-    >>> rc.auc_score()
-    0.75
-    >>> rc.max_informedness()
-    0.5
+    ::
+
+        >>> rc = RocCurve.from_binary([0, 0, 1, 1],
+        ...                           [0.1, 0.4, 0.35, 0.8])
+        >>> rc.auc_score()
+        0.75
+        >>> rc.max_informedness()
+        0.5
 
     """
     def __init__(self, fprs, tprs, thresholds=None, pos_label=None,
@@ -1257,13 +1326,15 @@ class RocCurve(object):
         """
         return auc(self.fprs, self.tprs, reorder=False)
 
-    def optimal_cutoff(self, method):
-        """Calculate optimal cutoff point according to a method lambda
+    def optimal_cutoff(self, scoring_method):
+        """Calculate optimal cutoff point according to ``scoring_method`` lambda
+
+        The scoring method must take two arguments: fpr and tpr.
         """
         max_index = np.NINF
         opt_pair = (np.nan, np.nan)
         for pair in izip(self.fprs, self.tprs):
-            index = method(*pair)
+            index = scoring_method(*pair)
             if index > max_index:
                 opt_pair = pair
                 max_index = index
@@ -1306,16 +1377,24 @@ def cohen_kappa(*args, **kwargs):
 
 
 def _plot_lift(xs, ys):  # pragma: no cover
-    """Shortcut to plot a lift chart (for clustering_aul_score debugging)
+    """Shortcut to plot a lift chart (for aul_score debugging)
     """
-    from matplotlib import pyplot
-    pyplot.plot(xs, ys, marker="o", linestyle='-')
-    pyplot.xlim(xmin=0.0, xmax=1.0)
-    pyplot.ylim(ymin=0.0, ymax=1.0)
-    pyplot.show()
+    from matplotlib import pyplot as plt
+    fig, ax = plt.subplots()
+    ax.plot(xs, ys, marker="o", linestyle='-')
+    ax.fill([0.0] + xs + [1.0], [0.0] + ys + [0.0], 'b', alpha=0.2)
+    ax.plot([0.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
+    ax.plot([0.0, 1.0], [1.0, 1.0], linestyle='--', color='grey')
+    ax.plot([1.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
+    ax.set_xlim(xmin=0.0, xmax=1.1)
+    ax.set_ylim(ymin=0.0, ymax=1.1)
+    ax.set_xlabel("portion total")
+    ax.set_ylabel("portion positive")
+    ax.set_title("Lift Curve")
+    fig.show()
 
 
-def clustering_aul_score(y_true, labels_pred):
+def aul_score(scores_true, scores_pred):
     """Area under Lift Curve (AUL) for cluster-size correlated classification
 
     The AUL measure here is similar to Gini coefficient of inequality [1]_
@@ -1388,46 +1467,43 @@ def clustering_aul_score(y_true, labels_pred):
     ----------
 
     .. [1] `Wikipedia entry for Gini coefficient of inequality
-            <https://en.wikipedia.org/wiki/Gini_coefficient>`_
+           <https://en.wikipedia.org/wiki/Gini_coefficient>`_
 
     .. [2] `Whissell, J. S., & Clarke, C. L. (2011, September). Clustering for
-            semi-supervised spam filtering. In Proceedings of the 8th Annual
-            Collaboration, Electronic messaging, Anti-Abuse and Spam Conference (pp.
-            125-134). ACM.
-            <https://doi.org/10.1145/2030376.2030391>`_
+           semi-supervised spam filtering. In Proceedings of the 8th Annual
+           Collaboration, Electronic messaging, Anti-Abuse and Spam Conference
+           (pp.  125-134). ACM.
+           <https://doi.org/10.1145/2030376.2030391>`_
 
     """
 
-    # form clusters from label pairs
-    data = labels_to_clusters(y_true, labels_pred)
+    # convert input to a series of tuples
+    score_groups = izip(scores_pred, scores_true)
 
-    # sort by cluster size
-    data = sorted(
-        ((len(truth_vals), sum(truth_vals)) for truth_vals in data),
-        key=itemgetter(0),
-        reverse=True
-    )
+    # sort tuples by predicted score in descending order
+    score_groups = sorted(score_groups, key=itemgetter(0), reverse=True)
 
-    # aggregate groups of clusters by size so that we could handle ties
-    data = list(aggregate_tuples(data))
+    # group tuples by predicted score so as to handle ties correctly
+    score_groups = list(aggregate_tuples(score_groups))
 
-    total_pos = 0
+    total_height = 0
     max_horizontal = 0
     max_vertical = 0
 
-    # in the first pass, calculate some totals
-    for cluster_size, pos_counts in data:
-        num_clusters = len(pos_counts)
-        total_pos += sum(pos_counts)
-        total_in_group = cluster_size * num_clusters
-        max_horizontal += total_in_group
+    # first pass: calculate some totals
+    for pred_score, true_scores in score_groups:
+        group_height = sum(true_scores)
+        group_width = pred_score * len(true_scores)
+        total_height += group_height
+        max_horizontal += group_width
 
-        if cluster_size > 1:
-            max_vertical += total_in_group
+        if pred_score > 1:
+            max_vertical += group_width
         else:
-            max_vertical += sum(pos_counts)
+            max_vertical += group_height
 
-    assert max_horizontal >= total_pos
+    if total_height > max_horizontal:
+        warnings.warn("Number of positives exceeds total count")
 
     aul_score = 0.0
     bin_height = 0.0
@@ -1436,17 +1512,17 @@ def clustering_aul_score(y_true, labels_pred):
     # xs = []
     # ys = []
 
-    # in the second pass, calculate the AUL metric:
-    # for each group of clusters of the same size...
-    for cluster_size, pos_counts in data:
-        avg_pos_count = sum(pos_counts) / float(len(pos_counts))
+    # second pass: iterate over each group of predicted scores of the same size
+    # and calculate the AUL metric
+    for pred_score, true_scores in score_groups:
+        avg_true_score = sum(true_scores) / float(len(true_scores))
 
-        for _ in pos_counts:
+        for _ in true_scores:
 
             # xs.append(bin_right_edge / float(max_horizontal))
 
-            bin_width = cluster_size
-            bin_height += avg_pos_count
+            bin_width = pred_score
+            bin_height += avg_true_score
             bin_right_edge += bin_width
             aul_score += bin_height * bin_width
 
@@ -1455,9 +1531,25 @@ def clustering_aul_score(y_true, labels_pred):
             # ys.append(bin_height / float(max_vertical))
 
     assert max_horizontal == bin_right_edge
-    denom = max_vertical * max_horizontal
+    rect_area = max_vertical * max_horizontal
 
-    # Special case: since we define the AUL to be always smaller than or equal
-    # to the surrounding rectangle, when the rectangle area (the denominator) is
-    # zero, the AUL score is also zero.
-    return 0.0 if denom == 0 else aul_score / denom
+    # special case: since normalizing the AUL defines it as always smaller than
+    # the bounding rectangle, when denominator in the expression below is zero,
+    # the AUL score is also equal to zero.
+    return 0.0 if rect_area == 0 else aul_score / rect_area
+
+
+def aul_score_from_clusters(clusters):
+    """Alternative interface for AUL metric
+    """
+    # score clusters by size and number of ground truth positives
+    data = ((len(cluster), sum(bool(val) for val in cluster)) for cluster in clusters)
+    scores_pred, scores_true = zip(*data) or ([], [])
+    return aul_score(scores_true, scores_pred)
+
+
+def aul_score_from_labels(y_true, labels_pred):
+    """Alternative interface for AUL metric
+    """
+    clusters = labels_to_clusters(y_true, labels_pred)
+    return aul_score_from_clusters(clusters)

@@ -92,7 +92,13 @@ def test_2x2_invariants():
         actual_mcc = cm.matthews_corr()
         expected_mcc = geometric_mean(actual_info, actual_mark)
         check_with_nans(actual_mcc, expected_mcc, 4, ensure_nans=False,
-                        msg="MCC1 and MCC 2 must be the same")
+                        msg="MCC must equal expected value")
+
+        # kappas
+        actual_kappa = cm.kappa()
+        expected_kappa = harmonic_mean(cm.kappa0(), cm.kappa1())
+        check_with_nans(actual_kappa, expected_kappa, 4, ensure_nans=False,
+                        msg="Kappa must equal expectd value")
 
         # odds ratio and Yule's Q
         actual_odds_ratio = cm.DOR()
