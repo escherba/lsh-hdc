@@ -40,7 +40,7 @@ cpdef expected_mutual_information(row_counts, col_counts):
     C = len(b)
     #R, C = contingency.shape
     N = np.sum(a)
-    if not np.isclose(N, np.sum(b)):
+    if not isclose(N, np.sum(b)):
         raise ValueError("Input sums must be equal")
     #a = np.sum(contingency, axis=1).astype(np.int32)
     #b = np.sum(contingency, axis=0).astype(np.int32)
