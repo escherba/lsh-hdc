@@ -26,9 +26,11 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2, err_pos
     nneg = int(npos * ((1.0 - pos_ratio) / pos_ratio))
     clusters = []
     for csize in csizes:
-        cluster = np.random.choice(2, csize, p=[err_pos, 1.0 - err_pos])
+        #cluster = np.random.choice(2, csize, p=[err_pos, 1.0 - err_pos])
+        cluster = [discrete_sample({0: err_pos, 1: 1.0 - err_pos}) for _ in xrange(csize)]
         clusters.append(list(cluster))
-    negs = np.random.choice(2, nneg, p=[1.0 - err_neg, err_neg])
+    #negs = np.random.choice(2, nneg, p=[1.0 - err_neg, err_neg])
+    negs = [discrete_sample({0: 1.0 - err_neg, 1: err_neg}) for _ in xrange(nneg)]
     clusters.extend([[x] for x in negs])
     return clusters
 
