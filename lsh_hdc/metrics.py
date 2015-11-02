@@ -780,7 +780,7 @@ class ConfusionMatrix2(ContingencyTable):
     def rogers_tanimoto_coeff(self):
         """Rogers-Tanimoto similarity coefficient
 
-        Like Gower-Legendre but upweights ``b + c``
+        Like Gower-Legendre but upweights 'b + c'
 
         See Also
         --------
@@ -792,7 +792,7 @@ class ConfusionMatrix2(ContingencyTable):
     def gower_legendre_coeff(self):
         """Gower-Legendre similarity coefficient
 
-        Like Rogers-Tanimoto but downweights ``b + c``
+        Like Rogers-Tanimoto but downweights 'b + c'
 
         See Also
         --------
@@ -1502,7 +1502,7 @@ def aul_score(scores_true, scores_pred):
     if total_height > max_horizontal:
         warnings.warn("Number of positives exceeds total count")
 
-    aul_score = 0.0
+    score = 0.0
     bin_height = 0.0
     bin_right_edge = 0
 
@@ -1521,7 +1521,7 @@ def aul_score(scores_true, scores_pred):
             bin_width = pred_score
             bin_height += avg_true_score
             bin_right_edge += bin_width
-            aul_score += bin_height * bin_width
+            score += bin_height * bin_width
 
             # ys.append(bin_height / float(max_vertical))
             # xs.append(bin_right_edge / float(max_horizontal))
@@ -1533,7 +1533,7 @@ def aul_score(scores_true, scores_pred):
     # special case: since normalizing the AUL defines it as always smaller than
     # the bounding rectangle, when denominator in the expression below is zero,
     # the AUL score is also equal to zero.
-    return 0.0 if rect_area == 0 else aul_score / rect_area
+    return 0.0 if rect_area == 0 else score / rect_area
 
 
 def aul_score_from_clusters(clusters):

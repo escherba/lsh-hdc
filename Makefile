@@ -23,6 +23,7 @@ doc_setup:
 
 docs:
 	cd docs; make html; cd ..
+	open docs/_build/html/index.html
 
 package: env build_ext
 	$(PYTHON) setup.py $(DISTRIBUTE)
