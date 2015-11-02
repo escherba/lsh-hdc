@@ -603,12 +603,6 @@ class ConfusionMatrix2(ContingencyTable):
         super(ConfusionMatrix2, self).__init__(rows=((TP, FN), (FP, TN)))
 
     @classmethod
-    def from_rows(cls, rows):
-        return super(ConfusionMatrix2, cls)(rows=rows)
-
-    from_array = from_rows
-
-    @classmethod
     def from_sets(cls, set1, set2, universe_size=None):
         """Create a confusion matrix for comparison of two sets
 
@@ -639,10 +633,6 @@ class ConfusionMatrix2(ContingencyTable):
 
     def to_rows(self):
         return ((self.TP, self.FN), (self.FP, self.TN))
-
-    @classmethod
-    def from_cols(cls, cols):
-        return super(ConfusionMatrix2, cls)(cols=cols)
 
     @classmethod
     def from_random_counts(cls, low=0, high=100):
@@ -894,8 +884,8 @@ class ConfusionMatrix2(ContingencyTable):
             Informedness = Sensitivity + Specificity - 1.0
                          = TPR - FPR
 
-        Synonyms: True Skill Score, Hannssen-Kuiper Score, Attributable Risk,
-        DeltaP'.
+        Synonyms: Youden's J, True Skill Score, Hannssen-Kuiper Score,
+        Attributable Risk, DeltaP'.
         """
         p1, q1 = self.row_totals.values()
         return _div(self.covar(), p1 * q1)

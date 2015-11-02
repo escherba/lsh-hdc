@@ -101,84 +101,6 @@ from pymaptools.iter import aggregate_tuples
 from pymaptools.containers import labels_to_clusters
 
 
-class RocCurve(object):
-
-    """Receiver Operating Characteristic (ROC)
-
-    ::
-
-        >>> rc = RocCurve.from_binary([0, 0, 1, 1],
-        ...                           [0.1, 0.4, 0.35, 0.8])
-        >>> rc.auc_score()
-        0.75
-        >>> rc.max_informedness()
-        0.5
-
-    """
-    def __init__(self, fprs, tprs, thresholds=None, pos_label=None,
-                 sample_weight=None):
-        self.fprs = fprs
-        self.tprs = tprs
-        self.thresholds = thresholds
-        self.pos_label = pos_label
-        self.sample_weight = sample_weight
-
-    @classmethod
-    def from_binary(cls, y_true, y_score, sample_weight=None):
-        """Convenience constructor which assumes 1 to be the positive label
-        """
-        fprs, tprs, thresholds = roc_curve(
-            y_true, y_score, pos_label=True, sample_weight=sample_weight)
-        return cls(fprs, tprs, thresholds=thresholds, sample_weight=sample_weight)
-
-    def auc_score(self):
-        """Replacement for Scikit-Learn's method
-
-        If number of Y classes is other than two, a warning will be triggered
-        but no exception thrown (the return value will be a NaN).  Also, we
-        don't reorder arrays during ROC calculation since they are assumed to be
-        in order.
-        """
-        return auc(self.fprs, self.tprs, reorder=False)
-
-    def optimal_cutoff(self, scoring_method):
-        """Calculate optimal cutoff point according to ``scoring_method`` lambda
-
-        The scoring method must take two arguments: fpr and tpr.
-        """
-        max_index = np.NINF
-        opt_pair = (np.nan, np.nan)
-        for pair in izip(self.fprs, self.tprs):
-            index = scoring_method(*pair)
-            if index > max_index:
-                opt_pair = pair
-                max_index = index
-        return opt_pair, max_index
-
-    @staticmethod
-    def _informedness(fpr, tpr):
-        return tpr - fpr
-
-    def max_informedness(self):
-        """Calculates maximum value of Informedness on a ROC curve
-
-        This is also known as Youden's J [1]_
-
-        References
-        ----------
-
-        .. [1] `Wikipedia entry for Youden's J statistic
-               <https://en.wikipedia.org/wiki/Youden%27s_J_statistic>`_
-        """
-        return self.optimal_cutoff(self._informedness)[1]
-
-
-def roc_auc_score(y_true, y_score, sample_weight=None):
-    """Replaces Scikit Learn implementation (for binary y_true vectors only)
-    """
-    return RocCurve.from_binary(y_true, y_score).auc_score()
-
-
 class LiftCurve(object):
 
     """Area under Lift Curve (AUL) for cluster-size correlated classification
@@ -190,7 +112,7 @@ class LiftCurve(object):
 
     @classmethod
     def from_counts(cls, counts_true, counts_pred):
-        """Returns class instance given arrays of true and predicted counts
+        """Instantiates class from arrays of true and predicted counts
 
         Parameters
         ----------
@@ -214,7 +136,7 @@ class LiftCurve(object):
 
     @classmethod
     def from_clusters(cls, clusters):
-        """Returns class instance given clusters of class-coded points
+        """Instantiates class from clusters of class-coded points
 
         Parameters
         ----------
@@ -237,7 +159,7 @@ class LiftCurve(object):
 
     @classmethod
     def from_labels(cls, y_true, labels_pred):
-        """Returns class instance given arrays of classes and cluster sizes
+        """Instantiates class from arrays of classes and cluster sizes
 
         Parameters
         ----------
@@ -263,7 +185,7 @@ class LiftCurve(object):
         ----------
 
         threshold : int, optional (default=1)
-            Predicted scores at or below this size are not considered accurate
+            only predicted scores above this number considered accurate
 
         plot : bool, optional (default=False)
             whether to return X and Y data series for plotting
@@ -346,14 +268,20 @@ class LiftCurve(object):
             return aul
 
     def plot(self, threshold=1, marker=None, save_to=None):  # pragma: no cover
-        """Shorthand to plot a graphical representation of Lift Curve
+        """Create a graphical representation of Lift Curve
 
         Requires Matplotlib
 
         Parameters
         ----------
+        threshold : int, optional (default=1)
+            only predicted scores above this number considered accurate
+
         marker : str, optional (default=None)
             Whether to draw marker at each bend
+
+        save_to : str, optional (default=None)
+            If specified, save the plot to path instead of displaying
 
         """
         from matplotlib import pyplot as plt
@@ -413,3 +341,81 @@ def aul_score_from_labels(y_true, labels_pred):
     aul : float
     """
     return LiftCurve.from_labels(y_true, labels_pred).aul_score()
+
+
+class RocCurve(object):
+
+    """Receiver Operating Characteristic (ROC)
+
+    ::
+
+        >>> rc = RocCurve.from_binary([0, 0, 1, 1],
+        ...                           [0.1, 0.4, 0.35, 0.8])
+        >>> rc.auc_score()
+        0.75
+        >>> rc.max_informedness()
+        0.5
+
+    """
+    def __init__(self, fprs, tprs, thresholds=None, pos_label=None,
+                 sample_weight=None):
+        self.fprs = fprs
+        self.tprs = tprs
+        self.thresholds = thresholds
+        self.pos_label = pos_label
+        self.sample_weight = sample_weight
+
+    @classmethod
+    def from_binary(cls, y_true, y_score, sample_weight=None):
+        """Instantiates class assuming binary labeling of {0, 1}
+        """
+        fprs, tprs, thresholds = roc_curve(
+            y_true, y_score, pos_label=True, sample_weight=sample_weight)
+        return cls(fprs, tprs, thresholds=thresholds, sample_weight=sample_weight)
+
+    def auc_score(self):
+        """Replacement for Scikit-Learn's method
+
+        If number of Y classes is other than two, a warning will be triggered
+        but no exception thrown (the return value will be a NaN).  Also, we
+        don't reorder arrays during ROC calculation since they are assumed to be
+        in order.
+        """
+        return auc(self.fprs, self.tprs, reorder=False)
+
+    def optimal_cutoff(self, scoring_method):
+        """Calculate optimal cutoff point according to ``scoring_method`` lambda
+
+        The scoring method must take two arguments: fpr and tpr.
+        """
+        max_index = np.NINF
+        opt_pair = (np.nan, np.nan)
+        for pair in izip(self.fprs, self.tprs):
+            index = scoring_method(*pair)
+            if index > max_index:
+                opt_pair = pair
+                max_index = index
+        return opt_pair, max_index
+
+    @staticmethod
+    def _informedness(fpr, tpr):
+        return tpr - fpr
+
+    def max_informedness(self):
+        """Calculates maximum value of Informedness on a ROC curve
+
+        This is also known as Youden's J [1]_
+
+        References
+        ----------
+
+        .. [1] `Wikipedia entry for Youden's J statistic
+               <https://en.wikipedia.org/wiki/Youden%27s_J_statistic>`_
+        """
+        return self.optimal_cutoff(self._informedness)[1]
+
+
+def roc_auc_score(y_true, y_score, sample_weight=None):
+    """Replaces Scikit Learn implementation (for binary y_true vectors only)
+    """
+    return RocCurve.from_binary(y_true, y_score).auc_score()
