@@ -1410,7 +1410,7 @@ def aul_score(scores_true, scores_pred):
     perfect clustering -- the one with a single, entirely homogeneous cluster C
     that covers all positives present in the data set. If one were to obtain
     such clustering, one could correctly label all positive samples in one step
-    with the simple rule, "all positive samples belong to cluster C". Under an
+    with the simple rule, *all positive samples belong to cluster C*. Under an
     imperfect clustering, on the other hand, the presence of the given sample in
     a cluster of size two or more implies the sample is only likely to be
     positive, with the confidence of the positive call monotonously increasing
@@ -1435,12 +1435,12 @@ def aul_score(scores_true, scores_pred):
     Given a clustering, we order the clusters from the largest one to the
     smallest one. We then plot a cumulative step function where the width of the
     bin under a given "step" is proportional to cluster size, and the height of
-    the bin is proportional to the cumulative number of positive samples seen so
-    far. After two-way normalization, a perfect clustering (i.e. where a single
-    perfectly homogeneous cluster covers the entire set of positives) will have
-    the AUL score of 1.0. A failure to cluster or a clustering based on a
-    property completely unrelated with the ground truth labeling will have the
-    AUL of 0.5. A perverse clustering, i.e. where predominantly negative
+    the bin is proportional to the expected number of positive samples seen so
+    far [3]_. After two-way normalization, a perfect clustering (i.e. where a
+    single perfectly homogeneous cluster covers the entire set of positives)
+    will have the AUL score of 1.0. A failure to cluster or a clustering based
+    on a property completely unrelated with the ground truth labeling will have
+    the AUL of 0.5. A perverse clustering, i.e. where predominantly negative
     samples fall into large clusters and positive ones remain unclustered or
     fall into smaller clusters will have the AUL somewhere between 0.0 and 0.5.
 
@@ -1459,6 +1459,12 @@ def aul_score(scores_true, scores_pred):
     the top right one. This way, a complete absence of clustering (i.e. all
     clusters are of size one) will always result in AUL of 0.5, which is also
     the AUL for a random clustering uncorrelated with the ground truth labeling.
+
+    .. [3] We take the expected number of positives and not the actual number
+           seen so far as the vertical scale in order to penalize
+           non-homogeneous clusters.  Otherwise the y=1.0 line would be reached
+           early in the process even in very bad cases, for example when there
+           is only one giant non- homogeneous cluster.
 
     References
     ----------
