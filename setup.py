@@ -105,7 +105,7 @@ URL = 'https://github.com/escherba/lsh-hdc'
 
 
 setup(
-    name="lsh-hdc",
+    name="LSH-HDC",
     version=VERSION,
     author="Eugene Scherba",
     license="BSD",

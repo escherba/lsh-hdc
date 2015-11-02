@@ -2,7 +2,6 @@
 
 SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 PYMODULE := lsh_hdc
-AUTHOR := Eugene Scherba
 SHELL_PRELOAD := $(SRC_ROOT)/$(PYMODULE)/metrics.py
 EXTENSION := $(PYMODULE)/ext.so
 EXTENSION_INTERMEDIATE := $(PYMODULE)/ext.cpp
@@ -19,7 +18,11 @@ PIP := $(PYENV) pip
 include study/build.mk
 
 doc_sources:
-	sphinx-apidoc -A "$(AUTHOR)" -e -F -o docs $(PYMODULE)
+	sphinx-apidoc \
+		-A "`$(PYTHON) setup.py --author`" \
+		-H "`$(PYTHON) setup.py --name`" \
+		-V "`$(PYTHON) setup.py --version`" \
+	    -f -e -d 4 -F -o docs $(PYMODULE)
 	git checkout docs/conf.py
 	git checkout docs/Makefile
 

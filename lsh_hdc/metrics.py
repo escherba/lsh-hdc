@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 
 Motivation
@@ -670,51 +672,66 @@ class ConfusionMatrix2(ContingencyTable):
         return self.rows[1][1]
 
     def ACC(self):
-        """Accuracy (Simple Matching Coefficient, Rand Index)
+        """Accuracy
+
+        Synonyms: Simple Matching Coefficient, Rand Index
         """
         return _div(self.TP + self.TN, self.grand_total)
 
     def PPV(self):
-        """Precision (Positive Predictive Value)
+        """Positive Predictive Value
+
+        Synonyms: precision, frequency of hits, post agreement, success ratio
         """
         return _div(self.TP, self.TP + self.FP)
 
     def NPV(self):
-        """Negative predictive value
+        """Negative Predictive Value
+
+        Synonyms: frequency of correct null forecasts
         """
         return _div(self.TN, self.TN + self.FN)
 
     def TPR(self):
-        """Recall (Sensitivity)
+        """True Positive Rate
 
-        Also known as hit rate
+        Synonyms: recall, sensitivity, hit rate, probability of detection,
+        prefigurance
         """
         return _div(self.TP, self.TP + self.FN)
 
     def FPR(self):
-        """Fallout (False Positive Rate)
+        """False Positive Rate
 
-        Synonyms: fallout, false alarm rate
+        Synonyms: fallout
         """
         return _div(self.FP, self.TN + self.FP)
 
     def TNR(self):
-        """Specificity (True Negative Rate)
+        """True Negative Rate
+
+        Synonyms: specificity
         """
         return _div(self.TN, self.FP + self.TN)
 
     def FNR(self):
-        """Miss Rate (False Negative Rate)
+        """False Negative Rate
+
+        Synonyms: miss rate, frequency of misses
         """
         return _div(self.FN, self.TP + self.FN)
 
     def FDR(self):
         """False discovery rate
+
+        Synonyms: probability of false alarm
         """
         return _div(self.FP, self.TP + self.FP)
 
     def FOR(self):
         """False omission rate
+
+        Synonyms: detection failure ratio
         """
         return _div(self.FN, self.TN + self.FN)
 
@@ -792,6 +809,8 @@ class ConfusionMatrix2(ContingencyTable):
         Jaccard coefficient has an interesting property in that in L-shaped
         matrices where either FP or FN are close to zero, its scale becomes
         equivalent to the scale of either recall or precision respectively.
+
+        Synonyms: critical success index
 
         See Also
         --------
@@ -879,13 +898,28 @@ class ConfusionMatrix2(ContingencyTable):
     def informedness(self):
         """Informedness (Recall corrected for chance)
 
+        This measure was first proposed for evaluating diagnotics tests in [1]_,
+        and also used in meteorology under the name "True Skill Score" [2]_.
+
         Alternative formulations::
 
             Informedness = Sensitivity + Specificity - 1.0
                          = TPR - FPR
 
         Synonyms: Youden's J, True Skill Score, Hannssen-Kuiper Score,
-        Attributable Risk, DeltaP'.
+        Attributable Risk, DeltaP.
+
+        References
+        ----------
+
+        .. [1] `Youden, W. J. (1950). Index for rating diagnostic tests. Cancer,
+               3(1), 32-35.
+               <http://www.ncbi.nlm.nih.gov/pubmed/15405679>`_
+
+        .. [2] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
+               summary measures of skill in rare event forecasting based on
+               contingency tables. Weather and Forecasting, 5(4), 576-585.
+               <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
         """
         p1, q1 = self.row_totals.values()
         return _div(self.covar(), p1 * q1)
@@ -897,7 +931,7 @@ class ConfusionMatrix2(ContingencyTable):
 
             Markedness = PPV + NPV - 1.0
 
-        Synonyms: DeltaP
+        Synonyms: DeltaP'
         """
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
@@ -961,12 +995,13 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(self.covar(), min(p1 * q2, p2 * q1))
 
     def kappa(self):
-        """Cohen's Kappa (Interrater Agreement, Adjusted Rand Index)
+        """Cohen's Kappa (Interrater Agreement)
 
-        Kappa index comes from psychology and was originally introduced to
+        Kappa index is best known in psychology field where it was introduced to
         measure interrater agreement. It has also been used in replication
         evaluation [1]_, reliability studies [2]_, clustering evaluation [3]_,
-        and feature selection [4]_.
+        feature selection [4]_, and forecasting [5]_. The first mention of a
+        this measure is in [6]_.
 
         Kappa can be derived by correcting Accuracy (Simple Matching
         Coefficient, Rand Index) for chance. Tbe general formula for chance
@@ -996,6 +1031,8 @@ class ConfusionMatrix2(ContingencyTable):
         confusion matrix, it is arguably better to use use informedness and
         markedness.
 
+        Synonyms: Adjusted Rand Index, Heidke Skill Score
+
         References
         ----------
 
@@ -1019,6 +1056,16 @@ class ConfusionMatrix2(ContingencyTable):
                 classification. In Artificial neural networks - ICANN 2009 (pp.
                 175-184).  Springer Berlin Heidelberg.
                 <https://doi.org/10.1007/978-3-642-04277-5_18>`_
+
+        .. [5] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
+               summary measures of skill in rare event forecasting based on
+               contingency tables. Weather and Forecasting, 5(4), 576-585.
+               <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
+
+        .. [6] `Heidke, Paul. "Berechnung des Erfolges und der Güte der
+               Windstärkevorhersagen im Sturmwarnungsdienst." Geografiska
+               Annaler (1926): 301-349.
+               <http://www.jstor.org/stable/519729>`_
 
         """
         p1, q1 = self.row_totals.values()
@@ -1163,6 +1210,7 @@ class ConfusionMatrix2(ContingencyTable):
     # clinical diagnostics
     sensitivity = TPR
     specificity = TNR
+    youden_j = informedness
 
     # sales/marketing
     hit_rate = TPR
@@ -1171,6 +1219,10 @@ class ConfusionMatrix2(ContingencyTable):
     # ecology
     sm_coeff = ACC
     phi_coeff = matthews_corr
+
+    # meteorology
+    heidke_skill = kappa
+    true_skill = informedness
 
     # cluster analysis
     rand_index = ACC
