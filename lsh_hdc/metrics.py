@@ -1495,12 +1495,12 @@ def aul_score(scores_true, scores_pred):
         group_height = sum(true_scores)
 
         # cluster size x number of clusters of given size
-        group_width = (pred_score + 1) * len(true_scores)
+        group_width = pred_score * len(true_scores)
 
         total_true += group_height
         total_any += group_width
 
-        if pred_score > 0:
+        if pred_score > 1:
             # penalize non-homogeneous clusters simply by assuming that they are
             # homogeneous, in which case their expected vertical contribution
             # should be equal to their horizontal contribution.
@@ -1530,7 +1530,7 @@ def aul_score(scores_true, scores_pred):
 
             # xs.append(bin_right_edge / float(total_any))
 
-            bin_width = pred_score + 1
+            bin_width = pred_score
             bin_height += avg_true_score
             bin_right_edge += bin_width
             aul += bin_height * bin_width
@@ -1551,10 +1551,9 @@ def aul_score(scores_true, scores_pred):
 def aul_score_from_clusters(clusters):
     """Alternative interface for AUL metric
     """
-    # take all non-empty clusters, score them by size (subtracting one in order
-    # to keep ``scores_pred`` consistent with ``score_true``) and by number of
-    # ground truth positives
-    data = ((len(cluster) - 1, sum(bool(val) for val in cluster))
+    # take all non-empty clusters, score them by size and by number of ground
+    # truth positives
+    data = ((len(cluster), sum(bool(val) for val in cluster))
             for cluster in clusters if cluster)
     scores_pred, scores_true = zip(*data) or ([], [])
     return aul_score(scores_true, scores_pred)
