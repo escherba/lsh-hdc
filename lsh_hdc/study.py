@@ -314,7 +314,7 @@ def clusters_to_labels(cluster_iter, double_negs=False, join_negs=True):
 def cluster_predictions(cluster_iter):
     y_true = []
     y_score = []
-    for idx, cluster in enumerate(cluster_iter):
+    for cluster in cluster_iter:
         pred_cluster = len(cluster)
         for point in cluster:
             true_cluster = is_point_pos(point)
@@ -369,7 +369,9 @@ INCIDENCE_METRICS = PAIRWISE_METRICS + ENTROPY_METRICS
 ROC_METRICS = ['roc_max_info', 'roc_auc']
 LIFT_METRICS = ['aul_score']
 
-METRICS = ROC_METRICS + LIFT_METRICS + INCIDENCE_METRICS + BENCHMARKS
+RANKING_METRICS = ROC_METRICS + LIFT_METRICS
+
+METRICS = RANKING_METRICS + INCIDENCE_METRICS + BENCHMARKS
 
 LEGEND_METRIC_KWARGS = {
     'time_wall': dict(loc='upper left'),
@@ -381,7 +383,7 @@ def add_incidence_metrics(args, clusters, pairs):
     """Add metrics based on incidence matrix of classes and clusters
     """
     args_metrics = METRICS
-    if (set(INCIDENCE_METRICS) & set(args_metrics)):
+    if set(INCIDENCE_METRICS) & set(args_metrics):
 
         from lsh_hdc.metrics import ClusteringMetrics
         labels = clusters_to_labels(
@@ -391,11 +393,11 @@ def add_incidence_metrics(args, clusters, pairs):
         )
         cm = ClusteringMetrics.from_labels(*labels)
 
-        if (set(ENTROPY_METRICS) & set(args_metrics)):
+        if set(ENTROPY_METRICS) & set(args_metrics):
             pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
 
         pairwise_metrics = set(PAIRWISE_METRICS) & set(args_metrics)
-        if (pairwise_metrics):
+        if pairwise_metrics:
             for metric in pairwise_metrics:
                 try:
                     score = cm.get_score(metric)
@@ -405,25 +407,19 @@ def add_incidence_metrics(args, clusters, pairs):
                 pairs.append((metric, score))
 
 
-def add_roc_metrics(args, clusters, pairs):
-    """Add metrics based on ROC Curve
+def add_ranking_metrics(args, clusters, pairs):
+    """Add metrics based on ROC and Lift curves
     """
     args_metrics = METRICS
-    if (set(ROC_METRICS) & set(args_metrics)):
-        from lsh_hdc.metrics import RocCurve
+    if set(ROC_METRICS) & set(args_metrics):
+        from lsh_hdc.ranking import RocCurve
         rc = RocCurve.from_binary(*cluster_predictions(clusters))
         if 'roc_auc' in args_metrics:
             pairs.append(('roc_auc', rc.auc_score()))
         if 'roc_max_info' in args_metrics:
             pairs.append(('roc_max_info', rc.max_informedness()))
-
-
-def add_lift_metrics(args, clusters, pairs):
-    """Add metrics based on Lift Curve
-    """
-    args_metrics = METRICS
-    if (set(LIFT_METRICS) & set(args_metrics)):
-        from lsh_hdc.metrics import aul_score_from_clusters as aul_score
+    if set(LIFT_METRICS) & set(args_metrics):
+        from lsh_hdc.ranking import aul_score_from_clusters as aul_score
         clusters_2xc = ([is_point_pos(point) for point in cluster]
                         for cluster in clusters)
         if 'aul_score' in args_metrics:
@@ -439,9 +435,8 @@ def perform_clustering(args, data):
 def perform_analysis(args, clusters):
     clusters = list(clusters)
     pairs = []
-    add_lift_metrics(args, clusters, pairs)
+    add_ranking_metrics(args, clusters, pairs)
     add_incidence_metrics(args, clusters, pairs)
-    add_roc_metrics(args, clusters, pairs)
     return dict(pairs)
 
 
