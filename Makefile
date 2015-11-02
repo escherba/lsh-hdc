@@ -18,8 +18,10 @@ PIP := $(PYENV) pip
 
 include study/build.mk
 
-doc_setup:
+doc_sources:
 	sphinx-apidoc -A "$(AUTHOR)" -e -F -o docs $(PYMODULE)
+	git checkout docs/conf.py
+	git checkout docs/Makefile
 
 docs:
 	cd docs; make html; cd ..

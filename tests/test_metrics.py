@@ -2,17 +2,14 @@ import warnings
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 from math import sqrt
-from itertools import chain, izip
-from pymaptools.containers import clusters_to_labels
-from pymaptools.sample import discrete_sample, random_seed
-from lsh_hdc.metrics import RocCurve, adjusted_rand_score, \
+from itertools import izip
+from nose.tools import assert_almost_equal, assert_true, assert_equal
+from lsh_hdc.metrics import adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
-    jaccard_similarity, aul_score_from_clusters, aul_score_from_labels, \
-    ClusteringMetrics, \
+    jaccard_similarity, ClusteringMetrics, \
     ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
     matthews_corr, expected_mutual_information, mutual_info_score, \
     adjusted_mutual_info_score
-from nose.tools import assert_almost_equal, assert_true, assert_equal
 
 
 def check_with_nans(num1, num2, places=None, msg=None, delta=None, ensure_nans=True):
@@ -83,34 +80,6 @@ def _talburt_wang_index(labels_true, labels_pred):
     return np.nan if prod == 0 else sqrt(prod) / len(V)
 
 
-def _auc(fpr, tpr, reorder=False):
-    """Compute area under ROC curve
-
-    This is a simple alternative implementation for testing.
-    For production tasks, use Sklearn's implementation.
-    """
-
-    def generic_auc(xs, ys, reorder=False):
-        """Compute area under a curve using trapesoidal rule
-        """
-        tuples = zip(xs, ys)
-        if not tuples:
-            return float('nan')
-        if reorder:
-            tuples.sort()
-        a = 0.0
-        x0, y0 = tuples[0]
-        for x1, y1 in tuples[1:]:
-            a += (x1 - x0) * (y1 + y0)
-            x0, y0 = x1, y1
-        return a * 0.5
-
-    return generic_auc(
-        chain([0.0], fpr, [1.0]),
-        chain([0.0], tpr, [1.0]),
-        reorder=reorder)
-
-
 def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
                              seed=42):
     # Compute score for random uniform cluster labelings
@@ -122,17 +91,6 @@ def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
             labels_b = random_labels(low=0, high=k - 1, size=n_samples)
             scores[i, j] = score_func(labels_a, labels_b)
     return scores
-
-
-def simulate_predictions(n=100, seed=None):
-    """simulate classifier predictions for data size of n
-    """
-    if seed is None:
-        seed = random_seed()
-    np.random.seed(seed % (2 ** 32))
-    probas = [np.random.random() for _ in xrange(n)]
-    classes = [discrete_sample({0: (1 - p), 1: p}) for p in probas]
-    return classes, probas
 
 
 def test_adjusted_mutual_info_score():
@@ -172,16 +130,6 @@ def test_adjusted_mutual_info_score():
     b110 = np.array([list(labels_b) * 110]).flatten()
     ami = adjusted_mutual_info_score(a110, b110)
     assert_almost_equal(ami, 0.37, 2)  # not accurate to more than 2 places
-
-
-def test_roc_curve():
-    # Test Area under Receiver Operating Characteristic (ROC) curve
-    for _ in range(10):
-        y_true, probas_pred = simulate_predictions(1000, seed=random_seed())
-        rc = RocCurve.from_binary(y_true, probas_pred)
-        expected_auc = _auc(rc.fprs, rc.tprs)
-        score = rc.auc_score()
-        assert_almost_equal(expected_auc, score, 2)
 
 
 def test_jaccard_nan():
@@ -341,56 +289,6 @@ def test_adjustment_for_chance():
     assert_array_almost_equal(max_abs_scores, [0.02, 0.03, 0.03, 0.02], 2)
 
 
-def test_clustering_aul_empty():
-    """Empty clusterings have AUL=0.0
-    """
-    clusters = []
-    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
-    score2 = aul_score_from_clusters(clusters)
-    assert_almost_equal(score1, 0.0, 4)
-    assert_almost_equal(score2, 0.0, 4)
-
-
-def test_clustering_aul_perfect():
-    """Perfect clusterings have AUL=1.0
-    """
-    clusters = [[1, 1, 1, 1, 1], [0], [0]]
-    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
-    score2 = aul_score_from_clusters(clusters)
-    assert_almost_equal(score1, 1.0, 4)
-    assert_almost_equal(score2, 1.0, 4)
-
-
-def test_clustering_aul_bad():
-    """Bad clusterings have have AUL=0.5
-    """
-    clusters = [[1, 1, 0, 0], [0]]
-    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
-    score2 = aul_score_from_clusters(clusters)
-    assert_almost_equal(score1, 0.5, 4)
-    assert_almost_equal(score2, 0.5, 4)
-
-
-def test_clustering_aul_perverse():
-    """Perverese cases are 0.0 < AUL < 0.5
-    """
-    clusters = [[1], [0, 0]]
-    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
-    score2 = aul_score_from_clusters(clusters)
-    assert_almost_equal(score1, 0.1111, 4)
-    assert_almost_equal(score2, 0.1111, 4)
-
-
-def test_clustering_aul_precalculated():
-    """A decent clustering should have a high score`
-    """
-    clusters = [[1, 1, 1], [1, 1], [0], [0]]
-    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
-    score2 = aul_score_from_clusters(clusters)
-    assert_almost_equal(score1, 0.8286, 4)
-    assert_almost_equal(score2, 0.8286, 4)
-
-
 def test_twoway_confusion_ll():
     """Example from McDonald's G-test for independence
     http://www.biostathandbook.com/gtestind.html
@@ -438,8 +336,6 @@ def test_twoway_confusion_phi():
 
 
 def test_0000():
-    """
-    """
     m = (0, 0, 0, 0)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
@@ -456,8 +352,6 @@ def test_0000():
 
 
 def test_1000():
-    """
-    """
     m = (1, 0, 0, 0)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
@@ -480,8 +374,6 @@ def test_1000():
 
 
 def test_0100():
-    """
-    """
     m = (0, 1, 0, 0)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
@@ -504,8 +396,6 @@ def test_0100():
 
 
 def test_0010():
-    """
-    """
     m = (0, 0, 1, 0)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
@@ -528,8 +418,6 @@ def test_0010():
 
 
 def test_0001():
-    """
-    """
     m = (0, 0, 0, 1)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
@@ -552,8 +440,6 @@ def test_0001():
 
 
 def test_1010():
-    """
-    """
     m = (1, 0, 1, 0)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
@@ -570,8 +456,6 @@ def test_1010():
 
 
 def test_1100():
-    """
-    """
     m = (1, 1, 0, 0)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
@@ -588,8 +472,6 @@ def test_1100():
 
 
 def test_0011():
-    """
-    """
     m = (0, 0, 1, 1)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
@@ -606,8 +488,6 @@ def test_0011():
 
 
 def test_0101():
-    """
-    """
     m = (0, 1, 0, 1)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
@@ -624,8 +504,6 @@ def test_0101():
 
 
 def test_1001():
-    """
-    """
     m = (1, 0, 0, 1)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
@@ -642,8 +520,6 @@ def test_1001():
 
 
 def test_0110():
-    """
-    """
     m = (0, 1, 1, 0)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
@@ -660,8 +536,6 @@ def test_0110():
 
 
 def test_0111():
-    """
-    """
     m = (0, 1, 1, 1)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
@@ -673,8 +547,6 @@ def test_0111():
 
 
 def test_1011():
-    """
-    """
     m = (1, 0, 1, 1)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
@@ -686,8 +558,6 @@ def test_1011():
 
 
 def test_1101():
-    """
-    """
     m = (1, 1, 0, 1)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
@@ -699,8 +569,6 @@ def test_1101():
 
 
 def test_1110():
-    """
-    """
     m = (1, 1, 1, 0)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
@@ -712,8 +580,6 @@ def test_1110():
 
 
 def test_1111():
-    """
-    """
     m = (1, 1, 1, 1)
     cm = ConfusionMatrix2.from_ccw(*m)
     assert_almost_equal(cm.chisq_score(), 0.0, 4)

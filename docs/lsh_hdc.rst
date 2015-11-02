@@ -14,6 +14,7 @@ Submodules
    lsh_hdc.hashes
    lsh_hdc.metrics
    lsh_hdc.preprocess
+   lsh_hdc.ranking
    lsh_hdc.study
    lsh_hdc.utils
 
