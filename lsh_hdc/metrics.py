@@ -878,7 +878,7 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(abs(self.TP - self.TN), self.grand_total)
 
     def bias_index(self):
-        """Bias
+        """Bias Index
 
         In interrater agreement studies, bias is the extent to which the raters
         disagree on the positive-negative ratio of the binary variable studied.
@@ -998,10 +998,9 @@ class ConfusionMatrix2(ContingencyTable):
         """Cohen's Kappa (Interrater Agreement)
 
         Kappa index is best known in psychology field where it was introduced to
-        measure interrater agreement. It has also been used in replication
-        evaluation [1]_, reliability studies [2]_, clustering evaluation [3]_,
-        feature selection [4]_, and forecasting [5]_. The first mention of a
-        this measure is in [6]_.
+        measure interrater agreement [1]_. It has also been used in replication
+        studies [2]_, clustering evaluation [3]_, feature selection [4]_, and
+        forecasting [5]_. The first derivation of this measure is in [6]_.
 
         Kappa can be derived by correcting Accuracy (Simple Matching
         Coefficient, Rand Index) for chance. Tbe general formula for chance
@@ -1036,26 +1035,25 @@ class ConfusionMatrix2(ContingencyTable):
         References
         ----------
 
-        .. [1] `Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering
-                validation: results and implications for applied analyses (p.
-                341).  World Scientific Pub Co Inc.
-                <https://doi.org/10.1142/9789812832153_0010>`_
+        .. [1] `Cohen, J. (1960). A coefficient of agreement for nominal scales.
+               Educational and psychological measurement, 20(1), 37-46.
+               <https://doi.org/10.1177/001316446002000104>`_
 
-        .. [2] `Sim, J., & Wright, C. C. (2005). The kappa statistic in
-                reliability studies: use, interpretation, and sample size
-                requirements.  Physical therapy, 85(3), 257-268.
-                <http://www.ncbi.nlm.nih.gov/pubmed/15733050>`_
+        .. [2] `Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering
+               validation: results and implications for applied analyses (p.
+               341).  World Scientific Pub Co Inc.
+               <https://doi.org/10.1142/9789812832153_0010>`_
 
         .. [3] `Warrens, M. J. (2008). On the equivalence of Cohen's kappa and
-                the Hubert-Arabie adjusted Rand index. Journal of Classification,
-                25(2), 177-183.
-                <https://doi.org/10.1007/s00357-008-9023-7>`_
+               the Hubert-Arabie adjusted Rand index. Journal of Classification,
+               25(2), 177-183.
+               <https://doi.org/10.1007/s00357-008-9023-7>`_
 
         .. [4] `Santos, J. M., & Embrechts, M. (2009). On the use of the
-                adjusted rand index as a metric for evaluating supervised
-                classification. In Artificial neural networks - ICANN 2009 (pp.
-                175-184).  Springer Berlin Heidelberg.
-                <https://doi.org/10.1007/978-3-642-04277-5_18>`_
+               adjusted rand index as a metric for evaluating supervised
+               classification. In Artificial neural networks - ICANN 2009 (pp.
+               175-184).  Springer Berlin Heidelberg.
+               <https://doi.org/10.1007/978-3-642-04277-5_18>`_
 
         .. [5] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
                summary measures of skill in rare event forecasting based on
@@ -1204,25 +1202,25 @@ class ConfusionMatrix2(ContingencyTable):
     # information retrieval
     precision = PPV
     recall = TPR
-    fallout = FPR
     accuracy = ACC
+    # fallout = FPR
 
     # clinical diagnostics
     sensitivity = TPR
     specificity = TNR
-    youden_j = informedness
+    # youden_j = informedness
 
     # sales/marketing
-    hit_rate = TPR
-    miss_rate = FNR
+    # hit_rate = TPR
+    # miss_rate = FNR
 
     # ecology
-    sm_coeff = ACC
-    phi_coeff = matthews_corr
+    # sm_coeff = ACC
+    # phi_coeff = matthews_corr
 
     # meteorology
-    heidke_skill = kappa
-    true_skill = informedness
+    # heidke_skill = kappa
+    # true_skill = informedness
 
     # cluster analysis
     rand_index = ACC
