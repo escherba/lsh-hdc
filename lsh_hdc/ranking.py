@@ -18,13 +18,10 @@ positive samples in one step with the simple rule, *all positive samples belong
 to cluster C*. Under an imperfect clustering, on the other hand, the presence
 of the given sample in a cluster of size two or more implies the sample is only
 likely to be positive, with the confidence of the positive call monotonously
-increasing with the size of the cluster. Furthermore, under imperfect
-conditions, a possibility is introduced that a cluster could predominantly or
-even entirely consist of negatives, and one would have to perform additional
-work labeling samples. To minimize the amount of work performed, we would like
-the metric to penalize situations with many small clusters (even if they are
-perfectly homogeneous), with maximum penalty applied to the clustering where
-all clusters are of size one.
+increasing with the size of the cluster.
+
+In other words, our expectation from a good clustering is that it will help us
+minimize the amount of work labeling samples.
 
 The application that inspired the design of this metric was mining for positive
 spam examples in large data sets of short user-generated content.  Given large
@@ -41,16 +38,21 @@ Algorithm
 Given a clustering, we order the clusters from the largest one to the smallest
 one. We then plot a cumulative step function where the width of the bin under a
 given "step" is proportional to cluster size, and the height of the bin is
-proportional to the expected number of positive samples seen so far [3]_. After
-two-way normalization, a perfect clustering (i.e. where a single perfectly
-homogeneous cluster covers the entire set of positives) will have the AUL score
-of 1.0. A failure to cluster or a clustering based on a property completely
-unrelated with the ground truth labeling will have the AUL of 0.5. A perverse
-clustering, i.e. where predominantly negative samples fall into large clusters
-and positive ones remain unclustered or fall into smaller clusters will have
-the AUL somewhere between 0.0 and 0.5.
+proportional to the expected number of positive samples seen so far [3]_. If a
+sample is in a cluster of size one, we assume it is likely to be negative and
+is therefore checked on an individual basis (the specific setting of cluster
+size at which the expectation changes is our 'threshold' parameter. The result
+of this assumption is that the expected contribution from unclustered
+samples is equal to their actual contribution (we assume individual checking
+always gives a correct answer). After two-way normalization, a perfect
+clustering (i.e. where a single perfectly homogeneous cluster covers the entire
+set of positives) will have the AUL score of 1.0. A failure to will result in
+the AUL of 0.5. A perverse clustering, i.e. one where many negative samples fall
+into clusters whose size is above our threshold, or where many positive samples
+remain unclustered (fall into clusters of size below the threshold one) the AUL
+somewhere between 0.0 and 0.5.
 
-A special treatment is necessary for cases where clusters are tied by size.  If
+A special treatment is necessary for cases where clusters are tied by size. If
 one were to treat tied clusters as a single group, one would obtain AUL of 1.0
 when no clusters at all are present, which is against our desiderata.  On the
 other hand, if one were to treat tied clusters entirely separately, one would
@@ -58,13 +60,11 @@ obtain different results depending on the properties of the sorting algorithm,
 also an undesirable situation. Always placing "heavy" clusters (i.e. those
 containing more positives) towards the beginning or towards the end of the tied
 group will result in, respectively, overestimating or underestimating the true
-AUL. The solution here is to average the positive counts among all clusters in
-a tied group, and then walk through them one by one, with the stepwise
-cumulative function asymptotically approaching a diagonal from the group's
-bottom left corner to the top right one. This way, a complete absence of
-clustering (i.e. all clusters are of size one) will always result in AUL of
-0.5, which is also the AUL for a random clustering uncorrelated with the ground
-truth labeling.
+AUL. The solution here is to average the positive counts among all clusters in a
+tied group, and then walk through them one by one, with the stepwise cumulative
+function asymptotically approaching a diagonal from the group's bottom left
+corner to the top right one. This way, a complete absence of clustering (i.e.
+all clusters are of size one) will always result in AUL of 0.5.
 
 The resulting AUL measure has some similarity with the Gini coefficient of
 inequality [2]_ except we plot the corresponding curve in the opposite
@@ -73,7 +73,7 @@ resulting score.
 
 
 .. [3] We take the expected number of positives and not the actual number seen
-       so far as the vertical scale in order to penalize non- homogeneous
+       so far as the vertical scale in order to penalize non-homogeneous
        clusters. Otherwise the y=1.0 ceiling would be reached early in the
        process even in very bad cases, for example when there is only one giant
        non-homogeneous cluster.
@@ -256,7 +256,7 @@ class LiftCurve(object):
         clusters = labels_to_clusters(y_true, labels_pred)
         return cls.from_clusters(clusters)
 
-    def aul_score(self, plot=False):
+    def aul_score(self, threshold=1, plot=False):
         """Calculate AUL score
 
         Parameters
@@ -268,7 +268,7 @@ class LiftCurve(object):
         """
         total_any = 0
         total_true = 0
-        exp_vertical = 0
+        assumed_vertical = 0
         aul = 0.0
 
         if plot:
@@ -292,7 +292,7 @@ class LiftCurve(object):
 
             total_any += group_width
 
-            if pred_score > 1:
+            if pred_score > threshold:
                 # penalize non-homogeneous clusters simply by assuming that they
                 # are homogeneous, in which case their expected vertical
                 # contribution should be equal to their horizontal contribution.
@@ -303,7 +303,7 @@ class LiftCurve(object):
                 # remaining true positives.
                 height_incr = group_height
 
-            exp_vertical += height_incr
+            assumed_vertical += height_incr
 
             if plot:
                 avg_true_score = group_height / float(num_true_scores)
@@ -328,7 +328,7 @@ class LiftCurve(object):
                 % (total_true, total_any)
             )
 
-        rect_area = exp_vertical * total_any
+        rect_area = assumed_vertical * total_any
 
         # special case: since normalizing the AUL defines it as always smaller
         # than the bounding rectangle, when denominator in the expression below
@@ -337,12 +337,12 @@ class LiftCurve(object):
 
         if plot:
             xs = np.array(xs, dtype=float) / total_any
-            ys = np.array(ys, dtype=float) / exp_vertical
+            ys = np.array(ys, dtype=float) / assumed_vertical
             return aul, xs, ys
         else:
             return aul
 
-    def plot(self, marker=None, save_to=None):  # pragma: no cover
+    def plot(self, threshold=1, marker=None, save_to=None):  # pragma: no cover
         """Shorthand to plot a graphical representation of Lift Curve
 
         Requires Matplotlib
@@ -355,7 +355,7 @@ class LiftCurve(object):
         """
         from matplotlib import pyplot as plt
 
-        aul, xs, ys = self.aul_score(plot=True)
+        aul, xs, ys = self.aul_score(threshold=threshold, plot=True)
         fig, ax = plt.subplots()
         ax.plot(xs, ys, marker=marker, linestyle='-')
         ax.fill([0.0] + list(xs) + [1.0], [0.0] + list(ys) + [0.0], 'b', alpha=0.2)
