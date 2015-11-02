@@ -262,7 +262,10 @@ class LiftCurve(object):
         Parameters
         ----------
 
-        plot: bool, optional (default=False)
+        threshold : int, optional (default=1)
+            Predicted scores at or below this size are not considered accurate
+
+        plot : bool, optional (default=False)
             whether to return X and Y data series for plotting
 
         """
@@ -349,7 +352,7 @@ class LiftCurve(object):
 
         Parameters
         ----------
-        marker: str, optional (default=None)
+        marker : str, optional (default=None)
             Whether to draw marker at each bend
 
         """
