@@ -948,7 +948,7 @@ class ConfusionMatrix2(ContingencyTable):
             >>> cm.coassoc_.loevinger_coeff()
             1.0
 
-        At the same time, kappa and matthews coefficients are 0.63 and 0.68,
+        At the same time, kappa and Matthews coefficients are 0.63 and 0.68,
         respectively. Being symmetrically defined, Loevinger coefficient will
         also return a perfect score in the dual (opposite) situation::
 
@@ -1349,7 +1349,7 @@ class RocCurve(object):
         References
         ----------
 
-        .. [1] `Wikipedia entry for Youden's J statitic
+        .. [1] `Wikipedia entry for Youden's J statistic
                <https://en.wikipedia.org/wiki/Youden%27s_J_statistic>`_
         """
         return self.optimal_cutoff(self._informedness)[1]
@@ -1386,7 +1386,7 @@ def _plot_lift(xs, ys):  # pragma: no cover
     ax.set_xlim(xmin=0.0, xmax=1.1)
     ax.set_ylim(ymin=0.0, ymax=1.1)
     ax.set_xlabel("portion total")
-    ax.set_ylabel("portion positive")
+    ax.set_ylabel("portion expected positive")
     ax.set_title("Lift Curve")
     fig.show()
 
@@ -1450,7 +1450,7 @@ def aul_score(scores_true, scores_pred):
     On the other hand, if one were to treat tied clusters entirely separately,
     one would obtain different results depending on the properties of the
     sorting algorithm, also an undesirable situation. Always placing "heavy"
-    clusters (i.e. those containig more positives) towards the beginning or
+    clusters (i.e. those containing more positives) towards the beginning or
     towards the end of the tied group will result in, respectively,
     overestimating or underestimating the true AUL. The solution here is to
     average the positive counts among all clusters in a tied group, and then
@@ -1483,26 +1483,38 @@ def aul_score(scores_true, scores_pred):
     # group tuples by predicted score so as to handle ties correctly
     score_groups = list(aggregate_tuples(score_groups))
 
-    total_height = 0
-    max_horizontal = 0
-    max_vertical = 0
+    total_true = 0
+    total_any = 0
+    exp_vertical = 0
 
-    # first pass: calculate some totals
+    # first pass: for each cluster-size group, incrementally calculate expected
+    # rectangle width and height.
     for pred_score, true_scores in score_groups:
+
+        # sum total of positives in all clusters of given size
         group_height = sum(true_scores)
-        group_width = pred_score * len(true_scores)
-        total_height += group_height
-        max_horizontal += group_width
 
-        if pred_score > 1:
-            max_vertical += group_width
+        # cluster size x number of clusters of given size
+        group_width = (pred_score + 1) * len(true_scores)
+
+        total_true += group_height
+        total_any += group_width
+
+        if pred_score > 0:
+            # penalize non-homogeneous clusters simply by assuming that they are
+            # homogeneous, in which case their expected vertical contribution
+            # should be equal to their horizontal contribution.
+            exp_vertical += group_width
         else:
-            max_vertical += group_height
+            # clusters of size one are by definition homogeneous so their
+            # expected vertical contribution equals sum total of any remaining
+            # true positives.
+            exp_vertical += group_height
 
-    if total_height > max_horizontal:
+    if total_true > total_any:
         warnings.warn("Number of positives exceeds total count")
 
-    score = 0.0
+    aul = 0.0
     bin_height = 0.0
     bin_right_edge = 0
 
@@ -1516,31 +1528,34 @@ def aul_score(scores_true, scores_pred):
 
         for _ in true_scores:
 
-            # xs.append(bin_right_edge / float(max_horizontal))
+            # xs.append(bin_right_edge / float(total_any))
 
-            bin_width = pred_score
+            bin_width = pred_score + 1
             bin_height += avg_true_score
             bin_right_edge += bin_width
-            score += bin_height * bin_width
+            aul += bin_height * bin_width
 
-            # ys.append(bin_height / float(max_vertical))
-            # xs.append(bin_right_edge / float(max_horizontal))
-            # ys.append(bin_height / float(max_vertical))
+            # ys.append(bin_height / float(exp_vertical))
+            # xs.append(bin_right_edge / float(total_any))
+            # ys.append(bin_height / float(exp_vertical))
 
-    assert max_horizontal == bin_right_edge
-    rect_area = max_vertical * max_horizontal
+    assert total_any == bin_right_edge
+    rect_area = exp_vertical * total_any
 
     # special case: since normalizing the AUL defines it as always smaller than
     # the bounding rectangle, when denominator in the expression below is zero,
     # the AUL score is also equal to zero.
-    return 0.0 if rect_area == 0 else score / rect_area
+    return 0.0 if rect_area == 0 else aul / rect_area
 
 
 def aul_score_from_clusters(clusters):
     """Alternative interface for AUL metric
     """
-    # score clusters by size and number of ground truth positives
-    data = ((len(cluster), sum(bool(val) for val in cluster)) for cluster in clusters)
+    # take all non-empty clusters, score them by size (subtracting one in order
+    # to keep ``scores_pred`` consistent with ``score_true``) and by number of
+    # ground truth positives
+    data = ((len(cluster) - 1, sum(bool(val) for val in cluster))
+            for cluster in clusters if cluster)
     scores_pred, scores_true = zip(*data) or ([], [])
     return aul_score(scores_true, scores_pred)
 
