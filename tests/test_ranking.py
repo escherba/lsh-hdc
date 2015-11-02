@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import chain
 from pymaptools.containers import clusters_to_labels
-from lsh_hdc.ranking import RocCurve, \
+from lsh_hdc.ranking import RocCurve, LiftCurve, \
     aul_score_from_clusters, aul_score_from_labels
 from nose.tools import assert_almost_equal
 from pymaptools.sample import discrete_sample, random_seed
@@ -17,6 +17,42 @@ def simulate_predictions(n=100, seed=None):
     classes = [discrete_sample({0: (1 - p), 1: p}) for p in probas]
     return classes, probas
 
+
+def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2, err_pos=0.1,
+                        err_neg=0.02):
+
+    csizes = map(int, np.random.gamma(galpha, gbeta, nclusters))
+    npos = sum(csizes)
+    nneg = int(npos * ((1.0 - pos_ratio) / pos_ratio))
+    clusters = []
+    for csize in csizes:
+        cluster = np.random.choice(2, csize, p=[err_pos, 1.0 - err_pos])
+        clusters.append(list(cluster))
+    negs = np.random.choice(2, nneg, p=[1.0 - err_neg, err_neg])
+    clusters.extend([[x] for x in negs])
+    return clusters
+
+
+def test_aul_simulated():
+    """Two different implementations of aul_score should return same numbers
+    """
+
+    # test lots of small examples
+    for _ in xrange(100):
+        clusters = simulate_clustering(galpha=1, gbeta=2, nclusters=4,
+                                       pos_ratio=0.5)
+        lc = LiftCurve.from_clusters(clusters)
+        expected_score = lc.aul_score(plot=True)[0]
+        actual_score = lc.aul_score(plot=False)
+        assert_almost_equal(expected_score, actual_score, 4)
+
+    # test a few large ones too
+    for _ in xrange(10):
+        clusters = simulate_clustering()
+        lc = LiftCurve.from_clusters(clusters)
+        expected_score = lc.aul_score(plot=True)[0]
+        actual_score = lc.aul_score(plot=False)
+        assert_almost_equal(expected_score, actual_score, 4)
 
 
 def _auc(fpr, tpr, reorder=False):
