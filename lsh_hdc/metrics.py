@@ -10,7 +10,7 @@ more acceptable performance in multiprocessing environment or on very large data
 sets.
 
 A side goal was to investigate different association metrics with the aim of
-applying them to evaluation of clusterings in semi-supervied learning and
+applying them to evaluation of clusterings in semi-supervised learning and
 feature selection in supervised learning.
 
 Finally, I was interested in the applicability of different association metrics
@@ -28,13 +28,10 @@ be represented as rows and columns in a table.  Roughly adhering to the
 terminology proposed in [1]_, we distinguish four types of experimental design
 all involving contingency tables.
 
-* Under Model O, sampling is entirely random. Columns, rows, and the grand total are variable.
-
-* Under Model I, random sampling occurs both row- and column-wise, but the grand total is fixed.
-
-* Under Model II, one side (either row or column totals) is fixed.
-
-* Under Model III, both rows and column totals are fixed.
+    * Under Model O, sampling is entirely random. Columns, rows, and the grand total are variable.
+    * Under Model I, random sampling occurs both row- and column-wise, but the grand total is fixed.
+    * Under Model II, one side (either row or column totals) is fixed.
+    * Under Model III, both rows and column totals are fixed.
 
 Model O is rarely employed in practice because researchers almost always have
 some rough total number of samples in mind that they would like to measure
@@ -53,7 +50,7 @@ original author, is a Model I study, but if performed by another group of
 researchers, becomes a Model II study.
 
 Fisher's classic example of tea tasting is an example of a Model III study [2]_.
-The key differnce from a Model II study here is that the subject was asked to
+The key difference from a Model II study here is that the subject was asked to
 call four cups as prepared by one method and four by the other. The subject was
 not free to say, for example, that none of the cups were prepared by adding milk
 first. The hypergeometric distribution used in the subsequent Fisher's exact
@@ -105,7 +102,7 @@ def nchoose2(n):
     """Binomial coefficient for k=2
 
     Scipy has ``scipy.special.binom`` and ``scipy.misc.comb``, however on
-    individaul (non-vectorized) ops used in memory-constratined stream
+    individual (non-vectorized) ops used in memory-constrained stream
     computation, a simple definition below is faster. It is possible to get the
     best of both worlds by writing a generator that returns NumPy arrays of
     limited size and then calling a vectorized n-choose-2 function on those,
@@ -354,11 +351,11 @@ class ContingencyTable(TableOfCounts):
         This method replaces the equivalent function in Scikit-Learn known as
         `homogeneity_completeness_v_measure` (the Scikit-Learn version takes up
         O(n^2) space because it stores data in a dense NumPy array) while the
-        given version is subquadratic because of sparse underlying storage.
+        given version is sub-quadratic because of sparse underlying storage.
 
         Note that the entropy variables H in the code below are improperly
         defined because they ought to be divided by N (the grand total for the
-        contigency table). However, the N variable cancels out during
+        contingency table). However, the N variable cancels out during
         normalization.
 
         References
@@ -381,7 +378,7 @@ class ContingencyTable(TableOfCounts):
     def split_join_distance(self):
         """Projection distance between partitions
 
-        Used in graph commmunity analysis. Originally defined in [1]_.
+        Used in graph community analysis. Originally defined in [1]_.
         Example::
 
             >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
@@ -456,7 +453,7 @@ class ClusteringMetrics(ContingencyTable):
     def coassoc_(self):
         """Compute a confusion matrix describing pairs from two partitionings
 
-        Given two partitionings A and B and a co-occurence matrix of point pairs,
+        Given two partitionings A and B and a co-occurrence matrix of point pairs,
 
             * TP - count of pairs found in the same partition in both A and B
             * FP - count of pairs found in the same partition in A but not in B
@@ -783,7 +780,7 @@ class ConfusionMatrix2(ContingencyTable):
     def rogers_tanimoto_coeff(self):
         """Rogers-Tanimoto similarity coefficient
 
-        Like Gower-Legendre but upweighs ``b + c``
+        Like Gower-Legendre but upweights 'b + c'
 
         See Also
         --------
@@ -795,7 +792,7 @@ class ConfusionMatrix2(ContingencyTable):
     def gower_legendre_coeff(self):
         """Gower-Legendre similarity coefficient
 
-        Like Rogers-Tanimoto but downweighs ``b + c``
+        Like Rogers-Tanimoto but downweights 'b + c'
 
         See Also
         --------
@@ -886,9 +883,9 @@ class ConfusionMatrix2(ContingencyTable):
             17  14
             78  81
 
-        Note that rater whose judgement is represented by rows (A) believes
+        Note that rater whose judgment is represented by rows (A) believes
         there are a lot more negative examples than positive ones while the
-        rater whose judgement is represented by columns (B) thinks the number of
+        rater whose judgment is represented by columns (B) thinks the number of
         positives is roughly equal to the number of negatives. In other words,
         the rater A appears to be negatively biased.
         """
@@ -951,7 +948,7 @@ class ConfusionMatrix2(ContingencyTable):
             >>> cm.coassoc_.loevinger_coeff()
             1.0
 
-        At the same time, kappa and matthews coefficients are 0.63 and 0.68,
+        At the same time, kappa and Matthews coefficients are 0.63 and 0.68,
         respectively. Being symmetrically defined, Loevinger coefficient will
         also return a perfect score in the dual (opposite) situation::
 
@@ -1075,7 +1072,7 @@ class ConfusionMatrix2(ContingencyTable):
     def matthews_corr(self):
         """Matthews Correlation Coefficient (Phi coefficient)
 
-        MCC is directly related to the Chi-square statitstic. Its value is equal
+        MCC is directly related to the Chi-square statistic. Its value is equal
         to the Chi-square value normalized by the maximum value Chi-Square
         can achieve with given margins (for a 2x2 table, the maximum Chi-square
         score is equal to the grand total N) transformed to correlation space by
@@ -1170,7 +1167,7 @@ class ConfusionMatrix2(ContingencyTable):
         """
         return self.TP * self.TN - self.FP * self.FN
 
-    # various silly terminologies folow
+    # various silly terminologies follow
 
     # information retrieval
     precision = PPV
@@ -1197,7 +1194,7 @@ class ConfusionMatrix2(ContingencyTable):
 
 
 def mutual_info_score(labels_true, labels_pred):
-    """Memory-efficeint replacement for equivalently named Sklean function
+    """Memory-efficient replacement for equivalently named Sklean function
     """
     ct = ContingencyTable.from_labels(labels_true, labels_pred)
     return ct.mutual_info_score()
@@ -1352,7 +1349,7 @@ class RocCurve(object):
         References
         ----------
 
-        .. [1] `Wikipedia entry for Youden's J statitic
+        .. [1] `Wikipedia entry for Youden's J statistic
                <https://en.wikipedia.org/wiki/Youden%27s_J_statistic>`_
         """
         return self.optimal_cutoff(self._informedness)[1]
@@ -1389,7 +1386,7 @@ def _plot_lift(xs, ys):  # pragma: no cover
     ax.set_xlim(xmin=0.0, xmax=1.1)
     ax.set_ylim(ymin=0.0, ymax=1.1)
     ax.set_xlabel("portion total")
-    ax.set_ylabel("portion positive")
+    ax.set_ylabel("portion expected positive")
     ax.set_title("Lift Curve")
     fig.show()
 
@@ -1443,7 +1440,7 @@ def aul_score(scores_true, scores_pred):
     perfectly homogeneous cluster covers the entire set of positives) will have
     the AUL score of 1.0. A failure to cluster or a clustering based on a
     property completely unrelated with the ground truth labeling will have the
-    AUL of 0.5. A perverse clustering, i.e. where predominantely negative
+    AUL of 0.5. A perverse clustering, i.e. where predominantly negative
     samples fall into large clusters and positive ones remain unclustered or
     fall into smaller clusters will have the AUL somewhere between 0.0 and 0.5.
 
@@ -1453,7 +1450,7 @@ def aul_score(scores_true, scores_pred):
     On the other hand, if one were to treat tied clusters entirely separately,
     one would obtain different results depending on the properties of the
     sorting algorithm, also an undesirable situation. Always placing "heavy"
-    clusters (i.e. those containig more positives) towards the beginnning or
+    clusters (i.e. those containing more positives) towards the beginning or
     towards the end of the tied group will result in, respectively,
     overestimating or underestimating the true AUL. The solution here is to
     average the positive counts among all clusters in a tied group, and then
@@ -1486,26 +1483,38 @@ def aul_score(scores_true, scores_pred):
     # group tuples by predicted score so as to handle ties correctly
     score_groups = list(aggregate_tuples(score_groups))
 
-    total_height = 0
-    max_horizontal = 0
-    max_vertical = 0
+    total_true = 0
+    total_any = 0
+    exp_vertical = 0
 
-    # first pass: calculate some totals
+    # first pass: for each cluster-size group, incrementally calculate expected
+    # rectangle width and height.
     for pred_score, true_scores in score_groups:
+
+        # sum total of positives in all clusters of given size
         group_height = sum(true_scores)
-        group_width = pred_score * len(true_scores)
-        total_height += group_height
-        max_horizontal += group_width
 
-        if pred_score > 1:
-            max_vertical += group_width
+        # cluster size x number of clusters of given size
+        group_width = (pred_score + 1) * len(true_scores)
+
+        total_true += group_height
+        total_any += group_width
+
+        if pred_score > 0:
+            # penalize non-homogeneous clusters simply by assuming that they are
+            # homogeneous, in which case their expected vertical contribution
+            # should be equal to their horizontal contribution.
+            exp_vertical += group_width
         else:
-            max_vertical += group_height
+            # clusters of size one are by definition homogeneous so their
+            # expected vertical contribution equals sum total of any remaining
+            # true positives.
+            exp_vertical += group_height
 
-    if total_height > max_horizontal:
+    if total_true > total_any:
         warnings.warn("Number of positives exceeds total count")
 
-    aul_score = 0.0
+    aul = 0.0
     bin_height = 0.0
     bin_right_edge = 0
 
@@ -1519,31 +1528,34 @@ def aul_score(scores_true, scores_pred):
 
         for _ in true_scores:
 
-            # xs.append(bin_right_edge / float(max_horizontal))
+            # xs.append(bin_right_edge / float(total_any))
 
-            bin_width = pred_score
+            bin_width = pred_score + 1
             bin_height += avg_true_score
             bin_right_edge += bin_width
-            aul_score += bin_height * bin_width
+            aul += bin_height * bin_width
 
-            # ys.append(bin_height / float(max_vertical))
-            # xs.append(bin_right_edge / float(max_horizontal))
-            # ys.append(bin_height / float(max_vertical))
+            # ys.append(bin_height / float(exp_vertical))
+            # xs.append(bin_right_edge / float(total_any))
+            # ys.append(bin_height / float(exp_vertical))
 
-    assert max_horizontal == bin_right_edge
-    rect_area = max_vertical * max_horizontal
+    assert total_any == bin_right_edge
+    rect_area = exp_vertical * total_any
 
     # special case: since normalizing the AUL defines it as always smaller than
     # the bounding rectangle, when denominator in the expression below is zero,
     # the AUL score is also equal to zero.
-    return 0.0 if rect_area == 0 else aul_score / rect_area
+    return 0.0 if rect_area == 0 else aul / rect_area
 
 
 def aul_score_from_clusters(clusters):
     """Alternative interface for AUL metric
     """
-    # score clusters by size and number of ground truth positives
-    data = ((len(cluster), sum(bool(val) for val in cluster)) for cluster in clusters)
+    # take all non-empty clusters, score them by size (subtracting one in order
+    # to keep ``scores_pred`` consistent with ``score_true``) and by number of
+    # ground truth positives
+    data = ((len(cluster) - 1, sum(bool(val) for val in cluster))
+            for cluster in clusters if cluster)
     scores_pred, scores_true = zip(*data) or ([], [])
     return aul_score(scores_true, scores_pred)
 
