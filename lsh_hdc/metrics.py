@@ -91,21 +91,8 @@ import numpy as np
 from math import sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import TableOfCounts
-from lsh_hdc.entropy import centropy, expected_mutual_information
-
-
-def nchoose2(n):
-    """Binomial coefficient for k=2
-
-    Scipy has ``scipy.special.binom`` and ``scipy.misc.comb``, however on
-    individual (non-vectorized) ops used in memory-constrained stream
-    computation, a simple definition below is faster. It is possible to get the
-    best of both worlds by writing a generator that returns NumPy arrays of
-    limited size and then calling a vectorized n-choose-2 function on those,
-    however the current way is fast enough for computing coincidence matrices
-    (turns out memory was the bottleneck, not raw computation speed).
-    """
-    return (n * (n - 1)) >> 1
+from pymaptools.iter import ilen
+from lsh_hdc.entropy import centropy, nchoose2, expected_mutual_information
 
 
 def _div(numer, denom):
@@ -121,15 +108,23 @@ def _div(numer, denom):
     return float(numer) / denom
 
 
-def jaccard_similarity(set1, set2):
+def jaccard_similarity(iterable1, iterable2):
     """Jaccard similarity between two sets
 
-    :param set1: set 1
-    :param set2: set 2
-    :returns: Jaccard similarity of two sets
-    :rtype: float
+    Parameters
+    ----------
+    iterable1 : collections.Iterable
+        first bag of items (order irrelevant)
+
+    iterable2 : collections.Iterable
+        second bag of items (order irrelevant)
+
+    Returns
+    -------
+
+    jaccard_similarity : float
     """
-    cm = ConfusionMatrix2.from_sets(set1, set2)
+    cm = ConfusionMatrix2.from_sets(iterable1, iterable2)
     return cm.jaccard_coeff()
 
 
@@ -390,6 +385,8 @@ class ContingencyTable(TableOfCounts):
                <http://dl.acm.org/citation.cfm?id=868979>`_
 
         """
+
+        # TODO: write a normalized implementation
         pa_B = sum(max(x) for x in self.iter_rows())
         pb_A = sum(max(x) for x in self.iter_cols())
         return 2 * self.grand_total - pa_B - pb_A
@@ -423,10 +420,10 @@ class ContingencyTable(TableOfCounts):
                <http://www.igi-global.com/chapter/algebraic-approach-data-quality-metrics/23022>`_
         """
         V_card = 0
-        A_card = len(list(self.iter_row_totals()))
-        B_card = len(list(self.iter_col_totals()))
+        A_card = ilen(self.iter_row_totals())
+        B_card = ilen(self.iter_col_totals())
         for row in self.iter_rows():
-            V_card += len(list(row))
+            V_card += ilen(row)
         prod = A_card * B_card
         return np.nan if prod == 0 else sqrt(prod) / V_card
 
@@ -939,7 +936,7 @@ class ConfusionMatrix2(ContingencyTable):
 
             Markedness = PPV + NPV - 1.0
 
-        Synonyms: DeltaP'
+        Synonyms: DeltaP′
         """
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
@@ -1244,14 +1241,14 @@ def mutual_info_score(labels_true, labels_pred):
 
 
 def homogeneity_completeness_v_measure(labels_true, labels_pred):
-    """Memory-efficient replacement for equivalently named Sklearn function
+    """Memory-efficient replacement for equivalently named Scikit-Learn function
     """
     ct = ContingencyTable.from_labels(labels_true, labels_pred)
     return ct.entropy_metrics()
 
 
 def adjusted_rand_score(labels_true, labels_pred):
-    """Memory-efficient replacement for equivalently named Sklearn function
+    """Memory-efficient replacement for equivalently named Scikit-Learn function
 
     In a supplement to [1]_, the following example is given::
 
@@ -1289,7 +1286,7 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
         1.0
 
     If classes members are completely split across different clusters,
-    the assignment is totally in-complete, hence the AMI is null::
+    the assignment is totally in-complete, hence the AMI is 0.0::
 
         >>> adjusted_mutual_info_score([0, 0, 0, 0], [0, 1, 2, 3])
         0.0

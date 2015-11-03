@@ -31,6 +31,53 @@ cpdef ndarray_from_iter(iterable, dtype=None):
         return np.asarray(iterable, dtype=dtype)
 
 
+cpdef nchoose2(np.int64_t n):
+    """Binomial coefficient for k=2
+
+    Scipy has ``scipy.special.binom`` and ``scipy.misc.comb``, however on
+    individual (non-vectorized) ops used in memory-constrained stream
+    computation, a simple definition below is faster. It is possible to get the
+    best of both worlds by writing a generator that returns NumPy arrays of
+    limited size and then calling a vectorized n-choose-2 function on those,
+    however the current way is fast enough for computing coincidence matrices
+    (turns out memory was the bottleneck, not raw computation speed).
+    """
+    return (n * (n - 1)) >> 1
+
+
+cpdef centropy(counts):
+    """Entropy of an iterable of counts
+
+    Assumes every entry in the list belongs to a different class. The resulting
+    value is *not* normalized by N. Also note that the entropy value is
+    calculated using natural base, which may not be what you want, so you may
+    need to normalized it with log(base).
+
+    The 'counts' parameter is expected to be an list or tuple-like iterable.
+    For convenience, it can also be a dict/mapping type, in which case its
+    values will be used to calculate entropy.
+
+    """
+    # Development note: The Cython version of this method is 50x faster on large
+    # arrays than pure CPython implementation. The speed-up is primarily due to
+    # the ``cdef np.int64_t c`` definition.
+
+    cdef np.int64_t c, n
+    cdef np.float64_t sum_c_logn_c, result
+
+    if isinstance(counts, Mapping):
+        counts = counts.itervalues()
+
+    n = 0
+    sum_c_logn_c = 0.0
+    for c in counts:
+        if c != 0:
+            n += c
+            sum_c_logn_c += c * log(c)
+    result = 0.0 if n == 0 else n * log(n) - sum_c_logn_c
+    return result
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef expected_mutual_information(row_counts, col_counts):
@@ -114,36 +161,3 @@ cpdef expected_mutual_information(row_counts, col_counts):
                 )
                 emi += (nijs[nij] * term2 * term3)
     return emi
-
-
-cpdef centropy(counts):
-    """Entropy of an iterable of counts
-
-    Assumes every entry in the list belongs to a different class. The resulting
-    value is *not* normalized by N. Also note that the entropy value is
-    calculated using natural base, which may not be what you want, so you may
-    need to normalized it with log(base).
-
-    The 'counts' parameter is expected to be an list or tuple-like iterable.
-    For convenience, it can also be a dict/mapping type, in which case its
-    values will be used to calculate entropy.
-
-    """
-    # Development note: The Cython version of this method is 50x faster on large
-    # arrays than pure CPython implementation. The speed-up is primarily due to
-    # the ``cdef np.int64_t c`` definition.
-
-    cdef np.int64_t c, n
-    cdef np.float64_t sum_c_logn_c, result
-
-    if isinstance(counts, Mapping):
-        counts = counts.itervalues()
-
-    n = 0
-    sum_c_logn_c = 0.0
-    for c in counts:
-        if c != 0:
-            n += c
-            sum_c_logn_c += c * log(c)
-    result = 0.0 if n == 0 else n * log(n) - sum_c_logn_c
-    return result
