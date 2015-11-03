@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# lsh_hdc documentation build configuration file, created by
-# sphinx-quickstart on Sun Nov  1 01:18:00 2015.
+# LSH-HDC documentation build configuration file, created by
+# sphinx-quickstart on Mon Nov  2 17:40:42 2015.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -54,7 +54,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'lsh_hdc'
+project = u'LSH-HDC'
 copyright = u'2015, Eugene Scherba'
 author = u'Eugene Scherba'
 
@@ -213,7 +213,7 @@ html_static_path = ['_static']
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'lsh_hdcdoc'
+htmlhelp_basename = 'LSH-HDCdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -235,7 +235,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'lsh_hdc.tex', u'lsh\\_hdc Documentation',
+  (master_doc, 'LSH-HDC.tex', u'LSH-HDC Documentation',
    u'Eugene Scherba', 'manual'),
 ]
 
@@ -265,7 +265,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'lsh_hdc', u'lsh_hdc Documentation',
+    (master_doc, 'lsh-hdc', u'LSH-HDC Documentation',
      [author], 1)
 ]
 
@@ -279,8 +279,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'lsh_hdc', u'lsh_hdc Documentation',
-   author, 'lsh_hdc', 'One line description of project.',
+  (master_doc, 'LSH-HDC', u'LSH-HDC Documentation',
+   author, 'LSH-HDC', 'One line description of project.',
    'Miscellaneous'),
 ]
 

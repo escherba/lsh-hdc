@@ -137,9 +137,9 @@ setup(
                 "include",
             ]),
         Extension(
-            "lsh_hdc.expected_mutual_info_fast",
+            "lsh_hdc.entropy",
             [
-                "lsh_hdc/expected_mutual_info_fast.pyx"
+                "lsh_hdc/entropy.pyx"
             ],
             depends=[
             ],

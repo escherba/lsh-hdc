@@ -88,11 +88,10 @@ References
 """
 
 import numpy as np
-from math import log, sqrt, copysign
-from collections import Mapping, Set, namedtuple
+from math import sqrt, copysign
+from collections import Set, namedtuple
 from pymaptools.containers import TableOfCounts
-from lsh_hdc.fixes import bincount
-from lsh_hdc.expected_mutual_info_fast import expected_mutual_information
+from lsh_hdc.entropy import centropy, expected_mutual_information
 
 
 def nchoose2(n):
@@ -132,45 +131,6 @@ def jaccard_similarity(set1, set2):
     """
     cm = ConfusionMatrix2.from_sets(set1, set2)
     return cm.jaccard_coeff()
-
-
-def centropy(counts):
-    """Entropy of an iterable of counts
-
-    Assumes every entry in the list belongs to a different class.
-
-    The parameter `counts` is expected to be an list or tuple-like iterable.
-    For convenience, it can also be a dict/mapping type, in which case its
-    values will be used to calculate entropy.
-
-    The entropy is calculated using natural base, which may not be what you
-    want, so caveat emptor.
-
-    """
-    if isinstance(counts, Mapping):
-        counts = counts.itervalues()
-
-    n = 0
-    sum_c_logn_c = 0.0
-    for c in counts:
-        if c != 0:
-            n += c
-            sum_c_logn_c += c * log(c)
-    return 0.0 if n == 0 else n * log(n) - sum_c_logn_c
-
-
-def lentropy(labels):
-    """Calculates the entropy for a labeling.
-    """
-    if len(labels) == 0:
-        return 1.0
-    label_idx = np.unique(labels, return_inverse=True)[1]
-    pi = bincount(label_idx).astype(np.float)
-    pi = pi[pi > 0]
-    pi_sum = np.sum(pi)
-    # log(a / b) should be calculated as log(a) - log(b) for
-    # possible loss of precision
-    return -np.sum((pi / pi_sum) * (np.log(pi) - log(pi_sum)))
 
 
 def ratio2weights(ratio):
@@ -371,6 +331,43 @@ class ContingencyTable(TableOfCounts):
         c = 1.0 if H_K == 0.0 else max(0.0, I_CK / H_K)
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
+
+    def adjusted_mutual_info_score(self):
+        """Adjusted Mutual Information between two clusterings
+
+        For mathemtical definition, see [1]_
+
+        References
+        ----------
+
+        .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
+            measures for clusterings comparison: Variants, properties,
+            normalization and correction for chance. The Journal of Machine
+            Learning Research, 11, 2837-2854.
+            <http://www.jmlr.org/papers/v11/vinh10a.html>`_
+
+        """
+        # Prepare row totals and check for special cases
+        row_totals = np.fromiter(self.iter_row_totals(), dtype=np.int64)
+        col_totals = np.fromiter(self.iter_col_totals(), dtype=np.int64)
+        R = len(row_totals)
+        C = len(col_totals)
+        if R == C == 1 or R == C == 0:
+            # No clustering since the data is not split. This is a perfect match
+            # hence return 1.0.
+            return 1.0
+
+        # In one step, calculate entropy for each labeling and mutual
+        # information
+        h_true, h_pred, mi = self._entropies()
+        mi_max = max(h_true, h_pred)
+
+        # Calculate the expected value for the MI
+        emi = expected_mutual_information(row_totals, col_totals)
+
+        # Calculate the adjusted MI score
+        ami = (mi - emi) / (mi_max - emi)
+        return ami
 
     def split_join_distance(self):
         """Projection distance between partitions
@@ -1267,7 +1264,10 @@ def adjusted_rand_score(labels_true, labels_pred):
 
 
 def adjusted_mutual_info_score(labels_true, labels_pred):
-    """Adjusted Mutual Information between two clusterings [1]_
+    """Adjusted Mutual Information between two clusterings
+
+    This is a memory-efficient replacement for the equivalently named
+    Scikit-Learn function.
 
     Perfect labelings are both homogeneous and complete, hence have
     score 1.0::
@@ -1283,39 +1283,9 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
         >>> adjusted_mutual_info_score([0, 0, 0, 0], [0, 1, 2, 3])
         0.0
 
-    References
-    ----------
-
-    .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
-           measures for clusterings comparison: Variants, properties,
-           normalization and correction for chance. The Journal of Machine
-           Learning Research, 11, 2837-2854.
-           <http://www.jmlr.org/papers/v11/vinh10a.html>`_
-
     """
-    # labels_true, labels_pred = check_clusterings(labels_true, labels_pred)
-    classes = np.unique(labels_true)
-    clusters = np.unique(labels_pred)
-
-    # Special limit cases: no clustering since the data is not split.
-    # This is a perfect match hence return 1.0.
-    if (classes.shape[0] == clusters.shape[0] == 1
-            or classes.shape[0] == clusters.shape[0] == 0):
-        return 1.0
-
-    # Calculate the MI for the two clusterings
-    cm = ContingencyTable.from_labels(labels_true, labels_pred)
-    mi = cm.mutual_info_score()
-    row_totals = np.fromiter(cm.iter_row_totals(), dtype=np.int32)
-    col_totals = np.fromiter(cm.iter_col_totals(), dtype=np.int32)
-
-    # Calculate the expected value for the mutual information
-    emi = expected_mutual_information(row_totals, col_totals)
-
-    # Calculate entropy for each labeling
-    h_true, h_pred = lentropy(labels_true), lentropy(labels_pred)
-    ami = (mi - emi) / (max(h_true, h_pred) - emi)
-    return ami
+    cm = ClusteringMetrics.from_labels(labels_true, labels_pred)
+    return cm.adjusted_mutual_info_score()
 
 
 def matthews_corr(*args, **kwargs):

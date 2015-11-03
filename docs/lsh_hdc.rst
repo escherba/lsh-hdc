@@ -8,7 +8,7 @@ Submodules
 
    lsh_hdc.cluster
    lsh_hdc.cluster_alt
-   lsh_hdc.expected_mutual_info_fast
+   lsh_hdc.entropy
    lsh_hdc.ext
    lsh_hdc.fixes
    lsh_hdc.hashes
