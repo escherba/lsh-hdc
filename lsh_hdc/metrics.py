@@ -92,7 +92,7 @@ from math import sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import TableOfCounts
 from pymaptools.iter import ilen
-from lsh_hdc.entropy import centropy, nchoose2, expected_mutual_information
+from lsh_hdc.entropy import centropy, nchoose2, emi_from_margins
 
 
 def _div(numer, denom):
@@ -361,7 +361,7 @@ class ContingencyTable(TableOfCounts):
         mi_max = max(h_true, h_pred)
 
         # Calculate the expected value for the MI
-        emi = expected_mutual_information(row_totals, col_totals)
+        emi = emi_from_margins(row_totals, col_totals)
 
         # Calculate the adjusted MI score
         ami = (mi - emi) / (mi_max - emi)

@@ -1,10 +1,10 @@
 import operator
+from math import floor
 from functools import partial
-from pymaptools import UnionFind
-from pymaptools.bitwise import hamming
 from itertools import imap
 from collections import defaultdict, Counter
-from math import floor
+from pymaptools.unionfind import UnionFind
+from pymaptools.bitwise import hamming
 from lsh_hdc.preprocess import RegexTokenizer
 from lsh_hdc import Shingler, SimHashSignature, MinHashSketchSignature, \
     MinHashSignature, LSHC
