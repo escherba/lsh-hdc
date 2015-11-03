@@ -91,21 +91,8 @@ import numpy as np
 from math import sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import TableOfCounts
-from lsh_hdc.entropy import centropy, expected_mutual_information
-
-
-def nchoose2(n):
-    """Binomial coefficient for k=2
-
-    Scipy has ``scipy.special.binom`` and ``scipy.misc.comb``, however on
-    individual (non-vectorized) ops used in memory-constrained stream
-    computation, a simple definition below is faster. It is possible to get the
-    best of both worlds by writing a generator that returns NumPy arrays of
-    limited size and then calling a vectorized n-choose-2 function on those,
-    however the current way is fast enough for computing coincidence matrices
-    (turns out memory was the bottleneck, not raw computation speed).
-    """
-    return (n * (n - 1)) >> 1
+from pymaptools.iter import ilen
+from lsh_hdc.entropy import centropy, nchoose2, expected_mutual_information
 
 
 def _div(numer, denom):
@@ -121,15 +108,23 @@ def _div(numer, denom):
     return float(numer) / denom
 
 
-def jaccard_similarity(set1, set2):
+def jaccard_similarity(iterable1, iterable2):
     """Jaccard similarity between two sets
 
-    :param set1: set 1
-    :param set2: set 2
-    :returns: Jaccard similarity of two sets
-    :rtype: float
+    Parameters
+    ----------
+    iterable1 : collections.Iterable
+        first bag of items (order irrelevant)
+
+    iterable2 : collections.Iterable
+        second bag of items (order irrelevant)
+
+    Returns
+    -------
+
+    jaccard_similarity : float
     """
-    cm = ConfusionMatrix2.from_sets(set1, set2)
+    cm = ConfusionMatrix2.from_sets(iterable1, iterable2)
     return cm.jaccard_coeff()
 
 
@@ -369,7 +364,7 @@ class ContingencyTable(TableOfCounts):
         ami = (mi - emi) / (mi_max - emi)
         return ami
 
-    def split_join_distance(self):
+    def split_join_distance(self, normalize=True):
         """Projection distance between partitions
 
         Used in graph community analysis. Originally defined in [1]_.
@@ -378,7 +373,7 @@ class ContingencyTable(TableOfCounts):
             >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
             >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
             >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-            >>> cm.split_join_distance()
+            >>> cm.split_join_distance(normalize=False)
             11
 
         References
@@ -390,14 +385,45 @@ class ContingencyTable(TableOfCounts):
                <http://dl.acm.org/citation.cfm?id=868979>`_
 
         """
-        pa_B = sum(max(x) for x in self.iter_rows())
-        pb_A = sum(max(x) for x in self.iter_cols())
-        return 2 * self.grand_total - pa_B - pb_A
+        sim = self.split_join_similarity(normalize=normalize)
+        sim_max = 1.0 if normalize else 2 * self.grand_total
+        return sim_max - sim
+
+    def split_join_similarity(self, normalize=True):
+        """Split-join similarity score
+
+        A relatively decent clustering::
+
+            >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
+            >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
+            >>> cm = ContingencyTable.from_labels(ltrue, lpred)
+            >>> cm.split_join_similarity()
+            0.9
+
+        Less good clustering::
+
+            >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
+            ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
+            >>> cm = ContingencyTable.from_clusters(clusters)
+            >>> cm.split_join_similarity()
+            0.5
+
+        See Also
+        --------
+        talburt_wang_index
+
+        """
+        pa_B = sum(max(row) for row in self.iter_rows())
+        pb_A = sum(max(col) for col in self.iter_cols())
+        score = pa_B + pb_A
+        if normalize:
+            score /= float(2 * self.grand_total)
+        return score
 
     def talburt_wang_index(self):
         """Talburt-Wang index of similarity of two partitionings
 
-        Example 1::
+        A relatively decent clustering::
 
             >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
             >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
@@ -405,13 +431,17 @@ class ContingencyTable(TableOfCounts):
             >>> round(cm.talburt_wang_index(), 3)
             0.816
 
-        Example 2 (from [1]_)::
+        Less good clustering (example from [1]_)::
 
             >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
             ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
             >>> cm = ContingencyTable.from_clusters(clusters)
             >>> round(cm.talburt_wang_index(), 2)
             0.49
+
+        See Also
+        --------
+        split_join_similarity
 
         References
         ----------
@@ -422,13 +452,10 @@ class ContingencyTable(TableOfCounts):
                applications, 1-22.
                <http://www.igi-global.com/chapter/algebraic-approach-data-quality-metrics/23022>`_
         """
-        V_card = 0
-        A_card = len(list(self.iter_row_totals()))
-        B_card = len(list(self.iter_col_totals()))
-        for row in self.iter_rows():
-            V_card += len(list(row))
-        prod = A_card * B_card
-        return np.nan if prod == 0 else sqrt(prod) / V_card
+        A_card = ilen(self.iter_row_totals())
+        B_card = ilen(self.iter_col_totals())
+        V_card = sum(ilen(row) for row in self.iter_rows())
+        return _div(sqrt(A_card * B_card), V_card)
 
 
 class ClusteringMetrics(ContingencyTable):
@@ -478,6 +505,11 @@ class ClusteringMetrics(ContingencyTable):
         except AttributeError:
             method = getattr(self.coassoc_, scoring_method)
         return method(*args, **kwargs)
+
+    def adjusted_rand_index(self):
+        """Memory-efficient replacement for a similar Scikit-Learn function
+        """
+        return self.coassoc_.kappa()
 
     def adjusted_jaccard_coeff(self):
         """Jaccard similarity coefficient with correction for chance
@@ -939,7 +971,7 @@ class ConfusionMatrix2(ContingencyTable):
 
             Markedness = PPV + NPV - 1.0
 
-        Synonyms: DeltaP'
+        Synonyms: DeltaP′
         """
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
@@ -1244,14 +1276,14 @@ def mutual_info_score(labels_true, labels_pred):
 
 
 def homogeneity_completeness_v_measure(labels_true, labels_pred):
-    """Memory-efficient replacement for equivalently named Sklearn function
+    """Memory-efficient replacement for equivalently named Scikit-Learn function
     """
     ct = ContingencyTable.from_labels(labels_true, labels_pred)
     return ct.entropy_metrics()
 
 
 def adjusted_rand_score(labels_true, labels_pred):
-    """Memory-efficient replacement for equivalently named Sklearn function
+    """Memory-efficient replacement for equivalently named Scikit-Learn function
 
     In a supplement to [1]_, the following example is given::
 
@@ -1271,7 +1303,7 @@ def adjusted_rand_score(labels_true, labels_pred):
 
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return ct.coassoc_.kappa()
+    return ct.adjusted_rand_index()
 
 
 def adjusted_mutual_info_score(labels_true, labels_pred):
@@ -1289,7 +1321,7 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
         1.0
 
     If classes members are completely split across different clusters,
-    the assignment is totally in-complete, hence the AMI is null::
+    the assignment is totally in-complete, hence the AMI is 0.0::
 
         >>> adjusted_mutual_info_score([0, 0, 0, 0], [0, 1, 2, 3])
         0.0
