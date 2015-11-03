@@ -109,9 +109,9 @@ def test_adjusted_mutual_info_score():
     row_totals = np.fromiter(cm.iter_row_totals(), dtype=np.int32)
     col_totals = np.fromiter(cm.iter_col_totals(), dtype=np.int32)
     emi_1 = expected_mutual_information(row_totals, col_totals)
-    assert_almost_equal(emi_1, 0.15042, 5)
+    assert_almost_equal(emi_1 / cm.grand_total, 0.15042, 5)
     emi_2 = expected_mutual_information(col_totals, row_totals)
-    assert_almost_equal(emi_2, 0.15042, 5)
+    assert_almost_equal(emi_2 / cm.grand_total, 0.15042, 5)
 
     # Adjusted mutual information (1)
     ami_1 = adjusted_mutual_info_score(labels_a, labels_b)
@@ -289,21 +289,47 @@ def test_adjustment_for_chance():
     assert_array_almost_equal(max_abs_scores, [0.02, 0.03, 0.03, 0.02], 2)
 
 
-def test_twoway_confusion_ll():
-    """Example from McDonald's G-test for independence
-    http://www.biostathandbook.com/gtestind.html
+def test_twoway_confusion_1():
+    """Finley's tornado data
+    http://www.cawcr.gov.au/projects/verification/Finley/Finley_Tornados.html
     """
-    cm = ConfusionMatrix2.from_ccw(4758, 8840, 76, 30)
-    assert_almost_equal(cm.g_score(),       2.14, 2)
-    assert_almost_equal(cm.chisq_score(),   2.07, 2)
+    cm = ConfusionMatrix2.from_ccw(28, 72, 2680, 23)
 
-    assert_almost_equal(cm.mi_corr(),       0.0150, 4)
-    assert_almost_equal(cm.mi_corr1(),      0.0110, 4)
-    assert_almost_equal(cm.mi_corr0(),      0.0415, 4)
-    assert_almost_equal(cm.matthews_corr(), 0.0123, 4)
-    assert_almost_equal(cm.informedness(),  0.0023, 4)
-    assert_almost_equal(cm.markedness(),    0.0669, 4)
-    assert_almost_equal(cm.kappa(),         0.0016, 4)
+    assert_almost_equal(cm.g_score(),       126.1, 1)
+    assert_almost_equal(cm.chisq_score(),   397.9, 1)
+
+    assert_almost_equal(cm.mi_corr(),       0.429, 3)
+    assert_almost_equal(cm.mi_corr1(),      0.497, 3)
+    assert_almost_equal(cm.mi_corr0(),      0.382, 3)
+
+    assert_almost_equal(cm.matthews_corr(), 0.377, 3)
+    assert_almost_equal(cm.informedness(),  0.523, 3)
+    assert_almost_equal(cm.markedness(),    0.271, 3)
+
+    assert_almost_equal(cm.kappa(),         0.355, 3)
+    assert_almost_equal(cm.kappa1(),        0.532, 3)
+    assert_almost_equal(cm.kappa0(),        0.267, 3)
+
+
+def test_twoway_confusion_2():
+    """Finley's tornado data (listed in Goodman and Kruskal)
+    """
+    cm = ConfusionMatrix2.from_ccw(11, 14, 906, 3)
+
+    assert_almost_equal(cm.g_score(),       70.83, 2)
+    assert_almost_equal(cm.chisq_score(),   314.3, 1)
+
+    assert_almost_equal(cm.mi_corr(),       0.614, 3)
+    assert_almost_equal(cm.mi_corr1(),      0.698, 3)
+    assert_almost_equal(cm.mi_corr0(),      0.555, 3)
+
+    assert_almost_equal(cm.matthews_corr(), 0.580, 3)
+    assert_almost_equal(cm.informedness(),  0.770, 3)
+    assert_almost_equal(cm.markedness(),    0.437, 3)
+
+    assert_almost_equal(cm.kappa(),         0.556, 3)
+    assert_almost_equal(cm.kappa1(),        0.780, 3)
+    assert_almost_equal(cm.kappa0(),        0.431, 3)
 
 
 def test_negative_correlation():

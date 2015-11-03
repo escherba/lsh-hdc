@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 
 Motivation
@@ -86,11 +88,10 @@ References
 """
 
 import numpy as np
-from math import log, sqrt, copysign
-from collections import Mapping, Set, namedtuple
+from math import sqrt, copysign
+from collections import Set, namedtuple
 from pymaptools.containers import TableOfCounts
-from lsh_hdc.fixes import bincount
-from lsh_hdc.expected_mutual_info_fast import expected_mutual_information
+from lsh_hdc.entropy import centropy, expected_mutual_information
 
 
 def nchoose2(n):
@@ -130,45 +131,6 @@ def jaccard_similarity(set1, set2):
     """
     cm = ConfusionMatrix2.from_sets(set1, set2)
     return cm.jaccard_coeff()
-
-
-def centropy(counts):
-    """Entropy of an iterable of counts
-
-    Assumes every entry in the list belongs to a different class.
-
-    The parameter `counts` is expected to be an list or tuple-like iterable.
-    For convenience, it can also be a dict/mapping type, in which case its
-    values will be used to calculate entropy.
-
-    The entropy is calculated using natural base, which may not be what you
-    want, so caveat emptor.
-
-    """
-    if isinstance(counts, Mapping):
-        counts = counts.itervalues()
-
-    n = 0
-    sum_c_logn_c = 0.0
-    for c in counts:
-        if c != 0:
-            n += c
-            sum_c_logn_c += c * log(c)
-    return 0.0 if n == 0 else n * log(n) - sum_c_logn_c
-
-
-def lentropy(labels):
-    """Calculates the entropy for a labeling.
-    """
-    if len(labels) == 0:
-        return 1.0
-    label_idx = np.unique(labels, return_inverse=True)[1]
-    pi = bincount(label_idx).astype(np.float)
-    pi = pi[pi > 0]
-    pi_sum = np.sum(pi)
-    # log(a / b) should be calculated as log(a) - log(b) for
-    # possible loss of precision
-    return -np.sum((pi / pi_sum) * (np.log(pi) - log(pi_sum)))
 
 
 def ratio2weights(ratio):
@@ -295,7 +257,7 @@ class ContingencyTable(TableOfCounts):
 
         The distance metric calculated here is one of several possible entropy-
         based distance metrics that could be defined on a RxC matrix. Per Table
-        2 in [1]_, the given measure is equivalent to ``2 * D_sum``.
+        2 in [1]_, the given measure is equivalent to '2 * D_sum'.
 
         Note that the entropy variables H below are calculated using natural
         logs, so a base correction may be necessary if you need your result in
@@ -333,7 +295,7 @@ class ContingencyTable(TableOfCounts):
 
         The V-measure metric is also known as Normalized Mutual Information
         (NMI), and is calculated here as the harmonic mean of Homogeneity and
-        Completeness (``NMI_sum``). There exist other definitions of NMI (see
+        Completeness ('NMI_sum'). There exist other definitions of NMI (see
         Table 2 in [1]_ for a good review).
 
         Homogeneity and Completeness are duals of each other and can be thought
@@ -369,6 +331,43 @@ class ContingencyTable(TableOfCounts):
         c = 1.0 if H_K == 0.0 else max(0.0, I_CK / H_K)
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
+
+    def adjusted_mutual_info(self):
+        """Adjusted Mutual Information between two clusterings
+
+        For mathemtical definition, see [1]_
+
+        References
+        ----------
+
+        .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
+            measures for clusterings comparison: Variants, properties,
+            normalization and correction for chance. The Journal of Machine
+            Learning Research, 11, 2837-2854.
+            <http://www.jmlr.org/papers/v11/vinh10a.html>`_
+
+        """
+        # Prepare row totals and check for special cases
+        row_totals = np.fromiter(self.iter_row_totals(), dtype=np.int64)
+        col_totals = np.fromiter(self.iter_col_totals(), dtype=np.int64)
+        R = len(row_totals)
+        C = len(col_totals)
+        if R == C == 1 or R == C == 0:
+            # No clustering since the data is not split. This is a perfect match
+            # hence return 1.0.
+            return 1.0
+
+        # In one step, calculate entropy for each labeling and mutual
+        # information
+        h_true, h_pred, mi = self._entropies()
+        mi_max = max(h_true, h_pred)
+
+        # Calculate the expected value for the MI
+        emi = expected_mutual_information(row_totals, col_totals)
+
+        # Calculate the adjusted MI score
+        ami = (mi - emi) / (mi_max - emi)
+        return ami
 
     def split_join_distance(self):
         """Projection distance between partitions
@@ -603,12 +602,6 @@ class ConfusionMatrix2(ContingencyTable):
         super(ConfusionMatrix2, self).__init__(rows=((TP, FN), (FP, TN)))
 
     @classmethod
-    def from_rows(cls, rows):
-        return super(ConfusionMatrix2, cls)(rows=rows)
-
-    from_array = from_rows
-
-    @classmethod
     def from_sets(cls, set1, set2, universe_size=None):
         """Create a confusion matrix for comparison of two sets
 
@@ -639,10 +632,6 @@ class ConfusionMatrix2(ContingencyTable):
 
     def to_rows(self):
         return ((self.TP, self.FN), (self.FP, self.TN))
-
-    @classmethod
-    def from_cols(cls, cols):
-        return super(ConfusionMatrix2, cls)(cols=cols)
 
     @classmethod
     def from_random_counts(cls, low=0, high=100):
@@ -680,51 +669,66 @@ class ConfusionMatrix2(ContingencyTable):
         return self.rows[1][1]
 
     def ACC(self):
-        """Accuracy (Simple Matching Coefficient, Rand Index)
+        """Accuracy
+
+        Synonyms: Simple Matching Coefficient, Rand Index
         """
         return _div(self.TP + self.TN, self.grand_total)
 
     def PPV(self):
-        """Precision (Positive Predictive Value)
+        """Positive Predictive Value
+
+        Synonyms: precision, frequency of hits, post agreement, success ratio
         """
         return _div(self.TP, self.TP + self.FP)
 
     def NPV(self):
-        """Negative predictive value
+        """Negative Predictive Value
+
+        Synonyms: frequency of correct null forecasts
         """
         return _div(self.TN, self.TN + self.FN)
 
     def TPR(self):
-        """Recall (Sensitivity)
+        """True Positive Rate
 
-        Also known as hit rate
+        Synonyms: recall, sensitivity, hit rate, probability of detection,
+        prefigurance
         """
         return _div(self.TP, self.TP + self.FN)
 
     def FPR(self):
-        """Fallout (False Positive Rate)
+        """False Positive Rate
 
-        Synonyms: fallout, false alarm rate
+        Synonyms: fallout
         """
         return _div(self.FP, self.TN + self.FP)
 
     def TNR(self):
-        """Specificity (True Negative Rate)
+        """True Negative Rate
+
+        Synonyms: specificity
         """
         return _div(self.TN, self.FP + self.TN)
 
     def FNR(self):
-        """Miss Rate (False Negative Rate)
+        """False Negative Rate
+
+        Synonyms: miss rate, frequency of misses
         """
         return _div(self.FN, self.TP + self.FN)
 
     def FDR(self):
         """False discovery rate
+
+        Synonyms: false alarm ratio, probability of false alarm
         """
         return _div(self.FP, self.TP + self.FP)
 
     def FOR(self):
         """False omission rate
+
+        Synonyms: detection failure ratio
         """
         return _div(self.FN, self.TN + self.FN)
 
@@ -803,6 +807,8 @@ class ConfusionMatrix2(ContingencyTable):
         matrices where either FP or FN are close to zero, its scale becomes
         equivalent to the scale of either recall or precision respectively.
 
+        Synonyms: critical success index
+
         See Also
         --------
         dice_coeff, ochiai_coeff
@@ -868,8 +874,15 @@ class ConfusionMatrix2(ContingencyTable):
         """
         return _div(abs(self.TP - self.TN), self.grand_total)
 
+    def frequency_bias(self):
+        """Frequency bias
+
+        How much more often is rater B is predicting TP
+        """
+        return _div(self.TP + self.FP, self.TP + self.FN)
+
     def bias_index(self):
-        """Bias
+        """Bias Index
 
         In interrater agreement studies, bias is the extent to which the raters
         disagree on the positive-negative ratio of the binary variable studied.
@@ -887,15 +900,31 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(abs(self.FN - self.FP), self.grand_total)
 
     def informedness(self):
-        """Informedness (Recall corrected for chance)
+        """Informedness
+
+        This measure was first proposed for evaluating diagnotics tests in [1]_,
+        and also used in meteorology under the name "True Skill Score" [2]_. It
+        can be thought of as recall corrected for chance.
 
         Alternative formulations::
 
             Informedness = Sensitivity + Specificity - 1.0
                          = TPR - FPR
 
-        Synonyms: True Skill Score, Hannssen-Kuiper Score, Attributable Risk,
-        DeltaP'.
+        Synonyms: Youden's J, True Skill Score, Hannssen-Kuiper Score,
+        Attributable Risk, DeltaP.
+
+        References
+        ----------
+
+        .. [1] `Youden, W. J. (1950). Index for rating diagnostic tests. Cancer,
+               3(1), 32-35.
+               <http://www.ncbi.nlm.nih.gov/pubmed/15405679>`_
+
+        .. [2] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
+               summary measures of skill in rare event forecasting based on
+               contingency tables. Weather and Forecasting, 5(4), 576-585.
+               <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
         """
         p1, q1 = self.row_totals.values()
         return _div(self.covar(), p1 * q1)
@@ -903,11 +932,14 @@ class ConfusionMatrix2(ContingencyTable):
     def markedness(self):
         """Markedness (Precision corrected for chance)
 
+        Complement to informednes. It can be thought of as precision corrected
+        for chance.
+
         Alternative formulation::
 
             Markedness = PPV + NPV - 1.0
 
-        Synonyms: DeltaP
+        Synonyms: DeltaP'
         """
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
@@ -971,12 +1003,12 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(self.covar(), min(p1 * q2, p2 * q1))
 
     def kappa(self):
-        """Cohen's Kappa (Interrater Agreement, Adjusted Rand Index)
+        """Cohen's Kappa (Interrater Agreement)
 
-        Kappa index comes from psychology and was originally introduced to
-        measure interrater agreement. It has also been used in replication
-        evaluation [1]_, reliability studies [2]_, clustering evaluation [3]_,
-        and feature selection [4]_.
+        Kappa index is best known in psychology field where it was introduced to
+        measure interrater agreement [1]_. It has also been used in replication
+        studies [2]_, clustering evaluation [3]_, feature selection [4]_, and
+        forecasting [5]_. The first derivation of this measure is in [6]_.
 
         Kappa can be derived by correcting Accuracy (Simple Matching
         Coefficient, Rand Index) for chance. Tbe general formula for chance
@@ -1006,29 +1038,40 @@ class ConfusionMatrix2(ContingencyTable):
         confusion matrix, it is arguably better to use use informedness and
         markedness.
 
+        Synonyms: Adjusted Rand Index, Heidke Skill Score
+
         References
         ----------
 
-        .. [1] `Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering
-                validation: results and implications for applied analyses (p.
-                341).  World Scientific Pub Co Inc.
-                <https://doi.org/10.1142/9789812832153_0010>`_
+        .. [1] `Cohen, J. (1960). A coefficient of agreement for nominal scales.
+               Educational and psychological measurement, 20(1), 37-46.
+               <https://doi.org/10.1177/001316446002000104>`_
 
-        .. [2] `Sim, J., & Wright, C. C. (2005). The kappa statistic in
-                reliability studies: use, interpretation, and sample size
-                requirements.  Physical therapy, 85(3), 257-268.
-                <http://www.ncbi.nlm.nih.gov/pubmed/15733050>`_
+        .. [2] `Arabie, P., Hubert, L. J., & De Soete, G. (1996). Clustering
+               validation: results and implications for applied analyses (p.
+               341).  World Scientific Pub Co Inc.
+               <https://doi.org/10.1142/9789812832153_0010>`_
 
         .. [3] `Warrens, M. J. (2008). On the equivalence of Cohen's kappa and
-                the Hubert-Arabie adjusted Rand index. Journal of Classification,
-                25(2), 177-183.
-                <https://doi.org/10.1007/s00357-008-9023-7>`_
+               the Hubert-Arabie adjusted Rand index. Journal of Classification,
+               25(2), 177-183.
+               <https://doi.org/10.1007/s00357-008-9023-7>`_
 
         .. [4] `Santos, J. M., & Embrechts, M. (2009). On the use of the
-                adjusted rand index as a metric for evaluating supervised
-                classification. In Artificial neural networks - ICANN 2009 (pp.
-                175-184).  Springer Berlin Heidelberg.
-                <https://doi.org/10.1007/978-3-642-04277-5_18>`_
+               adjusted rand index as a metric for evaluating supervised
+               classification. In Artificial neural networks - ICANN 2009 (pp.
+               175-184).  Springer Berlin Heidelberg.
+               <https://doi.org/10.1007/978-3-642-04277-5_18>`_
+
+        .. [5] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
+               summary measures of skill in rare event forecasting based on
+               contingency tables. Weather and Forecasting, 5(4), 576-585.
+               <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
+
+        .. [6] `Heidke, Paul. "Berechnung des Erfolges und der Güte der
+               Windstärkevorhersagen im Sturmwarnungsdienst." Geografiska
+               Annaler (1926): 301-349.
+               <http://www.jstor.org/stable/519729>`_
 
         """
         p1, q1 = self.row_totals.values()
@@ -1167,20 +1210,25 @@ class ConfusionMatrix2(ContingencyTable):
     # information retrieval
     precision = PPV
     recall = TPR
-    fallout = FPR
     accuracy = ACC
+    # fallout = FPR
 
     # clinical diagnostics
     sensitivity = TPR
     specificity = TNR
+    # youden_j = informedness
 
     # sales/marketing
-    hit_rate = TPR
-    miss_rate = FNR
+    # hit_rate = TPR
+    # miss_rate = FNR
 
     # ecology
-    sm_coeff = ACC
-    phi_coeff = matthews_corr
+    # sm_coeff = ACC
+    # phi_coeff = matthews_corr
+
+    # meteorology
+    # heidke_skill = kappa
+    # true_skill = informedness
 
     # cluster analysis
     rand_index = ACC
@@ -1227,7 +1275,10 @@ def adjusted_rand_score(labels_true, labels_pred):
 
 
 def adjusted_mutual_info_score(labels_true, labels_pred):
-    """Adjusted Mutual Information between two clusterings [1]_
+    """Adjusted Mutual Information between two clusterings
+
+    This is a memory-efficient replacement for the equivalently named
+    Scikit-Learn function.
 
     Perfect labelings are both homogeneous and complete, hence have
     score 1.0::
@@ -1243,39 +1294,9 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
         >>> adjusted_mutual_info_score([0, 0, 0, 0], [0, 1, 2, 3])
         0.0
 
-    References
-    ----------
-
-    .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
-           measures for clusterings comparison: Variants, properties,
-           normalization and correction for chance. The Journal of Machine
-           Learning Research, 11, 2837-2854.
-           <http://www.jmlr.org/papers/v11/vinh10a.html>`_
-
     """
-    # labels_true, labels_pred = check_clusterings(labels_true, labels_pred)
-    classes = np.unique(labels_true)
-    clusters = np.unique(labels_pred)
-
-    # Special limit cases: no clustering since the data is not split.
-    # This is a perfect match hence return 1.0.
-    if (classes.shape[0] == clusters.shape[0] == 1
-            or classes.shape[0] == clusters.shape[0] == 0):
-        return 1.0
-
-    # Calculate the MI for the two clusterings
-    cm = ContingencyTable.from_labels(labels_true, labels_pred)
-    mi = cm.mutual_info_score()
-    row_totals = np.fromiter(cm.iter_row_totals(), dtype=np.int32)
-    col_totals = np.fromiter(cm.iter_col_totals(), dtype=np.int32)
-
-    # Calculate the expected value for the mutual information
-    emi = expected_mutual_information(row_totals, col_totals)
-
-    # Calculate entropy for each labeling
-    h_true, h_pred = lentropy(labels_true), lentropy(labels_pred)
-    ami = (mi - emi) / (max(h_true, h_pred) - emi)
-    return ami
+    cm = ClusteringMetrics.from_labels(labels_true, labels_pred)
+    return cm.adjusted_mutual_info()
 
 
 def matthews_corr(*args, **kwargs):
