@@ -42,7 +42,7 @@ cpdef nchoose2(np.int64_t n):
     however the current way is fast enough for computing coincidence matrices
     (turns out memory was the bottleneck, not raw computation speed).
     """
-    return (n * (n - 1)) >> 1
+    return (n * (n - 1LL)) >> 1LL
 
 
 cpdef centropy(counts):
@@ -68,13 +68,13 @@ cpdef centropy(counts):
     if isinstance(counts, Mapping):
         counts = counts.itervalues()
 
-    n = 0
+    n = 0LL
     sum_c_logn_c = 0.0
     for c in counts:
-        if c != 0:
+        if c != 0LL:
             n += c
             sum_c_logn_c += c * log(c)
-    result = 0.0 if n == 0 else n * log(n) - sum_c_logn_c
+    result = 0.0 if n == 0LL else n * log(n) - sum_c_logn_c
     return result
 
 
@@ -102,55 +102,63 @@ cpdef expected_mutual_information(row_counts, col_counts):
     # there to avoid O(n^2) memory explosions on large data.
 
     cdef np.float64_t term2, term3
-    cdef np.ndarray[np.float64_t] gln_a, gln_b, gln_Na, gln_Nb, gln_nij, \
-        log_Nnij, nijs
+    cdef np.ndarray[np.float64_t] log_a, log_b, log_Nnij, nijs
     cdef np.ndarray[np.int64_t, ndim=1] a, b
 
     a = ndarray_from_iter(row_counts, dtype=np.int64)
     b = ndarray_from_iter(col_counts, dtype=np.int64)
+
+    log_a = np.log(a)
+    log_b = np.log(b)
 
     cdef Py_ssize_t R = len(a)
     cdef Py_ssize_t C = len(b)
     cdef np.int64_t N = np.sum(a)
     if N != np.sum(b):
         raise ValueError("Sums of row and column margins must be equal")
+
     # There are three major terms to the EMI equation, which are multiplied to
     # and then summed over varying nij values.
+
     # While nijs[0] will never be used, having it simplifies the indexing.
-    nijs = np.arange(0, max(np.max(a), np.max(b)) + 1, dtype=np.float64)
+    cdef np.int64_t max_ab = max(<np.int64_t>np.max(a), <np.int64_t>np.max(b))
+    nijs = np.arange(0, max_ab + 1LL, dtype=np.float64)
     nijs[0] = 1.0  # Stops divide by zero warnings. As its not used, no issue.
+
     # term2 is log((N*nij) / (a a b)) == log(N * nij) - log(a * b)
     # term2 uses log(N * nij)
     log_Nnij = log(N) + np.log(nijs)
+
     # term3 is large, and involved many factorials. Calculate these in log
     # space to stop overflows.
-    gln_a = gammaln(a + 1)
-    gln_b = gammaln(b + 1)
-    gln_Na = gammaln((N + 1) - a)
-    gln_Nb = gammaln((N + 1) - b)
-    cdef np.float64_t gln_N = gammaln(N + 1)
+    cdef np.int64_t N_1 = N + 1
+    cdef np.ndarray[np.float64_t] gln_ai_Nai_N, gln_b_Nb, gln_nij
+    gln_ai_Nai_N = gammaln(a + 1) + gammaln(N_1 - a) - gammaln(N_1)
+    gln_b_Nb = gammaln(b + 1) + gammaln(N_1 - b)
     gln_nij = gammaln(nijs + 1)
+
     # emi itself is a summation over the various values.
     cdef np.float64_t emi = 0.0
     cdef Py_ssize_t i, j, nij
-    cdef np.float64_t log_ab_outer_ij, outer_sum, gln_ai, gln_Nai
-    cdef np.int64_t ai, bj, N_ai_bj_1, ai_1, bj_1, start_ij, end_ij
+    cdef np.float64_t log_ai, log_ab_outer_ij, outer_sum, gln_ai_Nai_Ni
+    cdef np.int64_t ai, bj, ai_bj, N_ai_bj_1, ai_1, bj_1, start_ij, end_ij
     for i in xrange(R):
         ai = a[i]
-        gln_ai = gln_a[i]
-        gln_Nai = gln_Na[i]
+        ai_1 = ai + 1LL
+        log_ai = log_a[i]
+        gln_ai_Nai_Ni = gln_ai_Nai_N[i]
         for j in xrange(C):
             bj = b[j]
-            log_ab_outer_ij = log(ai * bj)
-            outer_sum = gln_ai + gln_b[j] + gln_Nai + gln_Nb[j] - gln_N
+            bj_1 = bj + 1LL
+
+            log_ab_outer_ij = log_ai + log_b[j]
+            outer_sum = gln_ai_Nai_Ni + gln_b_Nb[j]
 
             ai_bj = ai + bj
-            N_ai_bj_1 = N - ai_bj + 1
-            ai_1 = ai + 1
-            bj_1 = bj + 1
+            N_ai_bj_1 = N_1 - ai_bj
 
-            start_ij = max(1, ai_bj - N)
-            end_ij = min(ai, bj) + 1
+            start_ij = max(1LL, ai_bj - N)
+            end_ij = min(ai_1, bj_1)
             for nij in xrange(start_ij, end_ij):
                 term2 = log_Nnij[nij] - log_ab_outer_ij
                 # Numerators are positive, denominators are negative.
