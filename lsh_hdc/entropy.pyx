@@ -130,8 +130,9 @@ cpdef expected_mutual_information(row_counts, col_counts):
 
     # term3 is large, and involved many factorials. Calculate these in log
     # space to stop overflows.
-    gln_ai_Nai_N = gammaln(a + 1) + gammaln((N + 1) - a) - gammaln(N + 1)
-    gln_b_Nb = gammaln(b + 1) + gammaln((N + 1) - b)
+    cdef np.int64_t N_1 = N + 1
+    gln_ai_Nai_N = gammaln(a + 1) + gammaln(N_1 - a) - gammaln(N_1)
+    gln_b_Nb = gammaln(b + 1) + gammaln(N_1 - b)
     gln_nij = gammaln(nijs + 1)
 
     # emi itself is a summation over the various values.
@@ -152,7 +153,7 @@ cpdef expected_mutual_information(row_counts, col_counts):
             outer_sum = gln_ai_Nai_Ni + gln_b_Nb[j]
 
             ai_bj = ai + bj
-            N_ai_bj_1 = N - ai_bj + 1
+            N_ai_bj_1 = N_1 - ai_bj
 
             start_ij = max(1, ai_bj - N)
             end_ij = min(ai_1, bj_1)
