@@ -364,7 +364,7 @@ class ContingencyTable(TableOfCounts):
         ami = (mi - emi) / (mi_max - emi)
         return ami
 
-    def split_join_distance(self):
+    def split_join_distance(self, normalize=True):
         """Projection distance between partitions
 
         Used in graph community analysis. Originally defined in [1]_.
@@ -373,7 +373,7 @@ class ContingencyTable(TableOfCounts):
             >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
             >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
             >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-            >>> cm.split_join_distance()
+            >>> cm.split_join_distance(normalize=False)
             11
 
         References
@@ -385,11 +385,40 @@ class ContingencyTable(TableOfCounts):
                <http://dl.acm.org/citation.cfm?id=868979>`_
 
         """
+        sim = self.split_join_similarity(normalize=normalize)
+        sim_max = 1.0 if normalize else 2 * self.grand_total
+        return sim_max - sim
 
-        # TODO: write a normalized implementation
-        pa_B = sum(max(x) for x in self.iter_rows())
-        pb_A = sum(max(x) for x in self.iter_cols())
-        return 2 * self.grand_total - pa_B - pb_A
+    def split_join_similarity(self, normalize=True):
+        """Split-join similarity score
+
+        Example 1::
+
+            >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
+            >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
+            >>> cm = ContingencyTable.from_labels(ltrue, lpred)
+            >>> cm.split_join_similarity()
+            0.9
+
+        Example 2::
+
+            >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
+            ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
+            >>> cm = ContingencyTable.from_clusters(clusters)
+            >>> cm.split_join_similarity()
+            0.5
+
+        See Also
+        --------
+        talburt_wang_index
+
+        """
+        pa_B = sum(max(row) for row in self.iter_rows())
+        pb_A = sum(max(col) for col in self.iter_cols())
+        score = pa_B + pb_A
+        if normalize:
+            score /= float(2 * self.grand_total)
+        return score
 
     def talburt_wang_index(self):
         """Talburt-Wang index of similarity of two partitionings
@@ -410,6 +439,10 @@ class ContingencyTable(TableOfCounts):
             >>> round(cm.talburt_wang_index(), 2)
             0.49
 
+        See Also
+        --------
+        split_join_similarity
+
         References
         ----------
 
@@ -419,13 +452,10 @@ class ContingencyTable(TableOfCounts):
                applications, 1-22.
                <http://www.igi-global.com/chapter/algebraic-approach-data-quality-metrics/23022>`_
         """
-        V_card = 0
         A_card = ilen(self.iter_row_totals())
         B_card = ilen(self.iter_col_totals())
-        for row in self.iter_rows():
-            V_card += ilen(row)
-        prod = A_card * B_card
-        return np.nan if prod == 0 else sqrt(prod) / V_card
+        V_card = sum(ilen(row) for row in self.iter_rows())
+        return _div(sqrt(A_card * B_card), V_card)
 
 
 class ClusteringMetrics(ContingencyTable):
@@ -475,6 +505,11 @@ class ClusteringMetrics(ContingencyTable):
         except AttributeError:
             method = getattr(self.coassoc_, scoring_method)
         return method(*args, **kwargs)
+
+    def adjusted_rand_index(self):
+        """Memory-efficient replacement for a similar Scikit-Learn function
+        """
+        return self.coassoc_.kappa()
 
     def adjusted_jaccard_coeff(self):
         """Jaccard similarity coefficient with correction for chance
@@ -1268,7 +1303,7 @@ def adjusted_rand_score(labels_true, labels_pred):
 
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return ct.coassoc_.kappa()
+    return ct.adjusted_rand_index()
 
 
 def adjusted_mutual_info_score(labels_true, labels_pred):
