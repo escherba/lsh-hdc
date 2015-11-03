@@ -349,7 +349,13 @@ def do_simulation(args):
 BENCHMARKS = ['time_cpu']
 
 # square of mutual entropy correlation coefficients (for RxC matrices)
-ENTROPY_METRICS = ['homogeneity', 'completeness', 'nmi_score']
+ENTROPY_METRICS = [
+    'homogeneity', 'completeness', 'nmi_score',
+]
+
+CONTINGENCY_METRICS = [
+    'adjusted_mutual_info', 'talburt_wang_index'
+]
 
 PAIRWISE_METRICS = [
     # correlation triples
@@ -364,7 +370,7 @@ PAIRWISE_METRICS = [
     'adjusted_gower_legendre_coeff', 'adjusted_rogers_tanimoto_coeff',
 ]
 
-INCIDENCE_METRICS = PAIRWISE_METRICS + ENTROPY_METRICS
+INCIDENCE_METRICS = PAIRWISE_METRICS + CONTINGENCY_METRICS + ENTROPY_METRICS
 
 ROC_METRICS = ['roc_max_info', 'roc_auc']
 LIFT_METRICS = ['aul_score']
@@ -377,6 +383,17 @@ LEGEND_METRIC_KWARGS = {
     'time_wall': dict(loc='upper left'),
     'time_cpu': dict(loc='upper left'),
 }
+
+
+def append_scores(cm, pairs, metrics):
+    for metric in metrics:
+        try:
+            score = cm.get_score(metric)
+        except AttributeError:
+            logging.warn("Method %s not defined", metric)
+            continue
+        else:
+            pairs.append((metric, score))
 
 
 def add_incidence_metrics(args, clusters, pairs):
@@ -397,14 +414,10 @@ def add_incidence_metrics(args, clusters, pairs):
             pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
 
         pairwise_metrics = set(PAIRWISE_METRICS) & set(args_metrics)
-        if pairwise_metrics:
-            for metric in pairwise_metrics:
-                try:
-                    score = cm.get_score(metric)
-                except AttributeError:
-                    logging.warn("Method %s not defined on pairwise confusion matrix", metric)
-                    continue
-                pairs.append((metric, score))
+        append_scores(cm, pairs, pairwise_metrics)
+
+        contingency_metrics = set(CONTINGENCY_METRICS) & set(args_metrics)
+        append_scores(cm, pairs, contingency_metrics)
 
 
 def add_ranking_metrics(args, clusters, pairs):

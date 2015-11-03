@@ -332,7 +332,7 @@ class ContingencyTable(TableOfCounts):
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
 
-    def adjusted_mutual_info_score(self):
+    def adjusted_mutual_info(self):
         """Adjusted Mutual Information between two clusterings
 
         For mathemtical definition, see [1]_
@@ -1296,7 +1296,7 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
 
     """
     cm = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return cm.adjusted_mutual_info_score()
+    return cm.adjusted_mutual_info()
 
 
 def matthews_corr(*args, **kwargs):

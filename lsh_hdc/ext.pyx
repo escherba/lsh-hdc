@@ -35,12 +35,14 @@ cdef class PHashCombiner(object):
     cdef _mask
 
     def __cinit__(self, size, prime=31, bits=64):
+        # TODO: cdef prime and i to int64 to get speedup
         self._coeffs = [prime ** i for i in xrange(size)]
         self._mask = (1 << bits) - 1
 
     def combine(self, hashes):
         """Combine a list of integer hashes
         """
+        # TODO: cdef h and c to int64 to get speedup
         ab = sum(h * c for h, c in izip(hashes, self._coeffs))
         return ab & self._mask
 
