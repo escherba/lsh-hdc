@@ -5,7 +5,6 @@ performing simulations, clustering their output, and producing analaysis
 reports.
 """
 
-
 import random
 import os
 import sys
@@ -354,7 +353,8 @@ ENTROPY_METRICS = [
 ]
 
 CONTINGENCY_METRICS = [
-    'adjusted_mutual_info', 'talburt_wang_index'
+    'adjusted_mutual_info', 'talburt_wang_index',
+    'split_join_similarity'
 ]
 
 PAIRWISE_METRICS = [

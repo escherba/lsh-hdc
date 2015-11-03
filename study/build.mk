@@ -7,7 +7,8 @@ METRICS := \
 	adjusted_rand_index mi_corr1 jaccard_coeff \
 	informedness markedness \
 	aul_score roc_max_info roc_auc \
-	adjusted_mutual_info talburt_wang_index \
+	adjusted_mutual_info \
+	talburt_wang_index split_join_similarity \
 	time_cpu \
 
 SIMUL_CLUST_ANALY_ARGS := --sim_size 100000 --metrics $(METRICS)

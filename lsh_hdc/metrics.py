@@ -392,7 +392,7 @@ class ContingencyTable(TableOfCounts):
     def split_join_similarity(self, normalize=True):
         """Split-join similarity score
 
-        Example 1::
+        A relatively decent clustering::
 
             >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
             >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
@@ -400,7 +400,7 @@ class ContingencyTable(TableOfCounts):
             >>> cm.split_join_similarity()
             0.9
 
-        Example 2::
+        Less good clustering::
 
             >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
             ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
@@ -423,7 +423,7 @@ class ContingencyTable(TableOfCounts):
     def talburt_wang_index(self):
         """Talburt-Wang index of similarity of two partitionings
 
-        Example 1::
+        A relatively decent clustering::
 
             >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
             >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
@@ -431,7 +431,7 @@ class ContingencyTable(TableOfCounts):
             >>> round(cm.talburt_wang_index(), 3)
             0.816
 
-        Example 2 (from [1]_)::
+        Less good clustering (example from [1]_)::
 
             >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
             ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
