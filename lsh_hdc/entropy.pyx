@@ -80,8 +80,8 @@ cpdef centropy(counts):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef expected_mutual_information(row_counts, col_counts):
-    """Calculate the expected mutual information for two labelings.
+cpdef emi_from_margins(row_counts, col_counts):
+    """Calculate Expected Mutual Information given margins of RxC table
 
     The resulting value is *not* normalized by N.
 

@@ -8,7 +8,7 @@ from lsh_hdc.metrics import adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
     jaccard_similarity, ClusteringMetrics, \
     ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
-    matthews_corr, expected_mutual_information, mutual_info_score, \
+    matthews_corr, emi_from_margins, mutual_info_score, \
     adjusted_mutual_info_score
 
 
@@ -108,10 +108,10 @@ def test_adjusted_mutual_info_score():
     cm = ClusteringMetrics.from_labels(labels_a, labels_b)
     row_totals = np.fromiter(cm.iter_row_totals(), dtype=np.int32)
     col_totals = np.fromiter(cm.iter_col_totals(), dtype=np.int32)
-    emi_1 = expected_mutual_information(row_totals, col_totals)
-    assert_almost_equal(emi_1 / cm.grand_total, 0.15042, 5)
-    emi_2 = expected_mutual_information(col_totals, row_totals)
-    assert_almost_equal(emi_2 / cm.grand_total, 0.15042, 5)
+    emi_1 = emi_from_margins(row_totals, col_totals) / cm.grand_total
+    assert_almost_equal(emi_1, 0.15042, 5)
+    emi_2 = emi_from_margins(col_totals, row_totals) / cm.grand_total
+    assert_almost_equal(emi_2, 0.15042, 5)
 
     # Adjusted mutual information (1)
     ami_1 = adjusted_mutual_info_score(labels_a, labels_b)

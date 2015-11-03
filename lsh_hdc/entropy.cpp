@@ -1146,7 +1146,7 @@ static double (*__pyx_f_7lsh_hdc_3ext_lgamma)(double); /*proto*/
 static PyObject *__pyx_f_7lsh_hdc_7entropy_ndarray_from_iter(PyObject *, int __pyx_skip_dispatch, struct __pyx_opt_args_7lsh_hdc_7entropy_ndarray_from_iter *__pyx_optional_args); /*proto*/
 static PyObject *__pyx_f_7lsh_hdc_7entropy_nchoose2(__pyx_t_5numpy_int64_t, int __pyx_skip_dispatch); /*proto*/
 static PyObject *__pyx_f_7lsh_hdc_7entropy_centropy(PyObject *, int __pyx_skip_dispatch); /*proto*/
-static PyObject *__pyx_f_7lsh_hdc_7entropy_expected_mutual_information(PyObject *, PyObject *, int __pyx_skip_dispatch); /*proto*/
+static PyObject *__pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyObject *, PyObject *, int __pyx_skip_dispatch); /*proto*/
 static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_5numpy_int64_t = { "int64_t", NULL, sizeof(__pyx_t_5numpy_int64_t), { 0 }, 0, IS_UNSIGNED(__pyx_t_5numpy_int64_t) ? 'U' : 'I', IS_UNSIGNED(__pyx_t_5numpy_int64_t), 0 };
 static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t = { "float64_t", NULL, sizeof(__pyx_t_5numpy_float64_t), { 0 }, 0, 'R', 0, 0 };
 #define __Pyx_MODULE_NAME "lsh_hdc.entropy"
@@ -1245,7 +1245,7 @@ static PyObject *__pyx_n_s_xrange;
 static PyObject *__pyx_pf_7lsh_hdc_7entropy_ndarray_from_iter(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_iterable, PyObject *__pyx_v_dtype); /* proto */
 static PyObject *__pyx_pf_7lsh_hdc_7entropy_2nchoose2(CYTHON_UNUSED PyObject *__pyx_self, __pyx_t_5numpy_int64_t __pyx_v_n); /* proto */
 static PyObject *__pyx_pf_7lsh_hdc_7entropy_4centropy(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_counts); /* proto */
-static PyObject *__pyx_pf_7lsh_hdc_7entropy_6expected_mutual_information(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_row_counts, PyObject *__pyx_v_col_counts); /* proto */
+static PyObject *__pyx_pf_7lsh_hdc_7entropy_6emi_from_margins(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_row_counts, PyObject *__pyx_v_col_counts); /* proto */
 static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /* proto */
 static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info); /* proto */
 static PyObject *__pyx_int_0;
@@ -1957,13 +1957,13 @@ static PyObject *__pyx_pf_7lsh_hdc_7entropy_4centropy(CYTHON_UNUSED PyObject *__
 /* "lsh_hdc/entropy.pyx":83
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
- * cpdef expected_mutual_information(row_counts, col_counts):             # <<<<<<<<<<<<<<
- *     """Calculate the expected mutual information for two labelings.
+ * cpdef emi_from_margins(row_counts, col_counts):             # <<<<<<<<<<<<<<
+ *     """Calculate Expected Mutual Information given margins of RxC table
  * 
  */
 
-static PyObject *__pyx_pw_7lsh_hdc_7entropy_7expected_mutual_information(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static PyObject *__pyx_f_7lsh_hdc_7entropy_expected_mutual_information(PyObject *__pyx_v_row_counts, PyObject *__pyx_v_col_counts, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static PyObject *__pyx_pw_7lsh_hdc_7entropy_7emi_from_margins(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static PyObject *__pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyObject *__pyx_v_row_counts, PyObject *__pyx_v_col_counts, CYTHON_UNUSED int __pyx_skip_dispatch) {
   __pyx_t_5numpy_float64_t __pyx_v_term2;
   __pyx_t_5numpy_float64_t __pyx_v_term3;
   PyArrayObject *__pyx_v_log_a = 0;
@@ -2053,7 +2053,7 @@ static PyObject *__pyx_f_7lsh_hdc_7entropy_expected_mutual_information(PyObject 
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
-  __Pyx_RefNannySetupContext("expected_mutual_information", 0);
+  __Pyx_RefNannySetupContext("emi_from_margins", 0);
   __pyx_pybuffer_log_a.pybuffer.buf = NULL;
   __pyx_pybuffer_log_a.refcount = 0;
   __pyx_pybuffernd_log_a.data = NULL;
@@ -3148,8 +3148,8 @@ static PyObject *__pyx_f_7lsh_hdc_7entropy_expected_mutual_information(PyObject 
   /* "lsh_hdc/entropy.pyx":83
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
- * cpdef expected_mutual_information(row_counts, col_counts):             # <<<<<<<<<<<<<<
- *     """Calculate the expected mutual information for two labelings.
+ * cpdef emi_from_margins(row_counts, col_counts):             # <<<<<<<<<<<<<<
+ *     """Calculate Expected Mutual Information given margins of RxC table
  * 
  */
 
@@ -3173,7 +3173,7 @@ static PyObject *__pyx_f_7lsh_hdc_7entropy_expected_mutual_information(PyObject 
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_log_b.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_nijs.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("lsh_hdc.entropy.expected_mutual_information", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("lsh_hdc.entropy.emi_from_margins", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   goto __pyx_L2;
   __pyx_L0:;
@@ -3202,9 +3202,9 @@ static PyObject *__pyx_f_7lsh_hdc_7entropy_expected_mutual_information(PyObject 
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7lsh_hdc_7entropy_7expected_mutual_information(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_7lsh_hdc_7entropy_6expected_mutual_information[] = "Calculate the expected mutual information for two labelings.\n\n    The resulting value is *not* normalized by N.\n\n    License: BSD 3 clause\n\n    .. codeauthor:: Robert Layton <robertlayton@gmail.com>\n    .. codeauthor:: Corey Lynch <coreylynch9@gmail.com>\n    .. codeauthor:: Eugene Scherba <escherba@gmail.com>\n\n    ";
-static PyObject *__pyx_pw_7lsh_hdc_7entropy_7expected_mutual_information(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_7lsh_hdc_7entropy_7emi_from_margins(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_7lsh_hdc_7entropy_6emi_from_margins[] = "Calculate Expected Mutual Information given margins of RxC table\n\n    The resulting value is *not* normalized by N.\n\n    License: BSD 3 clause\n\n    .. codeauthor:: Robert Layton <robertlayton@gmail.com>\n    .. codeauthor:: Corey Lynch <coreylynch9@gmail.com>\n    .. codeauthor:: Eugene Scherba <escherba@gmail.com>\n\n    ";
+static PyObject *__pyx_pw_7lsh_hdc_7entropy_7emi_from_margins(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_row_counts = 0;
   PyObject *__pyx_v_col_counts = 0;
   int __pyx_lineno = 0;
@@ -3212,7 +3212,7 @@ static PyObject *__pyx_pw_7lsh_hdc_7entropy_7expected_mutual_information(PyObjec
   int __pyx_clineno = 0;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("expected_mutual_information (wrapper)", 0);
+  __Pyx_RefNannySetupContext("emi_from_margins (wrapper)", 0);
   {
     static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_row_counts,&__pyx_n_s_col_counts,0};
     PyObject* values[2] = {0,0};
@@ -3233,11 +3233,11 @@ static PyObject *__pyx_pw_7lsh_hdc_7entropy_7expected_mutual_information(PyObjec
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_col_counts)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("expected_mutual_information", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("emi_from_margins", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "expected_mutual_information") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "emi_from_margins") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -3250,29 +3250,29 @@ static PyObject *__pyx_pw_7lsh_hdc_7entropy_7expected_mutual_information(PyObjec
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("expected_mutual_information", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("emi_from_margins", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
-  __Pyx_AddTraceback("lsh_hdc.entropy.expected_mutual_information", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("lsh_hdc.entropy.emi_from_margins", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_7lsh_hdc_7entropy_6expected_mutual_information(__pyx_self, __pyx_v_row_counts, __pyx_v_col_counts);
+  __pyx_r = __pyx_pf_7lsh_hdc_7entropy_6emi_from_margins(__pyx_self, __pyx_v_row_counts, __pyx_v_col_counts);
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7lsh_hdc_7entropy_6expected_mutual_information(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_row_counts, PyObject *__pyx_v_col_counts) {
+static PyObject *__pyx_pf_7lsh_hdc_7entropy_6emi_from_margins(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_row_counts, PyObject *__pyx_v_col_counts) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
-  __Pyx_RefNannySetupContext("expected_mutual_information", 0);
+  __Pyx_RefNannySetupContext("emi_from_margins", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_7lsh_hdc_7entropy_expected_mutual_information(__pyx_v_row_counts, __pyx_v_col_counts, 0); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __pyx_f_7lsh_hdc_7entropy_emi_from_margins(__pyx_v_row_counts, __pyx_v_col_counts, 0); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -3281,7 +3281,7 @@ static PyObject *__pyx_pf_7lsh_hdc_7entropy_6expected_mutual_information(CYTHON_
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("lsh_hdc.entropy.expected_mutual_information", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("lsh_hdc.entropy.emi_from_margins", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
@@ -5436,7 +5436,7 @@ static PyMethodDef __pyx_methods[] = {
   {"ndarray_from_iter", (PyCFunction)__pyx_pw_7lsh_hdc_7entropy_1ndarray_from_iter, METH_VARARGS|METH_KEYWORDS, __pyx_doc_7lsh_hdc_7entropy_ndarray_from_iter},
   {"nchoose2", (PyCFunction)__pyx_pw_7lsh_hdc_7entropy_3nchoose2, METH_O, __pyx_doc_7lsh_hdc_7entropy_2nchoose2},
   {"centropy", (PyCFunction)__pyx_pw_7lsh_hdc_7entropy_5centropy, METH_O, __pyx_doc_7lsh_hdc_7entropy_4centropy},
-  {"expected_mutual_information", (PyCFunction)__pyx_pw_7lsh_hdc_7entropy_7expected_mutual_information, METH_VARARGS|METH_KEYWORDS, __pyx_doc_7lsh_hdc_7entropy_6expected_mutual_information},
+  {"emi_from_margins", (PyCFunction)__pyx_pw_7lsh_hdc_7entropy_7emi_from_margins, METH_VARARGS|METH_KEYWORDS, __pyx_doc_7lsh_hdc_7entropy_6emi_from_margins},
   {0, 0, 0, 0}
 };
 
