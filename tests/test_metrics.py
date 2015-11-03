@@ -293,22 +293,22 @@ def test_twoway_confusion_1():
     """Finley's tornado data
     http://www.cawcr.gov.au/projects/verification/Finley/Finley_Tornados.html
     """
-    cm = ConfusionMatrix2.from_ccw(28, 23, 2680, 72)
+    cm = ConfusionMatrix2.from_ccw(28, 72, 2680, 23)
 
     assert_almost_equal(cm.g_score(),       126.1, 1)
     assert_almost_equal(cm.chisq_score(),   397.9, 1)
 
     assert_almost_equal(cm.mi_corr(),       0.429, 3)
-    assert_almost_equal(cm.mi_corr1(),      0.382, 3)
-    assert_almost_equal(cm.mi_corr0(),      0.497, 3)
+    assert_almost_equal(cm.mi_corr1(),      0.497, 3)
+    assert_almost_equal(cm.mi_corr0(),      0.382, 3)
 
     assert_almost_equal(cm.matthews_corr(), 0.377, 3)
-    assert_almost_equal(cm.informedness(),  0.271, 3)
-    assert_almost_equal(cm.markedness(),    0.523, 3)
+    assert_almost_equal(cm.informedness(),  0.523, 3)
+    assert_almost_equal(cm.markedness(),    0.271, 3)
 
     assert_almost_equal(cm.kappa(),         0.355, 3)
-    assert_almost_equal(cm.kappa1(),        0.267, 3)
-    assert_almost_equal(cm.kappa0(),        0.532, 3)
+    assert_almost_equal(cm.kappa1(),        0.532, 3)
+    assert_almost_equal(cm.kappa0(),        0.267, 3)
 
 
 def test_twoway_confusion_2():

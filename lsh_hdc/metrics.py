@@ -721,7 +721,7 @@ class ConfusionMatrix2(ContingencyTable):
     def FDR(self):
         """False discovery rate
 
-        Synonyms: probability of false alarm
+        Synonyms: false alarm ratio, probability of false alarm
         """
         return _div(self.FP, self.TP + self.FP)
 
@@ -874,6 +874,13 @@ class ConfusionMatrix2(ContingencyTable):
         """
         return _div(abs(self.TP - self.TN), self.grand_total)
 
+    def frequency_bias(self):
+        """Frequency bias
+
+        How much more often is rater B is predicting TP
+        """
+        return _div(self.TP + self.FP, self.TP + self.FN)
+
     def bias_index(self):
         """Bias Index
 
@@ -893,10 +900,11 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(abs(self.FN - self.FP), self.grand_total)
 
     def informedness(self):
-        """Informedness (Recall corrected for chance)
+        """Informedness
 
         This measure was first proposed for evaluating diagnotics tests in [1]_,
-        and also used in meteorology under the name "True Skill Score" [2]_.
+        and also used in meteorology under the name "True Skill Score" [2]_. It
+        can be thought of as recall corrected for chance.
 
         Alternative formulations::
 
@@ -923,6 +931,9 @@ class ConfusionMatrix2(ContingencyTable):
 
     def markedness(self):
         """Markedness (Precision corrected for chance)
+
+        Complement to informednes. It can be thought of as precision corrected
+        for chance.
 
         Alternative formulation::
 
