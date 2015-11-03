@@ -26,8 +26,8 @@ doc_sources:
 	git checkout docs/conf.py
 	git checkout docs/Makefile
 
-docs:
-	cd docs; make html; cd ..
+docs: env build_ext
+	$(PYENV) cd docs; make html; cd ..
 	open docs/_build/html/index.html
 
 package: env build_ext

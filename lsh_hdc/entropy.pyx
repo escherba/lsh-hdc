@@ -38,24 +38,13 @@ cpdef ndarray_from_iter(iterable, dtype=None):
 cpdef expected_mutual_information(row_counts, col_counts):
     """Calculate the expected mutual information for two labelings.
 
-    The resulting value is *not* normalized by N. See [1]_ for a mathematical
-    definition.
+    The resulting value is *not* normalized by N.
 
-    References
-    ----------
+    License: BSD 3 clause
 
-    .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
-        measures for clusterings comparison: Variants, properties,
-        normalization and correction for chance. The Journal of Machine
-        Learning Research, 11, 2837-2854.
-        <http://www.jmlr.org/papers/v11/vinh10a.html>`_
-
-
-   .. codeauthor:: Robert Layton <robertlayton@gmail.com>,
-                    Corey Lynch <coreylynch9@gmail.com>,
-                    Eugene Scherba <escherba@gmail.com>
-
-    Licence: BSD 3 clause
+    .. codeauthor:: Robert Layton <robertlayton@gmail.com>
+    .. codeauthor:: Corey Lynch <coreylynch9@gmail.com>
+    .. codeauthor:: Eugene Scherba <escherba@gmail.com>
 
     """
     # Development note (Eugene Scherba, 10/2/2015): I modified this function so

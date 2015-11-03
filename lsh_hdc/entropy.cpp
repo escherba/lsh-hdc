@@ -1474,7 +1474,7 @@ static PyObject *__pyx_f_7lsh_hdc_7entropy_ndarray_from_iter(PyObject *__pyx_v_i
 
 /* Python wrapper */
 static PyObject *__pyx_pw_7lsh_hdc_7entropy_1ndarray_from_iter(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_7lsh_hdc_7entropy_ndarray_from_iter[] = "Create NumPy arrays from different object types\n\n    In addition to standard ``np.asarray`` casting functionality, this function\n    handles conversion from the following types: ``collections.Mapping``,\n    ``collections.Iterator``.\n\n    If the input object is an instance of ``collection.Mapping``, assumes that\n    we are interesting in creating a NumPy array from the values.\n    ";
+static char __pyx_doc_7lsh_hdc_7entropy_ndarray_from_iter[] = "Create NumPy arrays from different object types\n\n    In addition to standard ``np.asarray`` casting functionality, this function\n    handles conversion from the following types: ``collections.Mapping``,\n    ``collections.Iterator``.\n\n    If the input object is an instance of ``collections.Mapping``, assumes that\n    we are interesting in creating a NumPy array from the values.\n    ";
 static PyObject *__pyx_pw_7lsh_hdc_7entropy_1ndarray_from_iter(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_iterable = 0;
   PyObject *__pyx_v_dtype = 0;
@@ -2771,7 +2771,7 @@ static PyObject *__pyx_f_7lsh_hdc_7entropy_expected_mutual_information(PyObject 
 
 /* Python wrapper */
 static PyObject *__pyx_pw_7lsh_hdc_7entropy_3expected_mutual_information(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_7lsh_hdc_7entropy_2expected_mutual_information[] = "Calculate the expected mutual information for two labelings.\n\n    Note: the resulting value is *not* normalized by N.\n\n   .. codeauthor:: Robert Layton <robertlayton@gmail.com>,\n                    Corey Lynch <coreylynch9@gmail.com>,\n                    Eugene Scherba <escherba@gmail.com>\n\n    Licence: BSD 3 clause\n\n    ";
+static char __pyx_doc_7lsh_hdc_7entropy_2expected_mutual_information[] = "Calculate the expected mutual information for two labelings.\n\n    The resulting value is *not* normalized by N.\n\n    License: BSD 3 clause\n\n    .. codeauthor:: Robert Layton <robertlayton@gmail.com>\n    .. codeauthor:: Corey Lynch <coreylynch9@gmail.com>\n    .. codeauthor:: Eugene Scherba <escherba@gmail.com>\n\n    ";
 static PyObject *__pyx_pw_7lsh_hdc_7entropy_3expected_mutual_information(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_row_counts = 0;
   PyObject *__pyx_v_col_counts = 0;
