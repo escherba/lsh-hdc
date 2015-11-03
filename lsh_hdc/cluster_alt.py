@@ -1,7 +1,7 @@
 import operator
-from pymaptools import UnionFind
 from itertools import imap
 from collections import defaultdict, Counter
+from pymaptools.unionfind import UnionFind
 from lsh_hdc.preprocess import RegexTokenizer
 from lsh_hdc import Shingler, MinHashSignature, LSHC
 from logging import getLogger
