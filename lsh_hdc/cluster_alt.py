@@ -83,7 +83,7 @@ class Cluster(object):
                 matched_sketch = bucket[matched_label]
                 # Note: large improvement in precision when also ensuring that
                 # distance > 0 below:
-                if is_close(matched_sketch):
+                if is_close(matched_sketch, None):
                     union_find.union(matched_label, label)
 
     def get_clusters(self):

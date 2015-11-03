@@ -116,8 +116,6 @@ class Grid(object):
             mx = get_conf(mx)
             if matches(mx):
                 return idx, mx
-        else:
-            return None
 
     def compute(self, scores, score_dim=1, dtype=np.float16):
         result = {}
