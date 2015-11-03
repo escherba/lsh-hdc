@@ -10,9 +10,7 @@ cimport numpy as np
 cimport cython
 from lsh_hdc.ext cimport lgamma
 
-
 np.import_array()
-
 
 
 cpdef ndarray_from_iter(iterable, dtype=None):

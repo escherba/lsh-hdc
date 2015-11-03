@@ -289,37 +289,47 @@ def test_adjustment_for_chance():
     assert_array_almost_equal(max_abs_scores, [0.02, 0.03, 0.03, 0.02], 2)
 
 
-#def test_twoway_confusion_1():
-#    """Finley's tornado data
-#    http://www.cawcr.gov.au/projects/verification/Finley/Finley_Tornados.html
-#    """
-#    cm = ConfusionMatrix2.from_ccw(28, 23, 2680, 72)
-#    assert_almost_equal(cm.g_score(),       2.14, 2)
-#    assert_almost_equal(cm.chisq_score(),   2.07, 2)
-#
-#    assert_almost_equal(cm.mi_corr(),       0.015, 3)
-#    assert_almost_equal(cm.mi_corr1(),      0.011, 3)
-#    assert_almost_equal(cm.mi_corr0(),      0.041, 3)
-#    assert_almost_equal(cm.matthews_corr(), 0.012, 3)
-#    assert_almost_equal(cm.informedness(),  0.002, 3)
-#    assert_almost_equal(cm.markedness(),    0.066, 3)
-#    assert_almost_equal(cm.kappa(),         0.355, 3)
-#
-#
-#def test_twoway_confusion_2():
-#    """Finley's tornado data (Goodman and Kruskal)
-#    """
-#    cm = ConfusionMatrix2.from_ccw(11, 14, 906, 3)
-#    assert_almost_equal(cm.g_score(),       2.14, 2)
-#    assert_almost_equal(cm.chisq_score(),   2.07, 2)
-#
-#    assert_almost_equal(cm.mi_corr(),       0.015, 3)
-#    assert_almost_equal(cm.mi_corr1(),      0.011, 3)
-#    assert_almost_equal(cm.mi_corr0(),      0.041, 3)
-#    assert_almost_equal(cm.matthews_corr(), 0.012, 3)
-#    assert_almost_equal(cm.informedness(),  0.002, 3)
-#    assert_almost_equal(cm.markedness(),    0.066, 3)
-#    assert_almost_equal(cm.kappa(),         0.001, 3)
+def test_twoway_confusion_1():
+    """Finley's tornado data
+    http://www.cawcr.gov.au/projects/verification/Finley/Finley_Tornados.html
+    """
+    cm = ConfusionMatrix2.from_ccw(28, 23, 2680, 72)
+
+    assert_almost_equal(cm.g_score(),       126.1, 1)
+    assert_almost_equal(cm.chisq_score(),   397.9, 1)
+
+    assert_almost_equal(cm.mi_corr(),       0.429, 3)
+    assert_almost_equal(cm.mi_corr1(),      0.382, 3)
+    assert_almost_equal(cm.mi_corr0(),      0.497, 3)
+
+    assert_almost_equal(cm.matthews_corr(), 0.377, 3)
+    assert_almost_equal(cm.informedness(),  0.271, 3)
+    assert_almost_equal(cm.markedness(),    0.523, 3)
+
+    assert_almost_equal(cm.kappa(),         0.355, 3)
+    assert_almost_equal(cm.kappa1(),        0.267, 3)
+    assert_almost_equal(cm.kappa0(),        0.532, 3)
+
+
+def test_twoway_confusion_2():
+    """Finley's tornado data (listed in Goodman and Kruskal)
+    """
+    cm = ConfusionMatrix2.from_ccw(11, 14, 906, 3)
+
+    assert_almost_equal(cm.g_score(),       70.83, 2)
+    assert_almost_equal(cm.chisq_score(),   314.3, 1)
+
+    assert_almost_equal(cm.mi_corr(),       0.614, 3)
+    assert_almost_equal(cm.mi_corr1(),      0.698, 3)
+    assert_almost_equal(cm.mi_corr0(),      0.555, 3)
+
+    assert_almost_equal(cm.matthews_corr(), 0.580, 3)
+    assert_almost_equal(cm.informedness(),  0.770, 3)
+    assert_almost_equal(cm.markedness(),    0.437, 3)
+
+    assert_almost_equal(cm.kappa(),         0.556, 3)
+    assert_almost_equal(cm.kappa1(),        0.780, 3)
+    assert_almost_equal(cm.kappa0(),        0.431, 3)
 
 
 def test_negative_correlation():
