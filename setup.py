@@ -1,11 +1,19 @@
 import re
 import numpy
 import itertools
+import distutils.sysconfig
 from glob import glob
 from setuptools import setup, find_packages, Extension
 from setuptools.dist import Distribution
 from Cython.Distutils import build_ext
 from pkg_resources import resource_string
+
+
+# remove the "-Wstrict-prototypes" compiler option (not valid for C++)
+CFG_VARS = distutils.sysconfig.get_config_vars()
+for key, value in CFG_VARS.items():
+    if isinstance(value, basestring):
+        CFG_VARS[key] = value.replace("-Wstrict-prototypes", "")
 
 
 class BinaryDistribution(Distribution):

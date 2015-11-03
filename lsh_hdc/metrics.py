@@ -257,7 +257,7 @@ class ContingencyTable(TableOfCounts):
 
         The distance metric calculated here is one of several possible entropy-
         based distance metrics that could be defined on a RxC matrix. Per Table
-        2 in [1]_, the given measure is equivalent to ``2 * D_sum``.
+        2 in [1]_, the given measure is equivalent to '2 * D_sum'.
 
         Note that the entropy variables H below are calculated using natural
         logs, so a base correction may be necessary if you need your result in
@@ -295,7 +295,7 @@ class ContingencyTable(TableOfCounts):
 
         The V-measure metric is also known as Normalized Mutual Information
         (NMI), and is calculated here as the harmonic mean of Homogeneity and
-        Completeness (``NMI_sum``). There exist other definitions of NMI (see
+        Completeness ('NMI_sum'). There exist other definitions of NMI (see
         Table 2 in [1]_ for a good review).
 
         Homogeneity and Completeness are duals of each other and can be thought

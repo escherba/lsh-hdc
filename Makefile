@@ -62,7 +62,6 @@ nuke: clean
 clean:
 	python setup.py clean
 	rm -rf dist build
-	rm -f $(EXTENSION) $(EXTENSION_INTERMEDIATE)
 	find . -path ./env -prune -o -type f -name "*.pyc" -or -name "*.so" -or -name "*.cpp" -exec rm -f {} \;
 
 build_ext: $(EXTENSION)
