@@ -194,7 +194,10 @@ def harmonic_mean_weighted(x, y, ratio=1.0):
 
 class ContingencyTable(TableOfCounts):
 
-    # TODO: subclass pandas.DataFrame instead?
+    # Note: not subclassing Pandas DataFrame because the goal is to specifically
+    # optimize for sparse use cases when >90% of the table consists of zeros.
+    # As of today, Pandas 'crosstab' implementation of frequency tables forces
+    # one to iterate on all the zeros, which is horrible...
 
     def chisq_score(self):
         """Pearson's chi-square statistic
