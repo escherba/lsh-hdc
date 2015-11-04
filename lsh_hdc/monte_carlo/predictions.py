@@ -1,10 +1,11 @@
 import numpy as np
 import os
 import warnings
+import random
 from itertools import product, izip
 from pymaptools.iter import izip_with_cycles, isiterable
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
-from pymaptools.containers import labels_to_clusters
+from pymaptools.containers import labels_to_clusters, clusters_to_labels
 from pymaptools.sample import discrete_sample
 
 
@@ -15,15 +16,34 @@ def get_conf(obj):
         return obj
 
 
-def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
-                        err_pos=0.1, err_neg=0.02):
+def simulate_labeling(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
+                      err_pos=0.1, err_neg=0.02, sim_size=2000):
 
+    clusters = simulate_clustering(
+        galpha=galpha, gbeta=gbeta, nclusters=nclusters, pos_ratio=pos_ratio,
+        err_pos=err_pos, err_neg=err_neg, sim_size=sim_size)
+
+    tuples = zip(*clusters_to_labels(clusters))
+    random.shuffle(tuples)
+
+    ltrue, lpred = zip(*tuples) or ([], [])
+    return ltrue, lpred
+
+
+def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
+                        err_pos=0.1, err_neg=0.02, sim_size=2000):
     csizes = map(int, np.random.gamma(galpha, gbeta, nclusters))
     num_pos = sum(csizes)
     if num_pos == 0:
         csizes.append(1)
         num_pos += 1
-    num_neg = int(num_pos * ((1.0 - pos_ratio) / pos_ratio))
+    num_neg = max(0, sim_size - num_pos)
+    expected_num_neg = num_pos * ((1.0 - pos_ratio) / pos_ratio)
+    actual_neg_ratio = (num_neg - expected_num_neg) / float(expected_num_neg)
+    if abs(actual_neg_ratio) > 0.2:
+        word = "fewer" if actual_neg_ratio < 0.0 else "more"
+        warnings.warn("{:.1%} {} negatives than expected. Got: {} (expected: {}. Recommended sim_size: {})"
+                      .format(abs(actual_neg_ratio), word, num_neg, int(expected_num_neg), int(expected_num_neg + num_pos)))
 
     # the larger the cluster, the more probable it is some unclustered
     # items belong to it
@@ -46,7 +66,18 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
         else:
             clusters.extend([[x] for x in cluster])
 
-    return clusters
+    idx = -1
+    relabeled = []
+    for cluster in clusters:
+        relabeled_cluster = []
+        for class_label in cluster:
+            if class_label <= 0:
+                class_label = idx
+            relabeled_cluster.append(class_label)
+            idx -= 1
+        relabeled.append(relabeled_cluster)
+
+    return relabeled
 
 
 class Grid(object):

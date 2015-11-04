@@ -27,7 +27,7 @@ def test_simulated():
     # test lots of small examples
     for _ in xrange(100):
         clusters = simulate_clustering(galpha=1, gbeta=2, nclusters=4,
-                                       pos_ratio=0.5)
+                                       pos_ratio=0.5, sim_size=20)
         lc = LiftCurve.from_clusters(clusters)
         expected_score = lc.aul_score(plot=True)[0]
         actual_score = lc.aul_score(plot=False)

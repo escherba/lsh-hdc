@@ -101,6 +101,17 @@ from pymaptools.iter import aggregate_tuples
 from pymaptools.containers import labels_to_clusters
 
 
+def num2bool(num):
+    """Returns True if num > 0, False otherwise
+
+    When binarizing class labels, this lets us be consistent with Scikit-Learn
+    where binary labels can be {0, 1} with 0 being negativeve or {-1, 1} with -1
+    being negative
+
+    """
+    return num > 0
+
+
 class LiftCurve(object):
 
     """Area under Lift Curve (AUL) for cluster-size correlated classification
@@ -135,7 +146,7 @@ class LiftCurve(object):
         return cls(aggregate_tuples(count_groups))
 
     @classmethod
-    def from_clusters(cls, clusters, is_class_pos=bool):
+    def from_clusters(cls, clusters, is_class_pos=num2bool):
         """Instantiates class from clusters of class-coded points
 
         Parameters
@@ -145,7 +156,7 @@ class LiftCurve(object):
             List of lists of class labels
 
         is_class_pos: label_true -> Bool
-            Boolean predicate used to binarize true (class) labels
+            Boolean predicate used to num2bool true (class) labels
 
         """
         # take all non-empty clusters, score them by size and by number of
@@ -156,7 +167,7 @@ class LiftCurve(object):
         return cls.from_counts(scores_true, scores_pred)
 
     @classmethod
-    def from_labels(cls, labels_true, labels_pred, is_class_pos=bool):
+    def from_labels(cls, labels_true, labels_pred, is_class_pos=num2bool):
         """Instantiates class from arrays of classes and cluster sizes
 
         Parameters
@@ -169,7 +180,7 @@ class LiftCurve(object):
             Cluster labels to evaluate
 
         is_class_pos: label_true -> Bool
-            Boolean predicate used to binarize true (class) labels
+            Boolean predicate used to num2bool true (class) labels
 
         """
         clusters = labels_to_clusters(labels_true, labels_pred)
@@ -390,7 +401,7 @@ class RocCurve(object):
             plt.close(fig)
 
     @classmethod
-    def from_labels(cls, labels_true, y_score, is_class_pos=bool):
+    def from_labels(cls, labels_true, y_score, is_class_pos=num2bool):
         """Instantiates class assuming binary labeling of {0, 1}
 
         labels_true : array, shape = [n_samples]
@@ -400,10 +411,10 @@ class RocCurve(object):
             Predicted scores
 
         is_class_pos: label_true -> Bool
-            Boolean predicate used to binarize true (class) labels
+            Boolean predicate used to num2bool true (class) labels
         """
 
-        # binarize Y labels
+        # num2bool Y labels
         y_true = map(is_class_pos, labels_true)
 
         # calculate axes
@@ -413,7 +424,7 @@ class RocCurve(object):
         return cls(fprs, tprs, thresholds=thresholds)
 
     @classmethod
-    def from_clusters(cls, clusters, is_class_pos=bool):
+    def from_clusters(cls, clusters, is_class_pos=num2bool):
         """Instantiates class from clusters of class-coded points
 
         Parameters
@@ -423,7 +434,7 @@ class RocCurve(object):
             List of lists of class labels
 
         is_class_pos: label_true -> Bool
-            Boolean predicate used to binarize true (class) labels
+            Boolean predicate used to num2bool true (class) labels
 
         """
         y_true = []
