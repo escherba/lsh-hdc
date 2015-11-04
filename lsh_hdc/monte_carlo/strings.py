@@ -239,18 +239,18 @@ def load_clustering(args):
     return namespace, iter_clustering(iterator)
 
 
-def is_point_pos(point):
+def class_is_positive(point):
     return ':' in point
 
 
-def is_cluster_pos(cluster):
+def cluster_is_positive(cluster):
     return len(cluster) > 1
 
 
 def point_to_class_label(point_idx, point, neg_label=None):
     """Return class label given a point
     """
-    if is_point_pos(point):
+    if class_is_positive(point):
         label, _ = point.split(':')
         label = int(label)
     elif neg_label is None:
@@ -263,7 +263,7 @@ def point_to_class_label(point_idx, point, neg_label=None):
 def cluster_to_cluster_label(cluster_idx, cluster, neg_label=None):
     """Return cluster label given a cluster
     """
-    if is_cluster_pos(cluster):
+    if cluster_is_positive(cluster):
         label = cluster_idx
     elif neg_label is None:
         label = -cluster_idx
@@ -308,18 +308,6 @@ def clusters_to_labels(cluster_iter, double_negs=False, join_negs=True):
                 labels_pred.append(cluster_label)
                 point_idx += 1
     return labels_true, labels_pred
-
-
-def cluster_predictions(cluster_iter):
-    y_true = []
-    y_score = []
-    for cluster in cluster_iter:
-        pred_cluster = len(cluster)
-        for point in cluster:
-            true_cluster = is_point_pos(point)
-            y_true.append(true_cluster)
-            y_score.append(pred_cluster)
-    return y_true, y_score
 
 
 def serialize_args(args):
@@ -426,14 +414,14 @@ def add_ranking_metrics(args, clusters, pairs):
     args_metrics = METRICS
     if set(ROC_METRICS) & set(args_metrics):
         from lsh_hdc.ranking import RocCurve
-        rc = RocCurve.from_binary(*cluster_predictions(clusters))
+        rc = RocCurve.from_clusters(clusters, is_class_pos=class_is_positive)
         if 'roc_auc' in args_metrics:
             pairs.append(('roc_auc', rc.auc_score()))
         if 'roc_max_info' in args_metrics:
             pairs.append(('roc_max_info', rc.max_informedness()))
     if set(LIFT_METRICS) & set(args_metrics):
         from lsh_hdc.ranking import aul_score_from_clusters as aul_score
-        clusters_2xc = ([is_point_pos(point) for point in cluster]
+        clusters_2xc = ([class_is_positive(point) for point in cluster]
                         for cluster in clusters)
         if 'aul_score' in args_metrics:
             pairs.append(('aul_score', aul_score(clusters_2xc)))

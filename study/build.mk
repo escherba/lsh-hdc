@@ -48,7 +48,7 @@ TRIAL_RESULTS := $(shell \
 
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
-	@$(PYTHON) -m lsh_hdc.study simul_clust_analy \
+	@$(PYTHON) -m lsh_hdc.monte_carlo.strings simul_clust_analy \
 		$(SIMUL_CLUST_ANALY_ARGS) $(EXPERIMENT_ARGS) \
 		--$(GROUP_FIELD) $(word 1,$(subst -, ,$*)) \
 		--$(PARAM_FIELD) $(word 2,$(subst -, ,$*)) \

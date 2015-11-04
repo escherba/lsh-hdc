@@ -4,7 +4,7 @@ PYMODULE := lsh_hdc
 EXTENSION_EXT := .cpp
 PYPI_HOST := pypi
 DISTRIBUTE := sdist bdist_wheel
-SHELL_PRELOAD := $(PYMODULE)/metrics.py
+SHELL_PRELOAD := $(PYMODULE)/workspace.py
 
 SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 SHELL_PRELOAD := $(SRC_ROOT)/$(SHELL_PRELOAD)
@@ -13,7 +13,7 @@ EXTENSION_DEPS := $(shell find $(PYMODULE) -type f -name '*.pyx')
 EXTENSION_INTS := $(patsubst %.pyx,%$(EXTENSION_EXT),$(EXTENSION_DEPS))
 EXTENSION_LIBS := $(patsubst %$(EXTENSION_EXT),%.so,$(EXTENSION_INTS))
 
-EXTRAS_REQS := dev-requirements.txt $(wildcard extras-*-requirements.txt)
+EXTRAS_REQS := $(wildcard extras-*-requirements.txt)
 
 PYENV := . env/bin/activate;
 PYTHON := $(PYENV) python
@@ -57,7 +57,6 @@ shell: extras build_ext
 
 extras: env/make.extras
 env/make.extras: $(EXTRAS_REQS) | env
-	rm -rf env/build
 	$(PYENV) for req in $?; do pip install -r $$req; done
 	touch $@
 
@@ -93,5 +92,5 @@ env/bin/activate: dev-requirements.txt requirements.txt | setup.py
 	$(PYENV) easy_install -U pip
 	$(PIP) install -U wheel cython
 	$(PYENV) for reqfile in $^; do pip install -r $$reqfile; done
-	$(PYENV) pip install -e .
+	#$(PYENV) pip install -e .
 	touch $@

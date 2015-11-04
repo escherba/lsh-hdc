@@ -2,9 +2,11 @@ import numpy as np
 from itertools import chain
 from pymaptools.containers import clusters_to_labels
 from lsh_hdc.ranking import RocCurve, LiftCurve, \
-    aul_score_from_clusters, aul_score_from_labels
+    aul_score_from_clusters, aul_score_from_labels, roc_auc_score
 from nose.tools import assert_almost_equal
 from pymaptools.sample import discrete_sample, random_seed
+from lsh_hdc.monte_carlo.predictions import simulate_clustering
+from sklearn.metrics.ranking import roc_auc_score as auc_sklearn
 
 
 def simulate_predictions(n=100, seed=None):
@@ -13,46 +15,12 @@ def simulate_predictions(n=100, seed=None):
     if seed is None:
         seed = random_seed()
     np.random.seed(seed % (2 ** 32))
-    probas = [np.random.random() for _ in xrange(n)]
+    probas = np.random.random(n)
     classes = [discrete_sample({0: (1 - p), 1: p}) for p in probas]
     return classes, probas
 
 
-def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2, err_pos=0.1,
-                        err_neg=0.02):
-
-    csizes = map(int, np.random.gamma(galpha, gbeta, nclusters))
-    num_pos = sum(csizes)
-    if num_pos == 0:
-        csizes.append(1)
-        num_pos += 1
-    num_neg = int(num_pos * ((1.0 - pos_ratio) / pos_ratio))
-    clusters = []
-
-    # the larger the cluster, the more probable it is some unclustered
-    # items belong to it
-    probas = {}
-    total_csizes = sum(csizes) + num_neg
-    for idx, csize in enumerate([num_neg] + csizes):
-        p = (csize / float(total_csizes))
-        probas[idx] = p
-
-    for idx, csize in enumerate([num_neg] + csizes):
-        prev_err_total = 1.0 - probas[idx]
-        err_rate = err_pos if idx > 0 else err_neg
-        err_mult = err_rate / prev_err_total
-        cluster_probas = {cid: p * err_mult for cid, p in probas.iteritems()}
-        cluster_probas[idx] = 1.0 - err_rate
-        cluster = [discrete_sample(cluster_probas) for _ in xrange(csize)]
-        if idx > 0:
-            clusters.append(list(cluster))
-        else:
-            clusters.extend([[x] for x in cluster])
-
-    return clusters
-
-
-def test_aul_simulated():
+def test_simulated():
     """Two different implementations of aul_score should return same numbers
     """
 
@@ -102,18 +70,19 @@ def _auc(fpr, tpr, reorder=False):
         reorder=reorder)
 
 
-
-def test_roc_curve():
+def test_roc_simulated():
     # Test Area under Receiver Operating Characteristic (ROC) curve
     for _ in range(10):
         y_true, probas_pred = simulate_predictions(1000, seed=random_seed())
-        rc = RocCurve.from_binary(y_true, probas_pred)
-        expected_auc = _auc(rc.fprs, rc.tprs)
-        score = rc.auc_score()
-        assert_almost_equal(expected_auc, score, 2)
+        rc = RocCurve.from_labels(y_true, probas_pred)
+        auc_expected1 = _auc(rc.fprs, rc.tprs)
+        auc_expected2 = auc_sklearn(y_true, probas_pred)
+        auc_actual = roc_auc_score(y_true, probas_pred)
+        assert_almost_equal(auc_expected1, auc_actual, 3)
+        assert_almost_equal(auc_expected2, auc_actual, 3)
 
 
-def test_clustering_aul_empty():
+def test_sample_empty():
     """Empty clusterings have AUL=0.0
     """
     clusters = []
@@ -123,43 +92,99 @@ def test_clustering_aul_empty():
     assert_almost_equal(score2, 0.0, 4)
 
 
-def test_clustering_aul_perfect():
-    """Perfect clusterings have AUL=1.0
+def test_sample_perfect():
+    """Perfect clustering
     """
     clusters = [[1, 1, 1, 1, 1], [0], [0]]
-    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
-    score2 = aul_score_from_clusters(clusters)
-    assert_almost_equal(score1, 1.0, 4)
-    assert_almost_equal(score2, 1.0, 4)
+
+    aul1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    aul2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(aul1, 1.0, 4)
+    assert_almost_equal(aul2, 1.0, 4)
+
+    auc = RocCurve.from_clusters(clusters).auc_score()
+    assert_almost_equal(auc, 1.0, 4)
 
 
-def test_clustering_aul_bad():
-    """Bad clusterings have have AUL=0.5
+def test_sample_class1_nh():
+    """Same as in ``test_sample_perfect`` but class 1 not homogeneous
+    """
+    clusters = [[1, 1, 1], [1, 1], [0], [0]]
+
+    aul1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    aul2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(aul1, 0.8286, 4)
+    assert_almost_equal(aul2, 0.8286, 4)
+
+    auc = RocCurve.from_clusters(clusters).auc_score()
+    assert_almost_equal(auc, 1.0, 4)
+
+
+def test_sample_cluster0_nh():
+    """Same as in ``test_sample_perfect`` but cluster 0 not homogeneous
+    """
+    clusters = [[1, 1, 1, 1, 0], [0], [0]]
+
+    aul1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    aul2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(aul1, 0.8, 4)
+    assert_almost_equal(aul2, 0.8, 4)
+
+    auc = RocCurve.from_clusters(clusters).auc_score()
+    assert_almost_equal(auc, 0.8333, 4)
+
+
+def test_sample_cluster0_c0():
+    """Similar to ``test_sample_perfect`` but have a cluster of class 0
+    """
+    clusters = [[1, 1, 1, 1], [0, 0], [0]]
+
+    aul1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    aul2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(aul1, 0.6667, 4)
+    assert_almost_equal(aul2, 0.6667, 4)
+
+    auc = RocCurve.from_clusters(clusters).auc_score()
+    assert_almost_equal(auc, 1.0, 4)
+
+
+def test_sample_neg_class1():
+    """Similar to ``test_sample_perfect`` but have a negative of class 1
+    """
+    clusters = [[1, 1, 1, 1, 1], [1], [0]]
+
+    aul1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    aul2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(aul1, 0.8690, 4)
+    assert_almost_equal(aul2, 0.8690, 4)
+
+    auc = RocCurve.from_clusters(clusters).auc_score()
+    assert_almost_equal(auc, 0.9167, 4)
+
+
+def test_sample_bad():
+    """Bad clustering should score poorly
     """
     clusters = [[1, 1, 0, 0], [0]]
-    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
-    score2 = aul_score_from_clusters(clusters)
-    assert_almost_equal(score1, 0.5, 4)
-    assert_almost_equal(score2, 0.5, 4)
+
+    aul1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    aul2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(aul1, 0.5, 4)
+    assert_almost_equal(aul2, 0.5, 4)
+
+    auc = RocCurve.from_clusters(clusters).auc_score()
+    assert_almost_equal(auc, 0.6667, 4)
 
 
-def test_clustering_aul_perverse():
+def test_sample_perverse():
     """Perverese cases are 0.0 < AUL < 0.5
     """
     clusters = [[1], [0, 0]]
-    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
-    score2 = aul_score_from_clusters(clusters)
-    assert_almost_equal(score1, 0.1111, 4)
-    assert_almost_equal(score2, 0.1111, 4)
 
+    aul1 = aul_score_from_labels(*clusters_to_labels(clusters))
+    aul2 = aul_score_from_clusters(clusters)
+    assert_almost_equal(aul1, 0.1111, 4)
+    assert_almost_equal(aul2, 0.1111, 4)
 
-def test_clustering_aul_precalculated():
-    """A decent clustering should have a high score`
-    """
-    clusters = [[1, 1, 1], [1, 1], [0], [0]]
-    score1 = aul_score_from_labels(*clusters_to_labels(clusters))
-    score2 = aul_score_from_clusters(clusters)
-    assert_almost_equal(score1, 0.8286, 4)
-    assert_almost_equal(score2, 0.8286, 4)
-
-
+    auc = RocCurve.from_clusters(clusters).auc_score()
+    assert_almost_equal(auc, 0.0, 4)

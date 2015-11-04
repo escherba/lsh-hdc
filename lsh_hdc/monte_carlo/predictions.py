@@ -5,6 +5,7 @@ from itertools import product, izip
 from pymaptools.iter import izip_with_cycles, isiterable
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
 from pymaptools.containers import labels_to_clusters
+from pymaptools.sample import discrete_sample
 
 
 def get_conf(obj):
@@ -12,6 +13,40 @@ def get_conf(obj):
         return obj.coassoc_
     except AttributeError:
         return obj
+
+
+def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
+                        err_pos=0.1, err_neg=0.02):
+
+    csizes = map(int, np.random.gamma(galpha, gbeta, nclusters))
+    num_pos = sum(csizes)
+    if num_pos == 0:
+        csizes.append(1)
+        num_pos += 1
+    num_neg = int(num_pos * ((1.0 - pos_ratio) / pos_ratio))
+
+    # the larger the cluster, the more probable it is some unclustered
+    # items belong to it
+    probas = {}
+    total_csizes = sum(csizes) + num_neg
+    for idx, csize in enumerate([num_neg] + csizes):
+        p = (csize / float(total_csizes))
+        probas[idx] = p
+
+    clusters = []
+    for idx, csize in enumerate([num_neg] + csizes):
+        prev_err_total = 1.0 - probas[idx]
+        err_rate = err_pos if idx > 0 else err_neg
+        err_mult = err_rate / prev_err_total
+        cluster_probas = {cid: p * err_mult for cid, p in probas.iteritems()}
+        cluster_probas[idx] = 1.0 - err_rate
+        cluster = [discrete_sample(cluster_probas) for _ in xrange(csize)]
+        if idx > 0:
+            clusters.append(list(cluster))
+        else:
+            clusters.extend([[x] for x in cluster])
+
+    return clusters
 
 
 class Grid(object):
