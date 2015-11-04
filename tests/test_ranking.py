@@ -22,16 +22,33 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2, err_pos
                         err_neg=0.02):
 
     csizes = map(int, np.random.gamma(galpha, gbeta, nclusters))
-    npos = sum(csizes)
-    nneg = int(npos * ((1.0 - pos_ratio) / pos_ratio))
+    num_pos = sum(csizes)
+    if num_pos == 0:
+        csizes.append(1)
+        num_pos += 1
+    num_neg = int(num_pos * ((1.0 - pos_ratio) / pos_ratio))
     clusters = []
-    for csize in csizes:
-        #cluster = np.random.choice(2, csize, p=[err_pos, 1.0 - err_pos])
-        cluster = [discrete_sample({0: err_pos, 1: 1.0 - err_pos}) for _ in xrange(csize)]
-        clusters.append(list(cluster))
-    #negs = np.random.choice(2, nneg, p=[1.0 - err_neg, err_neg])
-    negs = [discrete_sample({0: 1.0 - err_neg, 1: err_neg}) for _ in xrange(nneg)]
-    clusters.extend([[x] for x in negs])
+
+    # the larger the cluster, the more probable it is some unclustered
+    # items belong to it
+    probas = {}
+    total_csizes = sum(csizes) + num_neg
+    for idx, csize in enumerate([num_neg] + csizes):
+        p = (csize / float(total_csizes))
+        probas[idx] = p
+
+    for idx, csize in enumerate([num_neg] + csizes):
+        prev_err_total = 1.0 - probas[idx]
+        err_rate = err_pos if idx > 0 else err_neg
+        err_mult = err_rate / prev_err_total
+        cluster_probas = {cid: p * err_mult for cid, p in probas.iteritems()}
+        cluster_probas[idx] = 1.0 - err_rate
+        cluster = [discrete_sample(cluster_probas) for _ in xrange(csize)]
+        if idx > 0:
+            clusters.append(list(cluster))
+        else:
+            clusters.extend([[x] for x in cluster])
+
     return clusters
 
 

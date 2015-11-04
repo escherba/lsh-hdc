@@ -1,13 +1,18 @@
-.PHONY: clean coverage develop env extras package release test virtualenv build_ext shell docs
+.PHONY: clean coverage develop env extras package release test virtualenv build_ext shell docs doc_sources
 
-SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 PYMODULE := lsh_hdc
-SHELL_PRELOAD := $(SRC_ROOT)/$(PYMODULE)/metrics.py
-EXTENSION := $(PYMODULE)/ext.so
-EXTENSION_INTERMEDIATE := $(PYMODULE)/ext.cpp
-EXTENSION_DEPS := $(PYMODULE)/ext.pyx
+EXTENSION_EXT := .cpp
 PYPI_HOST := pypi
 DISTRIBUTE := sdist bdist_wheel
+SHELL_PRELOAD := $(PYMODULE)/metrics.py
+
+SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+SHELL_PRELOAD := $(SRC_ROOT)/$(SHELL_PRELOAD)
+
+EXTENSION_DEPS := $(shell find $(PYMODULE) -type f -name '*.pyx')
+EXTENSION_INTS := $(patsubst %.pyx,%$(EXTENSION_EXT),$(EXTENSION_DEPS))
+EXTENSION_LIBS := $(patsubst %$(EXTENSION_EXT),%.so,$(EXTENSION_INTS))
+
 EXTRAS_REQS := dev-requirements.txt $(wildcard extras-*-requirements.txt)
 
 PYENV := . env/bin/activate;
@@ -22,9 +27,9 @@ doc_sources:
 		-A "`$(PYTHON) setup.py --author`" \
 		-H "`$(PYTHON) setup.py --name`" \
 		-V "`$(PYTHON) setup.py --version`" \
-	    -f -e -d 4 -F -o docs $(PYMODULE)
-	git checkout docs/conf.py
-	git checkout docs/Makefile
+		-f -e -d 4 -F -o docs $(PYMODULE)
+	-git checkout docs/conf.py
+	-git checkout docs/Makefile
 
 docs: env build_ext
 	$(PYENV) cd docs; make html; cd ..
@@ -44,7 +49,7 @@ coverage: test
 endif
 
 test: env build_ext
-	$(PYENV) nosetests $(NOSEARGS)
+	$(PYENV) $(ENV_EXTRA) python `which nosetests` $(NOSEARGS)
 	$(PYENV) py.test README.rst
 
 shell: extras build_ext
@@ -60,15 +65,16 @@ nuke: clean
 	rm -rf *.egg *.egg-info env bin cover coverage.xml nosetests.xml
 
 clean:
-	python setup.py clean
+	-python setup.py clean
 	rm -rf dist build
-	find . -path ./env -prune -o -type f -name "*.pyc" -or -name "*.so" -or -name "*.cpp" -exec rm -f {} \;
+	rm -f $(EXTENSION_LIBS) $(EXTENSION_INTS)
+	find . -path ./env -prune -o -type f -name "*.pyc" -exec rm -f {} \;
 
-build_ext: $(EXTENSION)
-	@echo "done building '$(EXTENSION)' extension"
-
-$(EXTENSION): env $(EXTENSION_DEPS)
+build_ext: env
 	$(PYTHON) setup.py build_ext --inplace
+
+$(EXTENSION_LIBS): build_ext
+	@echo "done building $@"
 
 develop:
 	@echo "Installing for " `which pip`
@@ -87,4 +93,5 @@ env/bin/activate: dev-requirements.txt requirements.txt | setup.py
 	$(PYENV) easy_install -U pip
 	$(PIP) install -U wheel cython
 	$(PYENV) for reqfile in $^; do pip install -r $$reqfile; done
+	$(PYENV) pip install -e .
 	touch $@
