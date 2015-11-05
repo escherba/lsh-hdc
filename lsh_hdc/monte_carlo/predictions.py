@@ -1,41 +1,132 @@
 import numpy as np
 import os
 import warnings
+import random
 from itertools import product, izip
 from pymaptools.iter import izip_with_cycles, isiterable
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
-from pymaptools.containers import labels_to_clusters
+from pymaptools.containers import labels_to_clusters, clusters_to_labels
+from pymaptools.sample import discrete_sample
 
 
 def get_conf(obj):
     try:
-        return obj.coassoc_
+        return obj.pairwise_
     except AttributeError:
         return obj
 
 
+def simulate_labeling(sample_size=2000, **kwargs):
+
+    clusters = simulate_clustering(**kwargs)
+    tuples = zip(*clusters_to_labels(clusters))
+    random.shuffle(tuples)
+    tuples = tuples[:sample_size]
+    ltrue, lpred = zip(*tuples) or ([], [])
+    return ltrue, lpred
+
+
+def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
+                        p_err=0.05, population_size=2000):
+    csizes = map(int, np.random.gamma(galpha, gbeta, nclusters))
+    num_pos = sum(csizes)
+    if num_pos == 0:
+        csizes.append(1)
+        num_pos += 1
+    num_neg = max(0, population_size - num_pos)
+    expected_num_neg = num_pos * ((1.0 - pos_ratio) / pos_ratio)
+    actual_neg_ratio = (num_neg - expected_num_neg) / float(expected_num_neg)
+    if abs(actual_neg_ratio) > 0.2:
+        word = "fewer" if actual_neg_ratio < 0.0 else "more"
+        warnings.warn("{:.1%} {} negatives than expected. Got: {} (expected: {}. Recommended population_size: {})"
+                      .format(abs(actual_neg_ratio), word, num_neg, int(expected_num_neg), int(expected_num_neg + num_pos)))
+
+    # the larger the cluster, the more probable it is some unclustered
+    # items belong to it
+    dist_class_labels = {}
+    total_csizes = sum(csizes) + num_neg
+    for idx, csize in enumerate([num_neg] + csizes):
+        p = (csize / float(total_csizes))
+        dist_class_labels[idx] = p
+
+    dist_err = {True: 1.0 - p_err, False: p_err}
+
+    clusters = []
+
+    # negative case first
+    for _ in xrange(num_neg):
+        no_error = discrete_sample(dist_err)
+        class_label = 0 if no_error else discrete_sample(dist_class_labels)
+        clusters.append([class_label])
+
+    # positive cases
+    for idx, csize in enumerate(csizes, start=1):
+        cluster = []
+        for _ in xrange(csize):
+            no_error = discrete_sample(dist_err)
+            class_label = idx if no_error else discrete_sample(dist_class_labels)
+            cluster.append(class_label)
+        clusters.append(cluster)
+
+    idx = -1
+    relabeled = []
+    for cluster in clusters:
+        relabeled_cluster = []
+        for class_label in cluster:
+            if class_label <= 0:
+                class_label = idx
+            relabeled_cluster.append(class_label)
+            idx -= 1
+        relabeled.append(relabeled_cluster)
+
+    return relabeled
+
+
 class Grid(object):
 
-    def __init__(self, grid_type='clusters', n=10000, size=20, max_classes=5,
-                 max_counts=100, seed=None):
+    def __init__(self, seed=None):
         if seed is not None:
             np.random.seed(seed)
-        self.max_classes = max_classes
-        self.max_counts = max_counts
-        self.n = n
-        self.size = size
-        if grid_type == 'clusters':
-            self.grid = self.fill_clusters()
-            self.grid_type = grid_type
-            self.get_matrix = self.matrix_from_labels
-            self.show_record = self.show_cluster
-        elif grid_type == 'matrices':
-            self.grid = self.fill_matrices()
-            self.grid_type = grid_type
-            self.get_matrix = self.matrix_from_matrices
-            self.show_record = self.show_matrix
-        else:
-            raise ValueError("Unknown grid_type selection '%s'" % grid_type)
+
+        self.max_classes = None
+        self.max_counts = None
+        self.n = None
+        self.size = None
+
+        self.grid = None
+        self.grid_type = None
+        self.get_matrix = None
+        self.show_record = None
+
+    @classmethod
+    def with_clusters(cls, n=1000, size=200, max_classes=5, seed=None):
+        obj = cls(seed=seed)
+
+        obj.grid = obj.fill_clusters(max_classes=max_classes, size=size, n=n)
+        obj.grid_type = 'clusters'
+        obj.get_matrix = obj.matrix_from_labels
+        obj.show_record = obj.show_cluster
+        return obj
+
+    @classmethod
+    def with_sim_clusters(cls, n=1000, size=200, seed=None, **kwargs):
+        obj = cls(seed=seed)
+
+        obj.grid = obj.fill_sim_clusters(size=size, n=n, **kwargs)
+        obj.grid_type = 'sim_clusters'
+        obj.get_matrix = obj.matrix_from_labels
+        obj.show_record = obj.show_cluster
+        return obj
+
+    @classmethod
+    def with_matrices(cls, n=1000, max_counts=100, seed=None):
+        obj = cls(seed=seed)
+
+        obj.grid = obj.fill_matrices(max_counts=max_counts, n=n)
+        obj.grid_type = 'matrices'
+        obj.get_matrix = obj.matrix_from_matrices
+        obj.show_record = obj.show_matrix
+        return obj
 
     def show_matrix(self, idx, inverse=False):
         grid = self.grid
@@ -43,10 +134,7 @@ class Grid(object):
 
     def show_cluster(self, idx, inverse=False):
         grid = self.grid
-        if inverse:
-            a, b = 1, 0
-        else:
-            a, b = 0, 1
+        a, b = (1, 0) if inverse else (0, 1)
         return labels_to_clusters(grid[a][idx], grid[b][idx])
 
     def best_clustering_by_score(self, score, flip_sign=False):
@@ -70,10 +158,10 @@ class Grid(object):
     iter_clusters = iter_grid
 
     def iter_matrices(self):
-        if self.grid_type == 'matrices':
+        if self.grid_type in ['matrices']:
             for idx, tup in self.iter_grid():
                 yield idx, self.matrix_from_matrices(*tup)
-        elif self.grid_type == 'clusters':
+        elif self.grid_type in ['clusters', 'sim_clusters']:
             for idx, labels in self.iter_grid():
                 yield idx, self.matrix_from_labels(*labels)
 
@@ -84,16 +172,56 @@ class Grid(object):
             if max_idx != 2:
                 print idx, tup
 
-    def fill_clusters(self):
+    def fill_clusters(self, n=None, size=None, max_classes=None):
+        if n is None:
+            n = self.n
+        else:
+            self.n = n
+        if size is None:
+            size = self.size
+        else:
+            self.size = size
+        if max_classes is None:
+            max_classes = self.max_classes
+        else:
+            self.max_classes = max_classes
+
         classes = np.random.randint(
-            low=0, high=self.max_classes, size=(self.n, self.size))
+            low=0, high=max_classes, size=(n, size))
         clusters = np.random.randint(
-            low=0, high=self.max_classes, size=(self.n, self.size))
+            low=0, high=max_classes, size=(n, size))
         return classes, clusters
 
-    def fill_matrices(self):
+    def fill_sim_clusters(self, n=None, size=None, **kwargs):
+        if n is None:
+            n = self.n
+        else:
+            self.n = n
+        if size is None:
+            size = self.size
+        else:
+            self.size = size
+
+        classes = np.empty((n, size), dtype=np.int64)
+        clusters = np.empty((n, size), dtype=np.int64)
+        for idx in xrange(n):
+            ltrue, lpred = simulate_labeling(sample_size=size, **kwargs)
+            classes[idx, :] = ltrue
+            clusters[idx, :] = lpred
+        return classes, clusters
+
+    def fill_matrices(self, max_counts=None, n=None):
+        if max_counts is None:
+            max_counts = self.max_counts
+        else:
+            self.max_counts = max_counts
+        if n is None:
+            n = self.n
+        else:
+            self.n = n
+
         matrices = np.random.randint(
-            low=0, high=self.max_counts, size=(self.n, 4))
+            low=0, high=max_counts, size=(n, 4))
         return (matrices,)
 
     def find_highest(self, score, flip_sign=False):
@@ -128,7 +256,7 @@ class Grid(object):
                 result[score][idx, :] = conf.get_score(score)
         return result
 
-    def corrplot(self, compute_result, save_to, **kwargs):
+    def corrplot(self, compute_result, save_to):
         items = compute_result.items()
         if not os.path.exists(save_to):
             os.mkdir(save_to)

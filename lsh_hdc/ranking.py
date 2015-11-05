@@ -101,6 +101,17 @@ from pymaptools.iter import aggregate_tuples
 from pymaptools.containers import labels_to_clusters
 
 
+def num2bool(num):
+    """Returns True if num > 0, False otherwise
+
+    When binarizing class labels, this lets us be consistent with Scikit-Learn
+    where binary labels can be {0, 1} with 0 being negativeve or {-1, 1} with -1
+    being negative
+
+    """
+    return num > 0
+
+
 class LiftCurve(object):
 
     """Area under Lift Curve (AUL) for cluster-size correlated classification
@@ -135,48 +146,45 @@ class LiftCurve(object):
         return cls(aggregate_tuples(count_groups))
 
     @classmethod
-    def from_clusters(cls, clusters):
+    def from_clusters(cls, clusters, is_class_pos=num2bool):
         """Instantiates class from clusters of class-coded points
 
         Parameters
         ----------
 
         clusters : collections.Iterable
-            List of clusters where each point is binary-coded according to true
-            class.
+            List of lists of class labels
 
-        Returns
-        -------
+        is_class_pos: label_true -> Bool
+            Boolean predicate used to num2bool true (class) labels
 
-        aul : float
         """
         # take all non-empty clusters, score them by size and by number of
         # ground truth positives
-        data = ((len(cluster), sum(bool(val) for val in cluster))
+        data = ((len(cluster), sum(is_class_pos(class_label) for class_label in cluster))
                 for cluster in clusters if cluster)
         scores_pred, scores_true = zip(*data) or ([], [])
         return cls.from_counts(scores_true, scores_pred)
 
     @classmethod
-    def from_labels(cls, y_true, labels_pred):
+    def from_labels(cls, labels_true, labels_pred, is_class_pos=num2bool):
         """Instantiates class from arrays of classes and cluster sizes
 
         Parameters
         ----------
 
-        y_true : array, shape = [n_samples]
-            True binary labels in range {0, 1}
+        labels_true : array, shape = [n_samples]
+            Class labels. If binary, 'is_class_pos' is optional
 
         labels_pred : array, shape = [n_samples]
             Cluster labels to evaluate
 
-        Returns
-        -------
+        is_class_pos: label_true -> Bool
+            Boolean predicate used to num2bool true (class) labels
 
-        aul : float
         """
-        clusters = labels_to_clusters(y_true, labels_pred)
-        return cls.from_clusters(clusters)
+        clusters = labels_to_clusters(labels_true, labels_pred)
+        return cls.from_clusters(clusters, is_class_pos=is_class_pos)
 
     def aul_score(self, threshold=1, plot=False):
         """Calculate AUL score
@@ -244,8 +252,8 @@ class LiftCurve(object):
             else:
                 # if not tasked with generating plots, use a geometric method
                 # instead of looping
-                aul += (total_true * group_width - \
-                    ((num_true_scores - 1) * pred_score * group_height) / 2.0)
+                aul += (total_true * group_width -
+                        ((num_true_scores - 1) * pred_score * group_height) / 2.0)
 
         if total_true > total_any:
             warnings.warn(
@@ -267,7 +275,7 @@ class LiftCurve(object):
         else:
             return aul
 
-    def plot(self, threshold=1, marker=None, save_to=None):  # pragma: no cover
+    def plot(self, threshold=1, fill=True, marker=None, save_to=None):  # pragma: no cover
         """Create a graphical representation of Lift Curve
 
         Requires Matplotlib
@@ -286,18 +294,19 @@ class LiftCurve(object):
         """
         from matplotlib import pyplot as plt
 
-        aul, xs, ys = self.aul_score(threshold=threshold, plot=True)
+        score, xs, ys = self.aul_score(threshold=threshold, plot=True)
         fig, ax = plt.subplots()
         ax.plot(xs, ys, marker=marker, linestyle='-')
-        ax.fill([0.0] + list(xs) + [1.0], [0.0] + list(ys) + [0.0], 'b', alpha=0.2)
+        if fill:
+            ax.fill([0.0] + list(xs) + [1.0], [0.0] + list(ys) + [0.0], 'b', alpha=0.2)
         ax.plot([0.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
         ax.plot([0.0, 1.0], [1.0, 1.0], linestyle='--', color='grey')
         ax.plot([1.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
-        ax.set_xlim(xmin=0.0, xmax=1.1)
-        ax.set_ylim(ymin=0.0, ymax=1.1)
+        ax.set_xlim(xmin=0.0, xmax=1.03)
+        ax.set_ylim(ymin=0.0, ymax=1.04)
         ax.set_xlabel("portion total")
         ax.set_ylabel("portion expected positive")
-        ax.set_title("Lift Curve (AUL=%.3f)" % aul)
+        ax.set_title("Lift Curve (AUL=%.3f)" % score)
         if save_to is None:
             fig.show()
         else:
@@ -349,7 +358,7 @@ class RocCurve(object):
 
     ::
 
-        >>> rc = RocCurve.from_binary([0, 0, 1, 1],
+        >>> rc = RocCurve.from_labels([0, 0, 1, 1],
         ...                           [0.1, 0.4, 0.35, 0.8])
         >>> rc.auc_score()
         0.75
@@ -365,13 +374,78 @@ class RocCurve(object):
         self.pos_label = pos_label
         self.sample_weight = sample_weight
 
-    @classmethod
-    def from_binary(cls, y_true, y_score, sample_weight=None):
-        """Instantiates class assuming binary labeling of {0, 1}
+    def plot(self, fill=True, save_to=None):  # pragma: no cover
+        """Plot the ROC curve
         """
+        from matplotlib import pyplot as plt
+
+        score = self.auc_score()
+        xs, ys = self.fprs, self.tprs
+
+        fig, ax = plt.subplots()
+        ax.plot(xs, ys, linestyle='-')
+        if fill:
+            ax.fill([0.0] + list(xs) + [1.0], [0.0] + list(ys) + [0.0], 'b', alpha=0.2)
+        ax.plot([0.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
+        ax.plot([0.0, 1.0], [1.0, 1.0], linestyle='--', color='grey')
+        ax.plot([1.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
+        ax.set_xlim(xmin=0.0, xmax=1.03)
+        ax.set_ylim(ymin=0.0, ymax=1.04)
+        ax.set_ylabel('TPR')
+        ax.set_xlabel('FPR')
+        ax.set_title("ROC Curve (AUC=%.3f)" % score)
+        if save_to is None:
+            fig.show()
+        else:
+            fig.savefig(save_to)
+            plt.close(fig)
+
+    @classmethod
+    def from_labels(cls, labels_true, y_score, is_class_pos=num2bool):
+        """Instantiates class assuming binary labeling of {0, 1}
+
+        labels_true : array, shape = [n_samples]
+            Class labels. If binary, 'is_class_pos' is optional
+
+        y_score : array, shape = [n_samples]
+            Predicted scores
+
+        is_class_pos: label_true -> Bool
+            Boolean predicate used to num2bool true (class) labels
+        """
+
+        # num2bool Y labels
+        y_true = map(is_class_pos, labels_true)
+
+        # calculate axes
         fprs, tprs, thresholds = roc_curve(
-            y_true, y_score, pos_label=True, sample_weight=sample_weight)
-        return cls(fprs, tprs, thresholds=thresholds, sample_weight=sample_weight)
+            y_true, y_score, pos_label=True)
+
+        return cls(fprs, tprs, thresholds=thresholds)
+
+    @classmethod
+    def from_clusters(cls, clusters, is_class_pos=num2bool):
+        """Instantiates class from clusters of class-coded points
+
+        Parameters
+        ----------
+
+        clusters : collections.Iterable
+            List of lists of class labels
+
+        is_class_pos: label_true -> Bool
+            Boolean predicate used to num2bool true (class) labels
+
+        """
+        y_true = []
+        y_score = []
+        for cluster in clusters:
+            pred_cluster = len(cluster)
+            for point in cluster:
+                true_cluster = is_class_pos(point)
+                y_true.append(true_cluster)
+                y_score.append(pred_cluster)
+        return cls.from_labels(y_true, y_score)
 
     def auc_score(self):
         """Replacement for Scikit-Learn's method
@@ -418,4 +492,4 @@ class RocCurve(object):
 def roc_auc_score(y_true, y_score, sample_weight=None):
     """Replaces Scikit Learn implementation (for binary y_true vectors only)
     """
-    return RocCurve.from_binary(y_true, y_score).auc_score()
+    return RocCurve.from_labels(y_true, y_score).auc_score()

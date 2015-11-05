@@ -88,7 +88,7 @@ References
 """
 
 import numpy as np
-from math import sqrt, copysign
+from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import TableOfCounts
 from pymaptools.iter import ilen
@@ -250,31 +250,6 @@ class ContingencyTable(TableOfCounts):
         I_CK = H_expected - H_actual
         return H_C, H_K, I_CK
 
-    def vi_distance(self):
-        """Variation of Information distance
-
-        The distance metric calculated here is one of several possible entropy-
-        based distance metrics that could be defined on a RxC matrix. Per Table
-        2 in [1]_, the given measure is equivalent to '2 * D_sum'.
-
-        Note that the entropy variables H below are calculated using natural
-        logs, so a base correction may be necessary if you need your result in
-        base 2 for example.
-
-        References
-        ----------
-
-        .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
-               measures for clusterings comparison: Variants, properties,
-               normalization and correction for chance. The Journal of Machine
-               Learning Research, 11, 2837-2854.
-               <http://www.jmlr.org/papers/v11/vinh10a.html>`_
-
-        """
-        H_C, H_K, I_CK = self._entropies()
-        VI_CK = (H_C - I_CK) + (H_K - I_CK)
-        return _div(VI_CK, self.grand_total)
-
     def mutual_info_score(self):
         """Mutual Information Score
 
@@ -367,6 +342,48 @@ class ContingencyTable(TableOfCounts):
         ami = (mi - emi) / (mi_max - emi)
         return ami
 
+    def vi_distance(self, normalize=True):
+        """Variation of Information distance
+
+        Defined in [1]_. This measure is one of several possible entropy-
+        based distance measure that could be defined on a RxC matrix. Per Table
+        2 in [2]_, the given measure is equivalent to '2 * D_sum'.
+
+        Note that the entropy variables H below are calculated using natural
+        logs, so a base correction may be necessary if you need your result in
+        base 2 for example.
+
+        References
+        ----------
+
+        .. [1] `Meilă, M. (2007). Comparing clusterings—an information based
+               distance. Journal of multivariate analysis, 98(5), 873-895.
+               <https://doi.org/10.1016/j.jmva.2006.11.013>`_
+
+        .. [2] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
+               measures for clusterings comparison: Variants, properties,
+               normalization and correction for chance. The Journal of Machine
+               Learning Research, 11, 2837-2854.
+               <http://www.jmlr.org/papers/v11/vinh10a.html>`_
+
+        """
+        H_C, H_K, I_CK = self._entropies()
+        VI_CK = (H_C + H_K) - (I_CK + I_CK)
+        score = _div(VI_CK, self.grand_total)
+        if normalize:
+            score /= log(self.grand_total)
+        return score
+
+    def vi_similarity(self, normalize=True):
+        """Inverse of ``vi_distance``
+        """
+        dist = self.vi_distance(normalize=False)
+        max_dist = log(self.grand_total)
+        score = max_dist - dist
+        if normalize:
+            score /= max_dist
+        return score
+
     def split_join_distance(self, normalize=True):
         """Projection distance between partitions
 
@@ -388,9 +405,12 @@ class ContingencyTable(TableOfCounts):
                <http://dl.acm.org/citation.cfm?id=868979>`_
 
         """
-        sim = self.split_join_similarity(normalize=normalize)
-        sim_max = 1.0 if normalize else 2 * self.grand_total
-        return sim_max - sim
+        sim = self.split_join_similarity(normalize=False)
+        max_sim = 2 * self.grand_total
+        score = max_sim - sim
+        if normalize:
+            score /= max_sim
+        return score
 
     def split_join_similarity(self, normalize=True):
         """Split-join similarity score
@@ -411,16 +431,59 @@ class ContingencyTable(TableOfCounts):
             >>> cm.split_join_similarity()
             0.5
 
-        See Also
-        --------
-        talburt_wang_index
-
         """
         pa_B = sum(max(row) for row in self.iter_rows())
         pb_A = sum(max(col) for col in self.iter_cols())
         score = pa_B + pb_A
         if normalize:
             score /= float(2 * self.grand_total)
+        return score
+
+    def mirkin_match_coeff(self, normalize=True):
+        """Equivalence match (similarity) coeffcient
+
+        ::
+
+            >>> C3 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
+            >>> C4 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10, 11, 12}, {13, 14, 15, 16}]
+            >>> cm = ClusteringMetrics.from_partitions(C3, C4)
+            >>> cm.mirkin_match_coeff(normalize=False)
+            216
+        """
+        max_score = self.grand_total ** 2
+        score = max_score - self.mirkin_mismatch_coeff(normalize=False)
+        if normalize:
+            score /= float(max_score)
+        return score
+
+    def mirkin_mismatch_coeff(self, normalize=True):
+        """Equivalence mismatch (distance) coefficient
+
+        Described in [1]_.
+
+        ::
+
+            >>> C1 = [{1, 2, 3, 4, 5, 6, 7, 8}, {9, 10, 11, 12, 13, 14, 15, 16}]
+            >>> C2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
+            >>> cm = ClusteringMetrics.from_partitions(C1, C2)
+            >>> cm.mirkin_mismatch_coeff(normalize=False)
+            56
+
+        References
+        ----------
+
+        .. [1] `Mirkin, B (1996). Mathematical Classification and Clustering.
+               Kluwer Academic Press: Boston-Dordrecht.
+               <https://books.google.com/books?isbn=1461304571>`_
+
+        """
+        score = (
+            sum(x ** 2 for x in self.iter_row_totals()) +
+            sum(x ** 2 for x in self.iter_col_totals()) -
+            2 * sum(x ** 2 for x in self.iter_cells())
+        )
+        if normalize:
+            score /= float(self.grand_total ** 2)
         return score
 
     def talburt_wang_index(self):
@@ -441,10 +504,6 @@ class ContingencyTable(TableOfCounts):
             >>> cm = ContingencyTable.from_clusters(clusters)
             >>> round(cm.talburt_wang_index(), 2)
             0.49
-
-        See Also
-        --------
-        split_join_similarity
 
         References
         ----------
@@ -471,10 +530,10 @@ class ClusteringMetrics(ContingencyTable):
 
     def __init__(self, *args, **kwargs):
         super(ClusteringMetrics, self).__init__(*args, **kwargs)
-        self._coassoc_ = None
+        self._pairwise_ = None
 
     @property
-    def coassoc_(self):
+    def pairwise_(self):
         """Compute a confusion matrix describing pairs from two partitionings
 
         Given two partitionings A and B and a co-occurrence matrix of point pairs,
@@ -489,16 +548,16 @@ class ClusteringMetrics(ContingencyTable):
         original partitionings are not symmetric.
 
         """
-        coassoc = self._coassoc_
-        if coassoc is None:
+        pairwise = self._pairwise_
+        if pairwise is None:
             actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
             called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
             TP = sum(nchoose2(cell) for cell in self.iter_cells())
             FN = actual_positives - TP
             FP = called_positives - TP
             TN = nchoose2(self.grand_total) - TP - FP - FN
-            coassoc = self._coassoc_ = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
-        return coassoc
+            pairwise = self._pairwise_ = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
+        return pairwise
 
     def get_score(self, scoring_method, *args, **kwargs):
         """Convenience method that looks up and runs a scoring method
@@ -506,13 +565,13 @@ class ClusteringMetrics(ContingencyTable):
         try:
             method = getattr(self, scoring_method)
         except AttributeError:
-            method = getattr(self.coassoc_, scoring_method)
+            method = getattr(self.pairwise_, scoring_method)
         return method(*args, **kwargs)
 
     def adjusted_rand_index(self):
         """Memory-efficient replacement for a similar Scikit-Learn function
         """
-        return self.coassoc_.kappa()
+        return self.pairwise_.kappa()
 
     def adjusted_jaccard_coeff(self):
         """Jaccard similarity coefficient with correction for chance
@@ -528,14 +587,14 @@ class ClusteringMetrics(ContingencyTable):
            <https://doi.org/10.1007/s11634-011-0090-y>`_
         """
         n = self.grand_total
-        coassoc = self.coassoc_
-        P = 2 * (coassoc.TP + coassoc.FN)
-        Q = 2 * (coassoc.TP + coassoc.FP)
+        pairwise = self.pairwise_
+        P = 2 * (pairwise.TP + pairwise.FN)
+        Q = 2 * (pairwise.TP + pairwise.FP)
         PnQn_over_nsq = ((P + n) * (Q + n)) / float(n ** 2)
         numer = PnQn_over_nsq - n
         denom = (P + Q + n) - PnQn_over_nsq
         expected = numer / denom
-        coeff = coassoc.jaccard_coeff()
+        coeff = pairwise.jaccard_coeff()
         adjusted = (coeff - expected) / (1.0 - expected)
         return adjusted
 
@@ -550,14 +609,14 @@ class ClusteringMetrics(ContingencyTable):
 
         """
         n = self.grand_total
-        coassoc = self.coassoc_
-        P = 2 * (coassoc.TP + coassoc.FN)
-        Q = 2 * (coassoc.TP + coassoc.FP)
+        pairwise = self.pairwise_
+        P = 2 * (pairwise.TP + pairwise.FN)
+        Q = 2 * (pairwise.TP + pairwise.FP)
         PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
         numer = PnQn_over_nsq - n
         denom = 2 * (P + Q + 2 * n) - n - (3 * PnQn_over_nsq)
         expected = numer / denom
-        coeff = coassoc.sokal_sneath_coeff()
+        coeff = pairwise.sokal_sneath_coeff()
         adjusted = (coeff - expected) / (1.0 - expected)
         return adjusted
 
@@ -572,16 +631,16 @@ class ClusteringMetrics(ContingencyTable):
 
         """
         n = self.grand_total
-        coassoc = self.coassoc_
-        P = 2 * (coassoc.TP + coassoc.FN)
-        Q = 2 * (coassoc.TP + coassoc.FP)
+        pairwise = self.pairwise_
+        P = 2 * (pairwise.TP + pairwise.FN)
+        Q = 2 * (pairwise.TP + pairwise.FP)
         PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
         nn1 = n * (n - 1)
         PQ2n = P + Q + 2 * n
         numer = 2 * PnQn_over_nsq + nn1 - PQ2n
         denom = PQ2n + nn1 - 2 * PnQn_over_nsq
         expected = numer / denom
-        coeff = coassoc.rogers_tanimoto_coeff()
+        coeff = pairwise.rogers_tanimoto_coeff()
         adjusted = (coeff - expected) / (1.0 - expected)
         return adjusted
 
@@ -596,16 +655,16 @@ class ClusteringMetrics(ContingencyTable):
 
         """
         n = self.grand_total
-        coassoc = self.coassoc_
-        P = 2 * (coassoc.TP + coassoc.FN)
-        Q = 2 * (coassoc.TP + coassoc.FP)
+        pairwise = self.pairwise_
+        P = 2 * (pairwise.TP + pairwise.FN)
+        Q = 2 * (pairwise.TP + pairwise.FP)
         PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
         nn1 = n * (n - 1)
         PQ2n = P + Q + 2 * n
         numer = 2 * PnQn_over_nsq + nn1 - PQ2n
         denom = PnQn_over_nsq + nn1 - 0.5 * PQ2n
         expected = numer / denom
-        coeff = coassoc.gower_legendre_coeff()
+        coeff = pairwise.gower_legendre_coeff()
         adjusted = (coeff - expected) / (1.0 - expected)
         return adjusted
 
@@ -1007,7 +1066,7 @@ class ConfusionMatrix2(ContingencyTable):
 
             >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
             >>> cm = ClusteringMetrics.from_clusters(clusters)
-            >>> cm.coassoc_.loevinger_coeff()
+            >>> cm.pairwise_.loevinger_coeff()
             1.0
 
         At the same time, kappa and Matthews coefficients are 0.63 and 0.68,
@@ -1016,7 +1075,7 @@ class ConfusionMatrix2(ContingencyTable):
 
             >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
             >>> cm = ClusteringMetrics.from_clusters(clusters)
-            >>> cm.coassoc_.loevinger_coeff()
+            >>> cm.pairwise_.loevinger_coeff()
             1.0
 
         Loevinger's coefficient has a unique property: all relevant two-way

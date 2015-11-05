@@ -27,10 +27,10 @@ class BinaryDistribution(Distribution):
 
 
 # dependency links
-SKIP_RE = re.compile(r'^\s*--find-links\s+(.*)$')
+SKIP_RE = re.compile(r'^\s*(?:-\S+)\s+(.*)$')
 
 # Regex groups: 0: URL part, 1: package name, 2: package version
-EGG_RE = re.compile(r'^(.+)#egg=([a-z0-9_.]+)-([a-z0-9_.-]+)$')
+EGG_RE = re.compile(r'^(git\+https?://[^#]+)(?:#egg=([a-z0-9_.]+)(?:-([a-z0-9_.-]+))?)?$')
 
 # Regex groups: 0: URL part, 1: package name, 2: branch name
 URL_RE = re.compile(r'^\s*(https?://[\w\.]+.*/([^\/]+)/archive/)([^\/]+).zip$')
@@ -45,24 +45,26 @@ def parse_reqs(reqs):
     pkg_reqs = []
     dep_links = []
     for req in reqs:
-        # find things like
-        # --find-links http://blah.com/blah
-        dep_link_info = re.search(SKIP_RE, req)
+        # find things like `--find-links <URL>`
+        dep_link_info = SKIP_RE.match(req)
         if dep_link_info is not None:
             url = dep_link_info.group(1)
             dep_links.append(url)
             continue
         # add packages of form:
         # git+https://github.com/Livefyre/pymaptools#egg=pymaptools-0.0.3
-        egg_info = re.search(EGG_RE, req)
+        egg_info = EGG_RE.match(req)
         if egg_info is not None:
-            url, egg, version = egg_info.group(0, 2, 3)
-            pkg_reqs.append(egg + '==' + version)
+            url, _, _ = egg_info.group(0, 2, 3)
+            # if version is None:
+            #     pkg_reqs.append(egg)
+            # else:
+            #     pkg_reqs.append(egg + '==' + version)
             dep_links.append(url)
             continue
         # add packages of form:
         # https://github.com/escherba/matplotlib/archive/qs_fix_build.zip
-        zip_info = re.search(URL_RE, req)
+        zip_info = URL_RE.match(req)
         if zip_info is not None:
             url, pkg = zip_info.group(0, 2)
             pkg_reqs.append(pkg)

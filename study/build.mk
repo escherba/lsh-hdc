@@ -8,7 +8,7 @@ METRICS := \
 	informedness markedness \
 	aul_score roc_max_info roc_auc \
 	adjusted_mutual_info \
-	talburt_wang_index split_join_similarity \
+	split_join_similarity mirkin_match_coeff talburt_wang_index \
 	time_cpu \
 
 SIMUL_CLUST_ANALY_ARGS := --sim_size 100000 --metrics $(METRICS)
@@ -48,7 +48,7 @@ TRIAL_RESULTS := $(shell \
 
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
-	@$(PYTHON) -m lsh_hdc.study simul_clust_analy \
+	@$(PYTHON) -m lsh_hdc.monte_carlo.strings simul_clust_analy \
 		$(SIMUL_CLUST_ANALY_ARGS) $(EXPERIMENT_ARGS) \
 		--$(GROUP_FIELD) $(word 1,$(subst -, ,$*)) \
 		--$(PARAM_FIELD) $(word 2,$(subst -, ,$*)) \
