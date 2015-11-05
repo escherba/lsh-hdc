@@ -4,7 +4,7 @@
 # Experiment-independent defaults
 METRICS := \
 	homogeneity completeness nmi_score \
-	adjusted_rand_index mi_corr1 jaccard_coeff \
+	adjusted_rand_index mi_corr1 mi_corr0 jaccard_coeff \
 	informedness markedness \
 	aul_score roc_max_info roc_auc \
 	adjusted_mutual_info \

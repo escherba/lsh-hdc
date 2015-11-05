@@ -353,7 +353,9 @@ PAIRWISE_METRICS = [
     'fscore', 'precision', 'recall',
 
     # other
-    'jaccard_coeff', 'ochiai_coeff', 'sokal_sneath_coeff',
+    'rand_index', 'accuracy',
+    'gower_legendre_coeff', 'rogers_tanimoto_coeff',
+    'dice_coeff', 'jaccard_coeff', 'ochiai_coeff', 'sokal_sneath_coeff',
     'adjusted_jaccard_coeff', 'adjusted_sokal_sneath_coeff',
     'adjusted_gower_legendre_coeff', 'adjusted_rogers_tanimoto_coeff',
 ]
