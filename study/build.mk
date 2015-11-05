@@ -78,7 +78,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 		` $(@D); \
 	fi
 	@echo "writing 'summary.csv' under $(@D)"
-	@$(PYTHON) -m lsh_hdc.study summarize \
+	@$(PYTHON) -m lsh_hdc.monte_carlo.strings summarize \
 		--metrics $(METRICS) \
 		--group_by $(GROUP_FIELD) \
 		--x_axis $(PARAM_FIELD) \
