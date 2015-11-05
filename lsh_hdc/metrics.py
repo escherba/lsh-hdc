@@ -474,7 +474,7 @@ class ContingencyTable(TableOfCounts):
 
         .. [1] `Mirkin, B (1996). Mathematical Classification and Clustering.
                Kluwer Academic Press: Boston-Dordrecht.
-               <https://books.google.com/books?isbn=1461304571>`_
+               <http://www.amazon.com/dp/0792341597>`_
 
         """
         score = (
