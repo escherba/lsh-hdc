@@ -92,5 +92,5 @@ env/bin/activate: dev-requirements.txt requirements.txt | setup.py
 	$(PYENV) easy_install -U pip
 	$(PIP) install -U wheel cython
 	$(PYENV) for reqfile in $^; do pip install -r $$reqfile; done
-	#$(PYENV) pip install -e .
+	$(PYENV) pip install -e .
 	touch $@

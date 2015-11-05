@@ -423,6 +423,32 @@ class ContingencyTable(TableOfCounts):
             score /= float(2 * self.grand_total)
         return score
 
+    def mirkin_match_coeff(self, normalize=True):
+        """Equivalence match (similarity) coeffcient
+        """
+        score = (
+            self.grand_total ** 2 -
+            sum(x ** 2 for x in self.iter_row_totals()) -
+            sum(x ** 2 for x in self.iter_col_totals()) +
+            2 * sum(x ** 2 for x in self.iter_cells())
+        )
+        if normalize:
+            score /= float(self.grand_total ** 2)
+        return score
+
+    def mirkin_mismatch_coeff(self, normalize=True):
+        """Equivalence mismatch (distance) coefficient
+        """
+
+        score = (
+            sum(x ** 2 for x in self.iter_row_totals()) +
+            sum(x ** 2 for x in self.iter_col_totals()) -
+            2 * sum(x ** 2 for x in self.iter_cells())
+        )
+        if normalize:
+            score /= float(self.grand_total ** 2)
+        return score
+
     def talburt_wang_index(self):
         """Talburt-Wang index of similarity of two partitionings
 

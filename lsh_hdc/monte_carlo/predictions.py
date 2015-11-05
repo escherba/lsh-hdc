@@ -27,7 +27,7 @@ def simulate_labeling(sample_size=2000, **kwargs):
 
 
 def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
-                        err_pos=0.1, err_neg=0.02, population_size=2000):
+                        p_err=0.05, population_size=2000):
     csizes = map(int, np.random.gamma(galpha, gbeta, nclusters))
     num_pos = sum(csizes)
     if num_pos == 0:
@@ -43,28 +43,28 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
 
     # the larger the cluster, the more probable it is some unclustered
     # items belong to it
-    probas = {}
+    dist_class_labels = {}
     total_csizes = sum(csizes) + num_neg
     for idx, csize in enumerate([num_neg] + csizes):
         p = (csize / float(total_csizes))
-        probas[idx] = p
+        dist_class_labels[idx] = p
+
+    dist_err = {True: 1.0 - p_err, False: p_err}
 
     clusters = []
 
     # negative case first
-    dist_err_neg = {True: 1.0 - err_neg, False: err_neg}
     for _ in xrange(num_neg):
-        no_error = discrete_sample(dist_err_neg)
-        class_label = 0 if no_error else discrete_sample(probas)
+        no_error = discrete_sample(dist_err)
+        class_label = 0 if no_error else discrete_sample(dist_class_labels)
         clusters.append([class_label])
 
     # positive cases
-    dist_err_pos = {True: 1.0 - err_pos, False: err_pos}
     for idx, csize in enumerate(csizes, start=1):
         cluster = []
         for _ in xrange(csize):
-            no_error = discrete_sample(dist_err_pos)
-            class_label = idx if no_error else discrete_sample(probas)
+            no_error = discrete_sample(dist_err)
+            class_label = idx if no_error else discrete_sample(dist_class_labels)
             cluster.append(class_label)
         clusters.append(cluster)
 
