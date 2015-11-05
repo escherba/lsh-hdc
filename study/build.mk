@@ -8,7 +8,7 @@ METRICS := \
 	informedness markedness \
 	aul_score roc_max_info roc_auc \
 	adjusted_mutual_info \
-	talburt_wang_index split_join_similarity \
+	split_join_similarity mirkin_match_coeff talburt_wang_index \
 	time_cpu \
 
 SIMUL_CLUST_ANALY_ARGS := --sim_size 100000 --metrics $(METRICS)

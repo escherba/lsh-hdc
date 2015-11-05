@@ -342,7 +342,7 @@ ENTROPY_METRICS = [
 
 CONTINGENCY_METRICS = [
     'adjusted_mutual_info', 'talburt_wang_index',
-    'split_join_similarity'
+    'split_join_similarity', 'mirkin_match_coeff'
 ]
 
 PAIRWISE_METRICS = [

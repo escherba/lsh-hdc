@@ -88,7 +88,7 @@ References
 """
 
 import numpy as np
-from math import sqrt, copysign
+from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import TableOfCounts
 from pymaptools.iter import ilen
@@ -250,31 +250,6 @@ class ContingencyTable(TableOfCounts):
         I_CK = H_expected - H_actual
         return H_C, H_K, I_CK
 
-    def vi_distance(self):
-        """Variation of Information distance
-
-        The distance metric calculated here is one of several possible entropy-
-        based distance metrics that could be defined on a RxC matrix. Per Table
-        2 in [1]_, the given measure is equivalent to '2 * D_sum'.
-
-        Note that the entropy variables H below are calculated using natural
-        logs, so a base correction may be necessary if you need your result in
-        base 2 for example.
-
-        References
-        ----------
-
-        .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
-               measures for clusterings comparison: Variants, properties,
-               normalization and correction for chance. The Journal of Machine
-               Learning Research, 11, 2837-2854.
-               <http://www.jmlr.org/papers/v11/vinh10a.html>`_
-
-        """
-        H_C, H_K, I_CK = self._entropies()
-        VI_CK = (H_C - I_CK) + (H_K - I_CK)
-        return _div(VI_CK, self.grand_total)
-
     def mutual_info_score(self):
         """Mutual Information Score
 
@@ -367,6 +342,48 @@ class ContingencyTable(TableOfCounts):
         ami = (mi - emi) / (mi_max - emi)
         return ami
 
+    def vi_distance(self, normalize=True):
+        """Variation of Information distance
+
+        Defined in [1]_. This measure is one of several possible entropy-
+        based distance measure that could be defined on a RxC matrix. Per Table
+        2 in [2]_, the given measure is equivalent to '2 * D_sum'.
+
+        Note that the entropy variables H below are calculated using natural
+        logs, so a base correction may be necessary if you need your result in
+        base 2 for example.
+
+        References
+        ----------
+
+        .. [1] `Meilă, M. (2007). Comparing clusterings—an information based
+               distance. Journal of multivariate analysis, 98(5), 873-895.
+               <https://doi.org/10.1016/j.jmva.2006.11.013>`_
+
+        .. [2] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
+               measures for clusterings comparison: Variants, properties,
+               normalization and correction for chance. The Journal of Machine
+               Learning Research, 11, 2837-2854.
+               <http://www.jmlr.org/papers/v11/vinh10a.html>`_
+
+        """
+        H_C, H_K, I_CK = self._entropies()
+        VI_CK = (H_C + H_K) - (I_CK + I_CK)
+        score = _div(VI_CK, self.grand_total)
+        if normalize:
+            score /= log(self.grand_total)
+        return score
+
+    def vi_similarity(self, normalize=True):
+        """Inverse of ``vi_distance``
+        """
+        dist = self.vi_distance(normalize=False)
+        max_dist = log(self.grand_total)
+        score = max_dist - dist
+        if normalize:
+            score /= max_dist
+        return score
+
     def split_join_distance(self, normalize=True):
         """Projection distance between partitions
 
@@ -388,9 +405,12 @@ class ContingencyTable(TableOfCounts):
                <http://dl.acm.org/citation.cfm?id=868979>`_
 
         """
-        sim = self.split_join_similarity(normalize=normalize)
-        sim_max = 1.0 if normalize else 2 * self.grand_total
-        return sim_max - sim
+        sim = self.split_join_similarity(normalize=False)
+        max_sim = 2 * self.grand_total
+        score = max_sim - sim
+        if normalize:
+            score /= max_sim
+        return score
 
     def split_join_similarity(self, normalize=True):
         """Split-join similarity score
@@ -411,10 +431,6 @@ class ContingencyTable(TableOfCounts):
             >>> cm.split_join_similarity()
             0.5
 
-        See Also
-        --------
-        talburt_wang_index
-
         """
         pa_B = sum(max(row) for row in self.iter_rows())
         pb_A = sum(max(col) for col in self.iter_cols())
@@ -425,21 +441,42 @@ class ContingencyTable(TableOfCounts):
 
     def mirkin_match_coeff(self, normalize=True):
         """Equivalence match (similarity) coeffcient
+
+        ::
+
+            >>> C3 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
+            >>> C4 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10, 11, 12}, {13, 14, 15, 16}]
+            >>> cm = ClusteringMetrics.from_partitions(C3, C4)
+            >>> cm.mirkin_match_coeff(normalize=False)
+            216
         """
-        score = (
-            self.grand_total ** 2 -
-            sum(x ** 2 for x in self.iter_row_totals()) -
-            sum(x ** 2 for x in self.iter_col_totals()) +
-            2 * sum(x ** 2 for x in self.iter_cells())
-        )
+        max_score = self.grand_total ** 2
+        score = max_score - self.mirkin_mismatch_coeff(normalize=False)
         if normalize:
-            score /= float(self.grand_total ** 2)
+            score /= float(max_score)
         return score
 
     def mirkin_mismatch_coeff(self, normalize=True):
         """Equivalence mismatch (distance) coefficient
-        """
 
+        Described in [1]_.
+
+        ::
+
+            >>> C1 = [{1, 2, 3, 4, 5, 6, 7, 8}, {9, 10, 11, 12, 13, 14, 15, 16}]
+            >>> C2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
+            >>> cm = ClusteringMetrics.from_partitions(C1, C2)
+            >>> cm.mirkin_mismatch_coeff(normalize=False)
+            56
+
+        References
+        ----------
+
+        .. [1] `Mirkin, B (1996). Mathematical Classification and Clustering.
+               Kluwer Academic Press: Boston-Dordrecht.
+               <https://books.google.com/books?isbn=1461304571>`_
+
+        """
         score = (
             sum(x ** 2 for x in self.iter_row_totals()) +
             sum(x ** 2 for x in self.iter_col_totals()) -
@@ -467,10 +504,6 @@ class ContingencyTable(TableOfCounts):
             >>> cm = ContingencyTable.from_clusters(clusters)
             >>> round(cm.talburt_wang_index(), 2)
             0.49
-
-        See Also
-        --------
-        split_join_similarity
 
         References
         ----------
