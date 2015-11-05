@@ -530,10 +530,10 @@ class ClusteringMetrics(ContingencyTable):
 
     def __init__(self, *args, **kwargs):
         super(ClusteringMetrics, self).__init__(*args, **kwargs)
-        self._coassoc_ = None
+        self._pairwise_ = None
 
     @property
-    def coassoc_(self):
+    def pairwise_(self):
         """Compute a confusion matrix describing pairs from two partitionings
 
         Given two partitionings A and B and a co-occurrence matrix of point pairs,
@@ -548,16 +548,16 @@ class ClusteringMetrics(ContingencyTable):
         original partitionings are not symmetric.
 
         """
-        coassoc = self._coassoc_
-        if coassoc is None:
+        pairwise = self._pairwise_
+        if pairwise is None:
             actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
             called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
             TP = sum(nchoose2(cell) for cell in self.iter_cells())
             FN = actual_positives - TP
             FP = called_positives - TP
             TN = nchoose2(self.grand_total) - TP - FP - FN
-            coassoc = self._coassoc_ = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
-        return coassoc
+            pairwise = self._pairwise_ = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
+        return pairwise
 
     def get_score(self, scoring_method, *args, **kwargs):
         """Convenience method that looks up and runs a scoring method
@@ -565,13 +565,13 @@ class ClusteringMetrics(ContingencyTable):
         try:
             method = getattr(self, scoring_method)
         except AttributeError:
-            method = getattr(self.coassoc_, scoring_method)
+            method = getattr(self.pairwise_, scoring_method)
         return method(*args, **kwargs)
 
     def adjusted_rand_index(self):
         """Memory-efficient replacement for a similar Scikit-Learn function
         """
-        return self.coassoc_.kappa()
+        return self.pairwise_.kappa()
 
     def adjusted_jaccard_coeff(self):
         """Jaccard similarity coefficient with correction for chance
@@ -587,14 +587,14 @@ class ClusteringMetrics(ContingencyTable):
            <https://doi.org/10.1007/s11634-011-0090-y>`_
         """
         n = self.grand_total
-        coassoc = self.coassoc_
-        P = 2 * (coassoc.TP + coassoc.FN)
-        Q = 2 * (coassoc.TP + coassoc.FP)
+        pairwise = self.pairwise_
+        P = 2 * (pairwise.TP + pairwise.FN)
+        Q = 2 * (pairwise.TP + pairwise.FP)
         PnQn_over_nsq = ((P + n) * (Q + n)) / float(n ** 2)
         numer = PnQn_over_nsq - n
         denom = (P + Q + n) - PnQn_over_nsq
         expected = numer / denom
-        coeff = coassoc.jaccard_coeff()
+        coeff = pairwise.jaccard_coeff()
         adjusted = (coeff - expected) / (1.0 - expected)
         return adjusted
 
@@ -609,14 +609,14 @@ class ClusteringMetrics(ContingencyTable):
 
         """
         n = self.grand_total
-        coassoc = self.coassoc_
-        P = 2 * (coassoc.TP + coassoc.FN)
-        Q = 2 * (coassoc.TP + coassoc.FP)
+        pairwise = self.pairwise_
+        P = 2 * (pairwise.TP + pairwise.FN)
+        Q = 2 * (pairwise.TP + pairwise.FP)
         PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
         numer = PnQn_over_nsq - n
         denom = 2 * (P + Q + 2 * n) - n - (3 * PnQn_over_nsq)
         expected = numer / denom
-        coeff = coassoc.sokal_sneath_coeff()
+        coeff = pairwise.sokal_sneath_coeff()
         adjusted = (coeff - expected) / (1.0 - expected)
         return adjusted
 
@@ -631,16 +631,16 @@ class ClusteringMetrics(ContingencyTable):
 
         """
         n = self.grand_total
-        coassoc = self.coassoc_
-        P = 2 * (coassoc.TP + coassoc.FN)
-        Q = 2 * (coassoc.TP + coassoc.FP)
+        pairwise = self.pairwise_
+        P = 2 * (pairwise.TP + pairwise.FN)
+        Q = 2 * (pairwise.TP + pairwise.FP)
         PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
         nn1 = n * (n - 1)
         PQ2n = P + Q + 2 * n
         numer = 2 * PnQn_over_nsq + nn1 - PQ2n
         denom = PQ2n + nn1 - 2 * PnQn_over_nsq
         expected = numer / denom
-        coeff = coassoc.rogers_tanimoto_coeff()
+        coeff = pairwise.rogers_tanimoto_coeff()
         adjusted = (coeff - expected) / (1.0 - expected)
         return adjusted
 
@@ -655,16 +655,16 @@ class ClusteringMetrics(ContingencyTable):
 
         """
         n = self.grand_total
-        coassoc = self.coassoc_
-        P = 2 * (coassoc.TP + coassoc.FN)
-        Q = 2 * (coassoc.TP + coassoc.FP)
+        pairwise = self.pairwise_
+        P = 2 * (pairwise.TP + pairwise.FN)
+        Q = 2 * (pairwise.TP + pairwise.FP)
         PnQn_over_nsq = (P + n) * (Q + n) / float(n ** 2)
         nn1 = n * (n - 1)
         PQ2n = P + Q + 2 * n
         numer = 2 * PnQn_over_nsq + nn1 - PQ2n
         denom = PnQn_over_nsq + nn1 - 0.5 * PQ2n
         expected = numer / denom
-        coeff = coassoc.gower_legendre_coeff()
+        coeff = pairwise.gower_legendre_coeff()
         adjusted = (coeff - expected) / (1.0 - expected)
         return adjusted
 
@@ -1066,7 +1066,7 @@ class ConfusionMatrix2(ContingencyTable):
 
             >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
             >>> cm = ClusteringMetrics.from_clusters(clusters)
-            >>> cm.coassoc_.loevinger_coeff()
+            >>> cm.pairwise_.loevinger_coeff()
             1.0
 
         At the same time, kappa and Matthews coefficients are 0.63 and 0.68,
@@ -1075,7 +1075,7 @@ class ConfusionMatrix2(ContingencyTable):
 
             >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
             >>> cm = ClusteringMetrics.from_clusters(clusters)
-            >>> cm.coassoc_.loevinger_coeff()
+            >>> cm.pairwise_.loevinger_coeff()
             1.0
 
         Loevinger's coefficient has a unique property: all relevant two-way

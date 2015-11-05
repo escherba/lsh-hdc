@@ -231,6 +231,37 @@ def test_non_consecutive_labels_ari():
     assert_almost_equal(ari_2, 0.24, 2)
 
 
+def test_split_join():
+    """test split-join and related metrics
+
+    Example given in
+    http://stats.stackexchange.com/a/25001/37267
+
+    For two different clustering pairs below, one can be obtained from the other
+    by moving only two points, {9, 10} for the first pair, and {11, 12} for the
+    second pair. The split-join distance for the two pairs is thus the same.
+
+    Mirkin and VI distance is larger for the first pair (C1 and C2). This is not
+    a fault of these measures as the clusterings in C3 and C4 do appear to
+    capture more information than in the case of C1 and C2, and so their
+    similarities should be greater.
+    """
+
+    C1 = [{1, 2, 3, 4, 5, 6, 7, 8}, {9, 10, 11, 12, 13, 14, 15, 16}]
+    C2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
+    cm = ClusteringMetrics.from_partitions(C1, C2)
+    assert_equal(cm.mirkin_mismatch_coeff(normalize=False), 56)
+    assert_almost_equal(cm.vi_distance(normalize=False), 0.594, 3)
+    assert_equal(cm.split_join_distance(normalize=False), 4)
+
+    C3 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
+    C4 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10, 11, 12}, {13, 14, 15, 16}]
+    cm = ClusteringMetrics.from_partitions(C3, C4)
+    assert_equal(cm.mirkin_mismatch_coeff(normalize=False), 40)
+    assert_almost_equal(cm.vi_distance(normalize=False), 0.520, 3)
+    assert_equal(cm.split_join_distance(normalize=False), 4)
+
+
 def test_IR_example():
     """Test example from IR book by Manning et al.
 
@@ -255,20 +286,20 @@ def test_IR_example():
     assert_almost_equal(cm.adjusted_sokal_sneath_coeff(),  0.128675, 6)
 
     # test metrics that are based on pairwise co-association matrix
-    coassoc = cm.coassoc_
+    conf = cm.pairwise_
 
-    assert_almost_equal(coassoc.chisq_score(),         8.063241, 6)
-    assert_almost_equal(coassoc.g_score(),             7.804221, 6)
+    assert_almost_equal(conf.chisq_score(),         8.063241, 6)
+    assert_almost_equal(conf.g_score(),             7.804221, 6)
 
-    assert_almost_equal(coassoc.jaccard_coeff(),       0.312500, 6)
-    assert_almost_equal(coassoc.ochiai_coeff(),        0.476731, 6)
-    assert_almost_equal(coassoc.dice_coeff(),          0.476190, 6)
-    assert_almost_equal(coassoc.sokal_sneath_coeff(),  0.185185, 6)
+    assert_almost_equal(conf.jaccard_coeff(),       0.312500, 6)
+    assert_almost_equal(conf.ochiai_coeff(),        0.476731, 6)
+    assert_almost_equal(conf.dice_coeff(),          0.476190, 6)
+    assert_almost_equal(conf.sokal_sneath_coeff(),  0.185185, 6)
 
-    assert_almost_equal(coassoc.kappa(),               0.242915, 6)
-    assert_almost_equal(coassoc.rand_index(),          0.676471, 6)
-    assert_almost_equal(coassoc.precision(),           0.500000, 6)
-    assert_almost_equal(coassoc.recall(),              0.454545, 6)
+    assert_almost_equal(conf.kappa(),               0.242915, 6)
+    assert_almost_equal(conf.rand_index(),          0.676471, 6)
+    assert_almost_equal(conf.precision(),           0.500000, 6)
+    assert_almost_equal(conf.recall(),              0.454545, 6)
 
     exp_tw = _talburt_wang_index(ltrue, lpred)
     act_tw = cm.talburt_wang_index()

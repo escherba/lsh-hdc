@@ -11,7 +11,7 @@ from pymaptools.sample import discrete_sample
 
 def get_conf(obj):
     try:
-        return obj.coassoc_
+        return obj.pairwise_
     except AttributeError:
         return obj
 
