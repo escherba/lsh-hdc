@@ -106,8 +106,8 @@ def test_adjusted_mutual_info_score():
 
     # Expected mutual information
     cm = ClusteringMetrics.from_labels(labels_a, labels_b)
-    row_totals = np.fromiter(cm.iter_row_totals(), dtype=np.int32)
-    col_totals = np.fromiter(cm.iter_col_totals(), dtype=np.int32)
+    row_totals = np.fromiter(cm.iter_row_totals(), dtype=np.int64)
+    col_totals = np.fromiter(cm.iter_col_totals(), dtype=np.int64)
     emi_1 = emi_from_margins(row_totals, col_totals) / cm.grand_total
     assert_almost_equal(emi_1, 0.15042, 5)
     emi_2 = emi_from_margins(col_totals, row_totals) / cm.grand_total
