@@ -13,7 +13,7 @@ from lsh_hdc.ext cimport lgamma
 np.import_array()
 
 
-cpdef ndarray_from_iter(iterable, dtype=None):
+cpdef ndarray_from_iter(iterable, dtype=None, contiguous=False):
     """Create NumPy arrays from different object types
 
     In addition to standard ``np.asarray`` casting functionality, this function
@@ -24,11 +24,18 @@ cpdef ndarray_from_iter(iterable, dtype=None):
     we are interesting in creating a NumPy array from the values.
     """
     if isinstance(iterable, Iterator):
-        return np.fromiter(iterable, dtype=dtype)
+        arr = np.fromiter(iterable, dtype=dtype)
+        if contiguous:
+            arr = np.ascontiguousarray(arr, dtype=dtype)
     elif isinstance(iterable, Mapping):
-        return np.fromiter(iterable.itervalues(), dtype=dtype)
+        arr = np.fromiter(iterable.itervalues(), dtype=dtype)
+        if contiguous:
+            arr = np.ascontiguousarray(arr, dtype=dtype)
+    elif contiguous:
+        arr = np.ascontiguousarray(iterable, dtype=dtype)
     else:
-        return np.asarray(iterable, dtype=dtype)
+        arr = np.asarray(iterable, dtype=dtype)
+    return arr
 
 
 cpdef nchoose2(np.int64_t n):
@@ -80,7 +87,8 @@ cpdef centropy(counts):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef emi_from_margins(row_counts, col_counts):
+cpdef emi_from_margins(np.ndarray[np.int64_t, ndim=1, mode='c'] a,
+                       np.ndarray[np.int64_t, ndim=1, mode='c'] b):
     """Calculate Expected Mutual Information given margins of RxC table
 
     The resulting value is *not* normalized by N.
@@ -103,18 +111,13 @@ cpdef emi_from_margins(row_counts, col_counts):
 
     cdef Py_ssize_t R, C, i, j, nij
 
-    cdef np.ndarray[np.int64_t, ndim=1] a, b
-
     cdef np.int64_t N, N_1, max_ab, ai, bj, ai_1, bj_1, ai_bj, N_ai_bj_1
 
-    cdef np.ndarray[np.float64_t, ndim=1] \
+    cdef np.ndarray[np.float64_t, ndim=1, mode='c'] \
         log_a, log_b, log_Nnij, nijs, gln_ai_Nai_N, gln_b_Nb, gln_nij
 
     cdef np.float64_t emi, log_ai, log_ab_outer_ij, outer_sum, \
                       gln_ai_Nai_Ni, term2, term3
-
-    a = ndarray_from_iter(row_counts, dtype=np.int64)
-    b = ndarray_from_iter(col_counts, dtype=np.int64)
 
     log_a = np.log(a)
     log_b = np.log(b)
