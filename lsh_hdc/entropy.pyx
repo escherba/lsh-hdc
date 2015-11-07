@@ -152,7 +152,7 @@ cpdef np.float64_t emi_from_margins(
 
     # term2 is log((N*nij) / (a a b)) == log(N * nij) - log(a * b)
     # term2 uses log(N * nij)
-    log_Nnij = log(N) + np.log(nijs)
+    log_Nnij = np.log(N) + np.log(nijs)
 
     # term3 is large, and involved many factorials. Calculate these in log
     # space to stop overflows.
