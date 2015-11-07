@@ -88,7 +88,7 @@ cpdef np.float64_t centropy(counts):
     # np.int64_t c`` definition.
 
     cdef np.int64_t c, n
-    cdef np.float64_t sum_c_logn_c, result
+    cdef np.float64_t sum_c_logn_c
 
     if isinstance(counts, Mapping):
         counts = counts.itervalues()
@@ -99,8 +99,7 @@ cpdef np.float64_t centropy(counts):
         if c != 0LL:
             n += c
             sum_c_logn_c += c * log(c)
-    result = 0.0 if n == 0LL else n * log(n) - sum_c_logn_c
-    return result
+    return 0.0 if n == 0LL else n * log(n) - sum_c_logn_c
 
 
 @cython.boundscheck(False)
