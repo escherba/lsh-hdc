@@ -8,9 +8,18 @@ from collections import Mapping, Iterator
 import numpy as np
 cimport numpy as np
 cimport cython
-from lsh_hdc.ext cimport lgamma
 
 np.import_array()
+
+
+cdef extern from "gamma.h":
+    cdef double sklearn_lgamma(double x)
+
+
+cdef double lgamma(double x):
+    if x <= 0:
+        raise ValueError("x must be strictly positive, got %f" % x)
+    return sklearn_lgamma(x)
 
 
 cpdef ndarray_from_iter(iterable, dtype=None, contiguous=False):
@@ -38,7 +47,7 @@ cpdef ndarray_from_iter(iterable, dtype=None, contiguous=False):
     return arr
 
 
-cpdef nchoose2(np.int64_t n):
+cpdef np.int64_t nchoose2(np.int64_t n) nogil:
     """Binomial coefficient for k=2
 
     Scipy has ``scipy.special.binom`` and ``scipy.misc.comb``, however on
@@ -52,7 +61,7 @@ cpdef nchoose2(np.int64_t n):
     return (n * (n - 1LL)) >> 1LL
 
 
-cpdef centropy(counts):
+cpdef np.float64_t centropy(counts):
     """Entropy of an iterable of counts
 
     Assumes every entry in the list belongs to a different class. The resulting
@@ -87,8 +96,9 @@ cpdef centropy(counts):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef emi_from_margins(np.ndarray[np.int64_t, ndim=1, mode='c'] a,
-                       np.ndarray[np.int64_t, ndim=1, mode='c'] b):
+cpdef np.float64_t emi_from_margins(
+    np.ndarray[np.int64_t, ndim=1, mode='c'] a,
+    np.ndarray[np.int64_t, ndim=1, mode='c'] b):
     """Calculate Expected Mutual Information given margins of RxC table
 
     The resulting value is *not* normalized by N.
@@ -169,9 +179,9 @@ cpdef emi_from_margins(np.ndarray[np.int64_t, ndim=1, mode='c'] a,
                 term2 = log_Nnij[nij] - log_ab_outer_ij
                 # Numerators are positive, denominators are negative.
                 term3 = exp(outer_sum
-                    - gln_nij[nij] - lgamma(ai_1 - nij)
-                    - lgamma(bj_1 - nij)
-                    - lgamma(nij + N_ai_bj_1)
+                    - gln_nij[nij] - sklearn_lgamma(ai_1 - nij)
+                    - sklearn_lgamma(bj_1 - nij)
+                    - sklearn_lgamma(nij + N_ai_bj_1)
                 )
                 emi += (nijs[nij] * term2 * term3)
     return emi

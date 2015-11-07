@@ -135,11 +135,9 @@ setup(
         Extension(
             "lsh_hdc.ext",
             [
-                "lsh_hdc/gamma.cc",
                 "lsh_hdc/ext.pyx",
             ],
             depends=[
-                "include/gamma.h",
             ],
             language="c++",
             extra_compile_args=CXXFLAGS,
@@ -149,14 +147,17 @@ setup(
         Extension(
             "lsh_hdc.entropy",
             [
-                "lsh_hdc/entropy.pyx"
+                "lsh_hdc/entropy.pyx",
+                "lsh_hdc/gamma.cc"
             ],
             depends=[
+                "include/gamma.h",
             ],
             language="c++",
             extra_compile_args=CXXFLAGS,
             include_dirs=[
-                numpy.get_include()
+                numpy.get_include(),
+                "include",
             ])
     ],
     classifiers=[
