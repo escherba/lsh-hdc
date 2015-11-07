@@ -6,10 +6,6 @@ from itertools import izip
 from hashlib import md5
 
 
-cdef extern from "gamma.h":
-    cdef double sklearn_lgamma(double x)
-
-
 cdef extern from * nogil:
     ctypedef unsigned char uint8_t
     ctypedef unsigned long int uint32_t
@@ -19,12 +15,6 @@ cdef extern from * nogil:
 ctypedef uint8_t uint8
 ctypedef uint32_t uint32
 ctypedef uint64_t uint64
-
-
-cdef double lgamma(double x):
-    if x <= 0:
-        raise ValueError("x must be strictly positive, got %f" % x)
-    return sklearn_lgamma(x)
 
 
 cdef class PHashCombiner(object):
