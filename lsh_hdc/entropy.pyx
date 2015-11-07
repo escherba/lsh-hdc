@@ -95,7 +95,8 @@ cpdef np.float64_t emi_from_margins(
     np.ndarray[np.int64_t, ndim=1, mode='c'] b):
     """Calculate Expected Mutual Information given margins of RxC table
 
-    The resulting value is *not* normalized by N.
+    For the sake of numeric precision, the resulting value is *not* normalized
+    by N.
 
     License: BSD 3 clause
 
@@ -115,10 +116,12 @@ cpdef np.float64_t emi_from_margins(
 
     cdef Py_ssize_t R, C, i, j, nij
 
-    cdef np.int64_t N, N_1, max_ab, ai, bj, ai_1, bj_1, ai_bj, N_ai_bj_1
+    cdef np.int64_t N, N_1, N_3, max_ab, ai, bj, ai_1, bj_1, ai_bj, N_ai_bj_1
 
     cdef np.ndarray[np.float64_t, ndim=1, mode='c'] \
         log_a, log_b, log_Nnij, nijs, gln_ai_Nai_N, gln_b_Nb, gln_nij
+
+    cdef np.ndarray[np.int64_t, ndim=1, mode='c'] a1, b1
 
     cdef np.float64_t emi, log_ai, log_ab_outer_ij, outer_sum, \
                       gln_ai_Nai_Ni, term2, term3
@@ -148,32 +151,32 @@ cpdef np.float64_t emi_from_margins(
     # term3 is large, and involved many factorials. Calculate these in log
     # space to stop overflows.
     N_1 = N + 1LL
-    gln_ai_Nai_N = gammaln(a + 1LL) + gammaln(N_1 - a) - gammaln(N_1)
-    gln_b_Nb = gammaln(b + 1LL) + gammaln(N_1 - b)
+    N_3 = N + 3LL
+
+    a1 = a + 1LL
+    b1 = b + 1LL
+    gln_ai_Nai_N = gammaln(a1) + gammaln(N_1 - a) - gammaln(N_1)
+    gln_b_Nb = gammaln(b1) + gammaln(N_1 - b)
     gln_nij = gammaln(nijs + 1.0)
 
     # emi itself is a summation over the various values.
     emi = 0.0
     for i in xrange(R):
-        ai = a[i]
-        ai_1 = ai + 1LL
+        ai_1 = a1[i]
         log_ai = log_a[i]
         gln_ai_Nai_Ni = gln_ai_Nai_N[i]
         for j in xrange(C):
-            bj = b[j]
-            bj_1 = bj + 1LL
-
+            bj_1 = b1[j]
             log_ab_outer_ij = log_ai + log_b[j]
             outer_sum = gln_ai_Nai_Ni + gln_b_Nb[j]
+            N_ai_bj_1 = N_3 - ai_1 - bj_1
 
-            ai_bj = ai + bj
-            N_ai_bj_1 = N_1 - ai_bj
-
-            for nij in xrange(max(1LL, ai_bj - N), min(ai_1, bj_1)):
+            for nij in xrange(max(1LL, 1LL - N_ai_bj_1), min(ai_1, bj_1)):
                 term2 = log_Nnij[nij] - log_ab_outer_ij
                 # Numerators are positive, denominators are negative.
                 term3 = exp(outer_sum
-                    - gln_nij[nij] - sklearn_lgamma(ai_1 - nij)
+                    - gln_nij[nij]
+                    - sklearn_lgamma(ai_1 - nij)
                     - sklearn_lgamma(bj_1 - nij)
                     - sklearn_lgamma(nij + N_ai_bj_1)
                 )
