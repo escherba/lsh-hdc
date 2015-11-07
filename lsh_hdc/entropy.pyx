@@ -16,6 +16,21 @@ cdef extern from "gamma.h":
     cdef np.float64_t sklearn_lgamma(np.float64_t x)
 
 
+cpdef np.float64_t lgamma(np.float64_t x):
+    """Log of gamma function for scalar double x
+
+    This is a scalar-only replacement for ``scipy.special.gammaln``. On scalar
+    values, this method is ~10x faster than the corresponding SciPy one. On
+    large arrays, however, even when vectorized using ``np.vectorize``, this
+    method is slower than the SciPy one, so use ``gammaln`` in those cases.
+
+    This function is borrowed verbatim from Scikit-Learn.
+    """
+    if x <= 0.0:
+        raise ValueError("x must be strictly positive, got %f" % x)
+    return sklearn_lgamma(x)
+
+
 cpdef ndarray_from_iter(iterable, dtype=None, contiguous=False):
     """Create NumPy arrays from different object types
 
