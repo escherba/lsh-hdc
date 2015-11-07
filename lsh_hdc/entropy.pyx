@@ -106,25 +106,31 @@ cpdef np.float64_t emi_from_margins(
 
     """
     # (Eugene Scherba, 10/2/2015): I modified this function so as to move all
-    # heavy operations inside the main loop. Specifically, the code creating RxC
-    # arrays that previously resulted in O(n^2) memory requirements was removed
-    # and/or rewritten. Although there may have been marginal benefits from
-    # preparing data for the main loop using vectorized NumPy operations, the
-    # main speed bottleneck of this code has been the three-tier loop. So it
-    # makes sense to just move all operations inside there to avoid O(n^2)
-    # memory explosions on large data.
+    # heavy operations inside the main loop. Specifically, I removed/rewritten
+    # the lines that were creating RxC intermediate NumPy arrays which resulted
+    # in the O(n^2) memory requirement. As of now, the memory required to
+    # calculate EMI is O(n). Another change was to remove normalization by N
+    # from the calculation. It is actually not needed to do so, since, in the
+    # calculation of the adjusted score MI - E(MI) / MI_max - E(MI), the N
+    # cancels out (if we also don't normalize MI that is). Not normalizing by N
+    # avoids having to perform lots of tiny floating point increments to EMI
+    # sum, resulting in better numeric accuracy. Finally, the inner loop
+    # directly calls ``sklearn_lgamma`` instead of relying on the ``lgamma``
+    # wrapper, resulting in further 15-20% speed improvement. The wrapper is
+    # unnecessary in the inner loop as the loop parameters guarantee that the
+    # values passed to the log-gamma method are never negative.
 
     cdef Py_ssize_t R, C, i, j, nij
 
     cdef np.int64_t N, N_1, N_3, max_ab, ai, bj, ai_1, bj_1, ai_bj, N_ai_bj_1
 
+    cdef np.float64_t emi, log_ai, log_ab_outer_ij, outer_sum, gln_ai_Nai_Ni
+
     cdef np.ndarray[np.float64_t, ndim=1, mode='c'] \
         log_a, log_b, log_Nnij, nijs, gln_ai_Nai_N, gln_b_Nb, gln_nij
 
-    cdef np.ndarray[np.int64_t, ndim=1, mode='c'] a1, b1
-
-    cdef np.float64_t emi, log_ai, log_ab_outer_ij, outer_sum, \
-                      gln_ai_Nai_Ni, term2, term3
+    cdef np.ndarray[np.int64_t, ndim=1, mode='c'] \
+        a1, b1
 
     log_a = np.log(a)
     log_b = np.log(b)
@@ -172,13 +178,15 @@ cpdef np.float64_t emi_from_margins(
             N_ai_bj_1 = N_3 - ai_1 - bj_1
 
             for nij in xrange(max(1LL, 1LL - N_ai_bj_1), min(ai_1, bj_1)):
-                term2 = log_Nnij[nij] - log_ab_outer_ij
                 # Numerators are positive, denominators are negative.
-                term3 = exp(outer_sum
-                    - gln_nij[nij]
-                    - sklearn_lgamma(ai_1 - nij)
-                    - sklearn_lgamma(bj_1 - nij)
-                    - sklearn_lgamma(nij + N_ai_bj_1)
+                emi += (
+                    nijs[nij]                            # term1
+                    * (log_Nnij[nij] - log_ab_outer_ij)  # term2
+                    * exp(outer_sum                      # term3
+                        - gln_nij[nij]
+                        - sklearn_lgamma(ai_1 - nij)
+                        - sklearn_lgamma(bj_1 - nij)
+                        - sklearn_lgamma(nij + N_ai_bj_1)
+                          )
                 )
-                emi += (nijs[nij] * term2 * term3)
     return emi
