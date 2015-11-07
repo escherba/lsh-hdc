@@ -114,7 +114,11 @@ cpdef np.float64_t emi_from_margins(
     # calculation of the adjusted score MI - E(MI) / MI_max - E(MI), the N
     # cancels out (if we also don't normalize MI that is). Not normalizing by N
     # avoids having to perform lots of tiny floating point increments to EMI
-    # sum, resulting in better numeric accuracy.
+    # sum, resulting in better numeric accuracy. Finally, the inner loop
+    # directly calls ``sklearn_lgamma`` instead of relying on the ``lgamma``
+    # wrapper, resulting in further 15-20% speed improvement. The wrapper is
+    # unnecessary in the inner loop as the loop parameters guarantee that the
+    # values passed to the log-gamma method are never negative.
 
     cdef Py_ssize_t R, C, i, j, nij
 
