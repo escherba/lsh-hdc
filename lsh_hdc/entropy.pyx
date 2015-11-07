@@ -120,20 +120,28 @@ cpdef np.float64_t emi_from_margins(
     .. codeauthor:: Eugene Scherba <escherba@gmail.com>
 
     """
-    # (Eugene Scherba, 10/2/2015): I modified this function so as to move all
-    # heavy operations inside the main loop. Specifically, I removed/rewritten
-    # the lines that were creating RxC intermediate NumPy arrays which resulted
-    # in the O(n^2) memory requirement. As of now, the memory required to
-    # calculate EMI is O(n). Another change was to remove normalization by N
-    # from the calculation. It is actually not needed to do so, since, in the
-    # calculation of the adjusted score MI - E(MI) / MI_max - E(MI), the N
-    # cancels out (if we also don't normalize MI that is). Not normalizing by N
-    # avoids having to perform lots of tiny floating point increments to EMI
-    # sum, resulting in better numeric accuracy. Finally, the inner loop
-    # directly calls ``sklearn_lgamma`` instead of relying on the ``lgamma``
-    # wrapper, resulting in further 15-20% speed improvement. The wrapper is
-    # unnecessary in the inner loop as the loop parameters guarantee that the
-    # values passed to the log-gamma method are never negative.
+    # List of changes (Eugene Scherba, 10/2/2015):
+    #
+    # 1) Removed/rewritten the lines that were creating RxC intermediate NumPy
+    # arrays which resulted in the O(n^2) memory requirement. Instead, the
+    # intermediate values are now calculated inside the loop, which may be
+    # slightly less efficient for small data sizes, but has huge advantages for
+    # large or even moderately sized data. This change reduces the memory
+    # requirements of this code from O(n^2) to O(n).
+    #
+    # 2) Removed normalization by N from the calculation. It is actually not
+    # needed to normalize by N if we also don't normalize the input MI value
+    # (in the calculation of the adjusted score which is ``MI - E(MI) / MI_max
+    # - E(MI)``, the N value cancels out). Not normalizing the EMI calculation
+    # by N avoids having to perform lots of tiny floating point increments to
+    # the EMI aggregate value and thus improves numeric accuracy, especially
+    # for small values of EMI.
+    #
+    # 3) The inner loop now directly calls ``sklearn_lgamma`` instead of relying
+    # on the ``lgamma`` wrapper, resulting in 15-20% speed improvement.  The
+    # wrapper is unnecessary in the inner loop as the loop parameters guarantee
+    # that the values passed to the log-gamma function can never be negative.
+    #
 
     cdef Py_ssize_t R, C, i, j, nij
 
@@ -160,6 +168,7 @@ cpdef np.float64_t emi_from_margins(
     # There are three major terms to the EMI equation, which are multiplied to
     # and then summed over varying nij values.
 
+    # term1 is nijs.
     # While nijs[0] will never be used, having it simplifies the indexing.
     max_ab = max(<np.int64_t>np.max(a), <np.int64_t>np.max(b))
     nijs = np.arange(0LL, max_ab + 1LL, dtype=np.float64)
@@ -195,7 +204,7 @@ cpdef np.float64_t emi_from_margins(
             for nij in xrange(max(1LL, 1LL - N_ai_bj_1), min(ai_1, bj_1)):
                 # Numerators are positive, denominators are negative.
                 emi += (
-                    nijs[nij]                            # term1
+                    <np.float64_t>nij                    # term1
                     * (log_Nnij[nij] - log_ab_outer_ij)  # term2
                     * exp(outer_sum                      # term3
                         - gln_nij[nij]
