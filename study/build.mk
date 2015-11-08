@@ -4,10 +4,10 @@
 # Experiment-independent defaults
 METRICS := \
 	homogeneity completeness nmi_score \
-	adjusted_rand_index mi_corr1 mi_corr0 jaccard_coeff \
+	adjusted_rand_score mi_corr1 mi_corr0 jaccard_coeff \
 	informedness markedness \
 	aul_score roc_max_info roc_auc \
-	adjusted_mutual_info \
+	adjusted_mutual_info_score \
 	split_join_similarity mirkin_match_coeff talburt_wang_index \
 	time_cpu \
 

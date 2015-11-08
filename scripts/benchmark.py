@@ -3,8 +3,8 @@ To benchmark the proposed implementation vs the one in Scikit-Learn:
 
 ::
 
-    ipython scripts/ami_benchmark.py -- --implementation sklearn
-    ipython scripts/ami_benchmark.py -- --implementation proposed
+    ipython scripts/benchmark.py -- --method adjusted_mutual_info_score --implementation sklearn
+    ipython scripts/benchmark.py -- --method adjusted_mutual_info_score --implementation proposed
 
 """
 import os
@@ -20,6 +20,13 @@ def parse_args(args=None):
     parser.add_argument('--implementation', type=str, default='proposed',
                         choices=['sklearn', 'proposed', 'oo'],
                         help='which implementation to benchmark')
+    parser.add_argument('--method', type=str, help='method to benchmark',
+                        default='adjusted_mutual_info_score',
+                        choices=[
+                            'adjusted_mutual_info_score',
+                            'homogeneity_completeness_v_measure',
+                            'adjusted_rand_score'
+                        ])
     parser.add_argument('--num_tests', type=int, default=3,
                         help='how many tests to run')
     parser.add_argument('--max_classes', type=int, default=500,
@@ -61,13 +68,16 @@ else:
 if ARGS.implementation == 'oo':
     from lsh_hdc.metrics import ClusteringMetrics
     cm = ClusteringMetrics.from_labels(ltrue, lpred)
-    line = "cm.adjusted_mutual_info()"
+    method = getattr(cm, ARGS.method)
+    line = "method()"
 elif ARGS.implementation == 'sklearn':
-    from sklearn.metrics.cluster import adjusted_mutual_info_score
-    line = "adjusted_mutual_info_score(ltrue, lpred)"
+    import sklearn.metrics.cluster as module
+    method = getattr(module, ARGS.method)
+    line = "method(ltrue, lpred)"
 elif ARGS.implementation == 'proposed':
-    from lsh_hdc.metrics import adjusted_mutual_info_score
-    line = "adjusted_mutual_info_score(ltrue, lpred)"
+    import lsh_hdc.metrics as module
+    method = getattr(module, ARGS.method)
+    line = "method(ltrue, lpred)"
 else:
     raise argparse.ArgumentError('Unknown value for --implementation')
 
