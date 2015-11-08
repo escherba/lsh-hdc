@@ -308,7 +308,7 @@ class ContingencyTable(TableOfCounts):
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
 
-    def adjusted_mutual_info(self):
+    def adjusted_mutual_info_score(self):
         """Adjusted Mutual Information between two clusterings
 
         For mathemtical definition, see [1]_
@@ -571,7 +571,7 @@ class ClusteringMetrics(ContingencyTable):
             method = getattr(self.pairwise_, scoring_method)
         return method(*args, **kwargs)
 
-    def adjusted_rand_index(self):
+    def adjusted_rand_score(self):
         """Memory-efficient replacement for a similar Scikit-Learn function
         """
         return self.pairwise_.kappa()
@@ -1325,7 +1325,7 @@ class ConfusionMatrix2(ContingencyTable):
 
     # cluster analysis
     rand_index = ACC
-    adjusted_rand_index = kappa
+    adjusted_rand_score = kappa
     fowlkes_mallows = ochiai_coeff
 
 
@@ -1364,7 +1364,7 @@ def adjusted_rand_score(labels_true, labels_pred):
 
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return ct.adjusted_rand_index()
+    return ct.adjusted_rand_score()
 
 
 def adjusted_mutual_info_score(labels_true, labels_pred):
@@ -1389,7 +1389,7 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
 
     """
     cm = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return cm.adjusted_mutual_info()
+    return cm.adjusted_mutual_info_score()
 
 
 def matthews_corr(*args, **kwargs):
