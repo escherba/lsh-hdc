@@ -126,8 +126,8 @@ def jaccard_similarity(iterable1, iterable2):
 
     jaccard_similarity : float
     """
-    cm = ConfusionMatrix2.from_sets(iterable1, iterable2)
-    return cm.jaccard_coeff()
+    t = ConfusionMatrix2.from_sets(iterable1, iterable2)
+    return t.jaccard_coeff()
 
 
 def ratio2weights(ratio):
@@ -402,8 +402,8 @@ class ContingencyTable(TableOfCounts):
 
             >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
             >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
-            >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-            >>> cm.split_join_distance(normalize=False)
+            >>> t = ClusteringMetrics.from_partitions(p1, p2)
+            >>> t.split_join_distance(normalize=False)
             11
 
         References
@@ -429,17 +429,17 @@ class ContingencyTable(TableOfCounts):
 
             >>> a = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
             >>> b = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
-            >>> cm = ContingencyTable.from_labels(a, b)
-            >>> cm.split_join_similarity()
+            >>> t = ContingencyTable.from_labels(a, b)
+            >>> t.split_join_similarity()
             0.9
 
         Less good clustering::
 
-            >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
-            ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
-            >>> cm = ContingencyTable.from_clusters(clusters)
-            >>> cm.split_join_similarity()
-            0.5
+            >>> clusters = [[1, 1], [1, 1, 1, 1], [2, 3], [2, 2, 3, 3],
+            ...             [3, 3, 4], [3, 4, 4, 4, 4, 4, 4, 4, 4, 4]]
+            >>> t = ContingencyTable.from_clusters(clusters)
+            >>> t.split_join_similarity()
+            0.74
 
         """
         pa_B = sum(max(row) for row in self.iter_rows())
@@ -456,8 +456,8 @@ class ContingencyTable(TableOfCounts):
 
             >>> C3 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
             >>> C4 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10, 11, 12}, {13, 14, 15, 16}]
-            >>> cm = ClusteringMetrics.from_partitions(C3, C4)
-            >>> cm.mirkin_match_coeff(normalize=False)
+            >>> t = ClusteringMetrics.from_partitions(C3, C4)
+            >>> t.mirkin_match_coeff(normalize=False)
             216
         """
         max_score = self.grand_total ** 2
@@ -475,8 +475,8 @@ class ContingencyTable(TableOfCounts):
 
             >>> C1 = [{1, 2, 3, 4, 5, 6, 7, 8}, {9, 10, 11, 12, 13, 14, 15, 16}]
             >>> C2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
-            >>> cm = ClusteringMetrics.from_partitions(C1, C2)
-            >>> cm.mirkin_mismatch_coeff(normalize=False)
+            >>> t = ClusteringMetrics.from_partitions(C1, C2)
+            >>> t.mirkin_mismatch_coeff(normalize=False)
             56
 
         References
@@ -503,16 +503,16 @@ class ContingencyTable(TableOfCounts):
 
             >>> a = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
             >>> b = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
-            >>> cm = ContingencyTable.from_labels(a, b)
-            >>> round(cm.talburt_wang_index(), 3)
+            >>> t = ContingencyTable.from_labels(a, b)
+            >>> round(t.talburt_wang_index(), 3)
             0.816
 
         Less good clustering (example from [1]_)::
 
-            >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
-            ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
-            >>> cm = ContingencyTable.from_clusters(clusters)
-            >>> round(cm.talburt_wang_index(), 2)
+            >>> clusters = [[1, 1], [1, 1, 1, 1], [2, 3], [2, 2, 3, 3],
+            ...             [3, 3, 4], [3, 4, 4, 4, 4, 4, 4, 4, 4, 4]]
+            >>> t = ContingencyTable.from_clusters(clusters)
+            >>> round(t.talburt_wang_index(), 2)
             0.49
 
         References
@@ -870,7 +870,12 @@ class ConfusionMatrix2(ContingencyTable):
 
         .. math::
 
-            DOR = \\frac{PLL}{NLL}
+            DOR = \\frac{PLL}{NLL}.
+
+        See Also
+        --------
+
+        PLL, NLL
 
         """
         return _div(self.TP * self.TN, self.FP * self.FN)
@@ -1128,8 +1133,8 @@ class ConfusionMatrix2(ContingencyTable):
         co-association matrix::
 
             >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
-            >>> cm = ClusteringMetrics.from_clusters(clusters)
-            >>> cm.pairwise_.loevinger_coeff()
+            >>> t = ClusteringMetrics.from_clusters(clusters)
+            >>> t.pairwise_.loevinger_coeff()
             1.0
 
         At the same time, kappa and Matthews coefficients are 0.63 and 0.68,
@@ -1137,8 +1142,8 @@ class ConfusionMatrix2(ContingencyTable):
         also return a perfect score in the dual (opposite) situation::
 
             >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
-            >>> cm = ClusteringMetrics.from_clusters(clusters)
-            >>> cm.pairwise_.loevinger_coeff()
+            >>> t = ClusteringMetrics.from_clusters(clusters)
+            >>> t.pairwise_.loevinger_coeff()
             1.0
 
         Loevinger's coefficient has a unique property: all relevant two-way
@@ -1458,8 +1463,8 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
         0.0
 
     """
-    cm = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return cm.adjusted_mutual_info_score()
+    t = ClusteringMetrics.from_labels(labels_true, labels_pred)
+    return t.adjusted_mutual_info_score()
 
 
 def matthews_corr(*args, **kwargs):
