@@ -213,7 +213,7 @@ class ContingencyTable(CrossTab):
         """
         N = float(self.grand_total)
         score = 0.0
-        for rm, cm, observed in self.iter_cells_with_margins():
+        for rm, cm, observed in self.iter_vals_with_margins():
             numer = rm * cm
             if numer != 0:
                 expected = numer / N
@@ -254,7 +254,7 @@ class ContingencyTable(CrossTab):
         """
         H_C = centropy(self.row_totals)
         H_K = centropy(self.col_totals)
-        H_actual = centropy(self.iter_cells())
+        H_actual = centropy(self.itervalues())
         H_expected = H_C + H_K
         I_CK = H_expected - H_actual
         return H_C, H_K, I_CK
@@ -492,7 +492,7 @@ class ContingencyTable(CrossTab):
         score = (
             sum(x ** 2 for x in self.iter_row_totals()) +
             sum(x ** 2 for x in self.iter_col_totals()) -
-            2 * sum(x ** 2 for x in self.iter_cells())
+            2 * sum(x ** 2 for x in self.itervalues())
         )
         if normalize:
             score /= float(self.grand_total ** 2)
@@ -566,7 +566,7 @@ class ClusteringMetrics(ContingencyTable):
         if pairwise is None:
             actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
             called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
-            TP = sum(nchoose2(cell) for cell in self.iter_cells())
+            TP = sum(nchoose2(cell) for cell in self.itervalues())
             FN = actual_positives - TP
             FP = called_positives - TP
             TN = nchoose2(self.grand_total) - TP - FP - FN
