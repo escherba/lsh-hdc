@@ -308,6 +308,8 @@ class ContingencyTable(TableOfCounts):
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
 
+    homogeneity_completeness_v_measure = entropy_metrics
+
     def adjusted_mutual_info_score(self):
         """Adjusted Mutual Information between two clusterings
 

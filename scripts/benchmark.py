@@ -3,8 +3,8 @@ To benchmark the proposed implementation vs the one in Scikit-Learn:
 
 ::
 
-    ipython scripts/ami_benchmark.py -- --method adjusted_mutual_info_score --implementation sklearn
-    ipython scripts/ami_benchmark.py -- --method adjusted_mutual_info_score --implementation proposed
+    ipython scripts/benchmark.py -- --method adjusted_mutual_info_score --implementation sklearn
+    ipython scripts/benchmark.py -- --method adjusted_mutual_info_score --implementation proposed
 
 """
 import os
@@ -20,11 +20,13 @@ def parse_args(args=None):
     parser.add_argument('--implementation', type=str, default='proposed',
                         choices=['sklearn', 'proposed', 'oo'],
                         help='which implementation to benchmark')
-    parser.add_argument('--method', type=str, choices=['adjusted_mutual_info_score',
-                                                       'adjusted_rand_score'],
+    parser.add_argument('--method', type=str, help='method to benchmark',
                         default='adjusted_mutual_info_score',
-                        help='which method to benchmark'
-                        )
+                        choices=[
+                            'adjusted_mutual_info_score',
+                            'homogeneity_completeness_v_measure',
+                            'adjusted_rand_score'
+                        ])
     parser.add_argument('--num_tests', type=int, default=3,
                         help='how many tests to run')
     parser.add_argument('--max_classes', type=int, default=500,
