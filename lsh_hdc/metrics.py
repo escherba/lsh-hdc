@@ -30,10 +30,12 @@ be represented as rows and columns in a table.  Roughly adhering to the
 terminology proposed in [1]_, we distinguish four types of experimental design
 all involving contingency tables.
 
-    * Under Model O, sampling is entirely random. Columns, rows, and the grand total are variable.
-    * Under Model I, random sampling occurs both row- and column-wise, but the grand total is fixed.
-    * Under Model II, one side (either row or column totals) is fixed.
-    * Under Model III, both rows and column totals are fixed.
+========= ===================================
+Model O   all margins and totals are variable
+Model I   only the grand total is fixed
+Model II  one margin (either row or column totals) is fixed
+Model III both margins are fixed
+========= ===================================
 
 Model O is rarely employed in practice because researchers almost always have
 some rough total number of samples in mind that they would like to measure
@@ -90,7 +92,7 @@ References
 import numpy as np
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
-from pymaptools.containers import TableOfCounts
+from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import ilen
 from lsh_hdc.entropy import centropy, nchoose2, emi_from_margins
 
@@ -124,8 +126,8 @@ def jaccard_similarity(iterable1, iterable2):
 
     jaccard_similarity : float
     """
-    cm = ConfusionMatrix2.from_sets(iterable1, iterable2)
-    return cm.jaccard_coeff()
+    t = ConfusionMatrix2.from_sets(iterable1, iterable2)
+    return t.jaccard_coeff()
 
 
 def ratio2weights(ratio):
@@ -192,12 +194,14 @@ def harmonic_mean_weighted(x, y, ratio=1.0):
     return float(x) if x == y else (x * y) / (lweight * x + rweight * y)
 
 
-class ContingencyTable(TableOfCounts):
+class ContingencyTable(CrossTab):
 
     # Note: not subclassing Pandas DataFrame because the goal is to specifically
     # optimize for sparse use cases when >90% of the table consists of zeros.
     # As of today, Pandas 'crosstab' implementation of frequency tables forces
     # one to iterate on all the zeros, which is horrible...
+
+    __init__ = CrossTab.__init__
 
     def to_array(self):
         """Convert to NumPy array
@@ -209,7 +213,7 @@ class ContingencyTable(TableOfCounts):
         """
         N = float(self.grand_total)
         score = 0.0
-        for rm, cm, observed in self.iter_cells_with_margins():
+        for rm, cm, observed in self.iter_vals_with_margins():
             numer = rm * cm
             if numer != 0:
                 expected = numer / N
@@ -250,7 +254,7 @@ class ContingencyTable(TableOfCounts):
         """
         H_C = centropy(self.row_totals)
         H_K = centropy(self.col_totals)
-        H_actual = centropy(self.iter_cells())
+        H_actual = centropy(self.itervalues())
         H_expected = H_C + H_K
         I_CK = H_expected - H_actual
         return H_C, H_K, I_CK
@@ -283,10 +287,10 @@ class ContingencyTable(TableOfCounts):
         Because of the dual property, in a symmetric matrix, all three scores
         are the same.
 
-        This method replaces the equivalent function in Scikit-Learn known as
-        `homogeneity_completeness_v_measure` (the Scikit-Learn version takes up
-        :math:`O(n^2)` space because it stores data in a dense NumPy array) while the
-        given version is sub-quadratic because of sparse underlying storage.
+        This method replaces ``homogeneity_completeness_v_measure`` method in
+        Scikit-Learn.  The Scikit-Learn version takes up :math:`O(n^2)` space
+        because it stores data in a dense NumPy array, while the given version
+        is sub-quadratic because of sparse underlying storage.
 
         Note that the entropy variables H in the code below are improperly
         defined because they ought to be divided by N (the grand total for the
@@ -400,8 +404,8 @@ class ContingencyTable(TableOfCounts):
 
             >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
             >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
-            >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-            >>> cm.split_join_distance(normalize=False)
+            >>> t = ClusteringMetrics.from_partitions(p1, p2)
+            >>> t.split_join_distance(normalize=False)
             11
 
         References
@@ -427,17 +431,17 @@ class ContingencyTable(TableOfCounts):
 
             >>> a = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
             >>> b = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
-            >>> cm = ContingencyTable.from_labels(a, b)
-            >>> cm.split_join_similarity()
+            >>> t = ContingencyTable.from_labels(a, b)
+            >>> t.split_join_similarity()
             0.9
 
         Less good clustering::
 
-            >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
-            ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
-            >>> cm = ContingencyTable.from_clusters(clusters)
-            >>> cm.split_join_similarity()
-            0.5
+            >>> clusters = [[1, 1], [1, 1, 1, 1], [2, 3], [2, 2, 3, 3],
+            ...             [3, 3, 4], [3, 4, 4, 4, 4, 4, 4, 4, 4, 4]]
+            >>> t = ContingencyTable.from_clusters(clusters)
+            >>> t.split_join_similarity()
+            0.74
 
         """
         pa_B = sum(max(row) for row in self.iter_rows())
@@ -454,8 +458,8 @@ class ContingencyTable(TableOfCounts):
 
             >>> C3 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
             >>> C4 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10, 11, 12}, {13, 14, 15, 16}]
-            >>> cm = ClusteringMetrics.from_partitions(C3, C4)
-            >>> cm.mirkin_match_coeff(normalize=False)
+            >>> t = ClusteringMetrics.from_partitions(C3, C4)
+            >>> t.mirkin_match_coeff(normalize=False)
             216
         """
         max_score = self.grand_total ** 2
@@ -473,8 +477,8 @@ class ContingencyTable(TableOfCounts):
 
             >>> C1 = [{1, 2, 3, 4, 5, 6, 7, 8}, {9, 10, 11, 12, 13, 14, 15, 16}]
             >>> C2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
-            >>> cm = ClusteringMetrics.from_partitions(C1, C2)
-            >>> cm.mirkin_mismatch_coeff(normalize=False)
+            >>> t = ClusteringMetrics.from_partitions(C1, C2)
+            >>> t.mirkin_mismatch_coeff(normalize=False)
             56
 
         References
@@ -488,7 +492,7 @@ class ContingencyTable(TableOfCounts):
         score = (
             sum(x ** 2 for x in self.iter_row_totals()) +
             sum(x ** 2 for x in self.iter_col_totals()) -
-            2 * sum(x ** 2 for x in self.iter_cells())
+            2 * sum(x ** 2 for x in self.itervalues())
         )
         if normalize:
             score /= float(self.grand_total ** 2)
@@ -501,16 +505,16 @@ class ContingencyTable(TableOfCounts):
 
             >>> a = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
             >>> b = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
-            >>> cm = ContingencyTable.from_labels(a, b)
-            >>> round(cm.talburt_wang_index(), 3)
+            >>> t = ContingencyTable.from_labels(a, b)
+            >>> round(t.talburt_wang_index(), 3)
             0.816
 
         Less good clustering (example from [1]_)::
 
-            >>> clusters = [{1, 1}, {1, 1, 1, 1}, {2, 3}, {2, 2, 3, 3},
-            ...             {3, 3, 4}, {3, 4, 4, 4, 4, 4, 4, 4, 4, 4}]
-            >>> cm = ContingencyTable.from_clusters(clusters)
-            >>> round(cm.talburt_wang_index(), 2)
+            >>> clusters = [[1, 1], [1, 1, 1, 1], [2, 3], [2, 2, 3, 3],
+            ...             [3, 3, 4], [3, 4, 4, 4, 4, 4, 4, 4, 4, 4]]
+            >>> t = ContingencyTable.from_clusters(clusters)
+            >>> round(t.talburt_wang_index(), 2)
             0.49
 
         References
@@ -537,7 +541,7 @@ class ClusteringMetrics(ContingencyTable):
     """
 
     def __init__(self, *args, **kwargs):
-        super(ClusteringMetrics, self).__init__(*args, **kwargs)
+        ContingencyTable.__init__(self, *args, **kwargs)
         self._pairwise_ = None
 
     @property
@@ -546,10 +550,12 @@ class ClusteringMetrics(ContingencyTable):
 
         Given two partitionings A and B and a co-occurrence matrix of point pairs,
 
-            * TP - count of pairs found in the same partition in both A and B
-            * FP - count of pairs found in the same partition in A but not in B
-            * FN - count of pairs found in the same partition in B but not in A
-            * TN - count of pairs in different partitions in both A and B
+        == =============================================================
+        TP count of pairs found in the same partition in both A and B
+        FP count of pairs found in the same partition in A but not in B
+        FN count of pairs found in the same partition in B but not in A
+        TN count of pairs in different partitions in both A and B
+        == =============================================================
 
         Note that although the resulting confusion matrix has the form of a
         correlation table for two binary variables, it is not symmetric if the
@@ -560,7 +566,7 @@ class ClusteringMetrics(ContingencyTable):
         if pairwise is None:
             actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
             called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
-            TP = sum(nchoose2(cell) for cell in self.iter_cells())
+            TP = sum(nchoose2(cell) for cell in self.itervalues())
             FN = actual_positives - TP
             FP = called_positives - TP
             TN = nchoose2(self.grand_total) - TP - FP - FN
@@ -683,7 +689,7 @@ class ClusteringMetrics(ContingencyTable):
 confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
 
 
-class ConfusionMatrix2(ContingencyTable):
+class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     """A confusion matrix (2x2 contingency table)
 
     For a binary variable (where one is measuring either presence vs absence of
@@ -697,7 +703,8 @@ class ConfusionMatrix2(ContingencyTable):
     For a nominal variable, the negative class becomes a distinct label, and
     TP/FP/FN/TN terminology does not apply, although the algorithms should work
     the same way (with the obvious distinction that different assumptions will
-    be made).
+    be made). For a convenient reference about some of the attributes and
+    methods defined here see [1]_.
 
     Attributes
     ----------
@@ -710,6 +717,12 @@ class ConfusionMatrix2(ContingencyTable):
         True negative count
     FN :
         False negative count
+
+    References
+    ----------
+
+    .. [1] `Wikipedia entry for Confusion Matrix
+            <https://en.wikipedia.org/wiki/Confusion_matrix>`_
     """
 
     def __repr__(self):
@@ -718,7 +731,7 @@ class ConfusionMatrix2(ContingencyTable):
     def __init__(self, TP=None, FN=None, FP=None, TN=None, rows=None):
         if rows is None:
             rows = ((TP, FN), (FP, TN))
-        super(ConfusionMatrix2, self).__init__(rows=rows)
+        ContingencyTable.__init__(self, rows=rows)
 
     @classmethod
     def from_sets(cls, set1, set2, universe_size=None):
@@ -866,7 +879,12 @@ class ConfusionMatrix2(ContingencyTable):
 
         .. math::
 
-            DOR = \\frac{PLL}{NLL}
+            DOR = \\frac{PLL}{NLL}.
+
+        See Also
+        --------
+
+        PLL, NLL
 
         """
         return _div(self.TP * self.TN, self.FP * self.FN)
@@ -1124,8 +1142,8 @@ class ConfusionMatrix2(ContingencyTable):
         co-association matrix::
 
             >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
-            >>> cm = ClusteringMetrics.from_clusters(clusters)
-            >>> cm.pairwise_.loevinger_coeff()
+            >>> t = ClusteringMetrics.from_clusters(clusters)
+            >>> t.pairwise_.loevinger_coeff()
             1.0
 
         At the same time, kappa and Matthews coefficients are 0.63 and 0.68,
@@ -1133,8 +1151,8 @@ class ConfusionMatrix2(ContingencyTable):
         also return a perfect score in the dual (opposite) situation::
 
             >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
-            >>> cm = ClusteringMetrics.from_clusters(clusters)
-            >>> cm.pairwise_.loevinger_coeff()
+            >>> t = ClusteringMetrics.from_clusters(clusters)
+            >>> t.pairwise_.loevinger_coeff()
             1.0
 
         Loevinger's coefficient has a unique property: all relevant two-way
@@ -1454,8 +1472,8 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
         0.0
 
     """
-    cm = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return cm.adjusted_mutual_info_score()
+    t = ClusteringMetrics.from_labels(labels_true, labels_pred)
+    return t.adjusted_mutual_info_score()
 
 
 def matthews_corr(*args, **kwargs):

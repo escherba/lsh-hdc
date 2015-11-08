@@ -77,7 +77,7 @@ build_ext: env
 $(EXTENSION_LIBS): build_ext
 	@echo "done building $@"
 
-develop:
+develop: build_ext
 	@echo "Installing for " `which pip`
 	-pip uninstall --yes $(PYMODULE)
 	pip install -e .
