@@ -3,8 +3,8 @@ To benchmark the proposed implementation vs the one in Scikit-Learn:
 
 ::
 
-    ipython scripts/benchmark.py -- --method adjusted_mutual_info_score --implementation sklearn
-    ipython scripts/benchmark.py -- --method adjusted_mutual_info_score --implementation proposed
+    ipython scripts/benchmark.py -- --method ami --implementation sklearn
+    ipython scripts/benchmark.py -- --method ami --implementation proposed
 
 """
 import os
@@ -15,6 +15,13 @@ import cPickle as pickle
 from IPython import get_ipython
 
 
+METHODS = {
+    'hcv': 'homogeneity_completeness_v_measure',
+    'ami': 'adjusted_mutual_info_score',
+    'ari': 'adjusted_rand_score'
+}
+
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--implementation', type=str, default='proposed',
@@ -22,11 +29,7 @@ def parse_args(args=None):
                         help='which implementation to benchmark')
     parser.add_argument('--method', type=str, help='method to benchmark',
                         default='adjusted_mutual_info_score',
-                        choices=[
-                            'adjusted_mutual_info_score',
-                            'homogeneity_completeness_v_measure',
-                            'adjusted_rand_score'
-                        ])
+                        choices=METHODS.keys())
     parser.add_argument('--num_tests', type=int, default=3,
                         help='how many tests to run')
     parser.add_argument('--max_classes', type=int, default=500,
@@ -68,15 +71,15 @@ else:
 if ARGS.implementation == 'oo':
     from lsh_hdc.metrics import ClusteringMetrics
     cm = ClusteringMetrics.from_labels(ltrue, lpred)
-    method = getattr(cm, ARGS.method)
+    method = getattr(cm, METHODS[ARGS.method])
     line = "method()"
 elif ARGS.implementation == 'sklearn':
     import sklearn.metrics.cluster as module
-    method = getattr(module, ARGS.method)
+    method = getattr(module, METHODS[ARGS.method])
     line = "method(ltrue, lpred)"
 elif ARGS.implementation == 'proposed':
     import lsh_hdc.metrics as module
-    method = getattr(module, ARGS.method)
+    method = getattr(module, METHODS[ARGS.method])
     line = "method(ltrue, lpred)"
 else:
     raise argparse.ArgumentError('Unknown value for --implementation')

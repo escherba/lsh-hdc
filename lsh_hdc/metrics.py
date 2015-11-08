@@ -92,7 +92,7 @@ References
 import numpy as np
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
-from pymaptools.containers import TableOfCounts
+from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import ilen
 from lsh_hdc.entropy import centropy, nchoose2, emi_from_margins
 
@@ -194,12 +194,14 @@ def harmonic_mean_weighted(x, y, ratio=1.0):
     return float(x) if x == y else (x * y) / (lweight * x + rweight * y)
 
 
-class ContingencyTable(TableOfCounts):
+class ContingencyTable(CrossTab):
 
     # Note: not subclassing Pandas DataFrame because the goal is to specifically
     # optimize for sparse use cases when >90% of the table consists of zeros.
     # As of today, Pandas 'crosstab' implementation of frequency tables forces
     # one to iterate on all the zeros, which is horrible...
+
+    __init__ = CrossTab.__init__
 
     def to_array(self):
         """Convert to NumPy array
@@ -539,7 +541,7 @@ class ClusteringMetrics(ContingencyTable):
     """
 
     def __init__(self, *args, **kwargs):
-        super(ClusteringMetrics, self).__init__(*args, **kwargs)
+        ContingencyTable.__init__(self, *args, **kwargs)
         self._pairwise_ = None
 
     @property
@@ -687,7 +689,7 @@ class ClusteringMetrics(ContingencyTable):
 confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
 
 
-class ConfusionMatrix2(ContingencyTable):
+class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     """A confusion matrix (2x2 contingency table)
 
     For a binary variable (where one is measuring either presence vs absence of
@@ -701,7 +703,8 @@ class ConfusionMatrix2(ContingencyTable):
     For a nominal variable, the negative class becomes a distinct label, and
     TP/FP/FN/TN terminology does not apply, although the algorithms should work
     the same way (with the obvious distinction that different assumptions will
-    be made).
+    be made). For a convenient reference about some of the attributes and
+    methods defined here see [1]_.
 
     Attributes
     ----------
@@ -714,6 +717,12 @@ class ConfusionMatrix2(ContingencyTable):
         True negative count
     FN :
         False negative count
+
+    References
+    ----------
+
+    .. [1] `Wikipedia entry for Confusion Matrix
+            <https://en.wikipedia.org/wiki/Confusion_matrix>`_
     """
 
     def __repr__(self):
@@ -722,7 +731,7 @@ class ConfusionMatrix2(ContingencyTable):
     def __init__(self, TP=None, FN=None, FP=None, TN=None, rows=None):
         if rows is None:
             rows = ((TP, FN), (FP, TN))
-        super(ConfusionMatrix2, self).__init__(rows=rows)
+        ContingencyTable.__init__(self, rows=rows)
 
     @classmethod
     def from_sets(cls, set1, set2, universe_size=None):
