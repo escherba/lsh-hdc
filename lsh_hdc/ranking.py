@@ -105,7 +105,7 @@ def num2bool(num):
     """True if zero or positive real, False otherwise
 
     When binarizing class labels, this lets us be consistent with Scikit-Learn
-    where binary labels can be {0, 1} with 0 being negativeve or {-1, 1} with -1
+    where binary labels can be {0, 1} with 0 being negative or {-1, 1} with -1
     being negative.
 
     """
@@ -180,7 +180,7 @@ class LiftCurve(object):
             Cluster labels to evaluate
 
         is_class_pos: label_true -> Bool
-            Boolean predicate used to binarixe true (class) labels
+            Boolean predicate used to binarize true (class) labels
 
         """
         clusters = labels_to_clusters(labels_true, labels_pred)
@@ -358,11 +358,11 @@ class RocCurve(object):
 
     ::
 
-        >>> rc = RocCurve.from_labels([0, 0, 1, 1],
-        ...                           [0.1, 0.4, 0.35, 0.8])
-        >>> rc.auc_score()
+        >>> c = RocCurve.from_labels([0, 0, 1, 1],
+        ...                          [0.1, 0.4, 0.35, 0.8])
+        >>> c.auc_score()
         0.75
-        >>> rc.max_informedness()
+        >>> c.max_informedness()
         0.5
 
     """

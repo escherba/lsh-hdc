@@ -315,7 +315,7 @@ class ContingencyTable(TableOfCounts):
     def adjusted_mutual_info_score(self):
         """Adjusted Mutual Information between two clusterings
 
-        For mathemtical definition, see [1]_
+        For a mathematical definition, see [1]_
 
         References
         ----------
@@ -364,7 +364,7 @@ class ContingencyTable(TableOfCounts):
         References
         ----------
 
-        .. [1] `Meilă, M. (2007). Comparing clusterings—an information based
+        .. [1] `Meila, M. (2007). Comparing clusterings -- an information based
                distance. Journal of multivariate analysis, 98(5), 873-895.
                <https://doi.org/10.1016/j.jmva.2006.11.013>`_
 
@@ -425,9 +425,9 @@ class ContingencyTable(TableOfCounts):
 
         A relatively decent clustering::
 
-            >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
-            >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
-            >>> cm = ContingencyTable.from_labels(ltrue, lpred)
+            >>> a = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
+            >>> b = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
+            >>> cm = ContingencyTable.from_labels(a, b)
             >>> cm.split_join_similarity()
             0.9
 
@@ -448,7 +448,7 @@ class ContingencyTable(TableOfCounts):
         return score
 
     def mirkin_match_coeff(self, normalize=True):
-        """Equivalence match (similarity) coeffcient
+        """Equivalence match (similarity) coefficient
 
         ::
 
@@ -499,9 +499,9 @@ class ContingencyTable(TableOfCounts):
 
         A relatively decent clustering::
 
-            >>> ltrue = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
-            >>> lpred = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
-            >>> cm = ContingencyTable.from_labels(ltrue, lpred)
+            >>> a = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
+            >>> b = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
+            >>> cm = ContingencyTable.from_labels(a, b)
             >>> round(cm.talburt_wang_index(), 3)
             0.816
 
@@ -1039,9 +1039,9 @@ class ConfusionMatrix2(ContingencyTable):
     def informedness(self):
         """Informedness
 
-        This measure was first proposed for evaluating diagnotics tests in [1]_,
-        and also used in meteorology under the name "True Skill Score" [2]_. It
-        can be thought of as recall corrected for chance.
+        This measure was first proposed for evaluating medical diagnostics
+        tests in [1]_, and also used in meteorology under the name "True Skill
+        Score" [2]_. It can be thought of as recall corrected for chance.
 
         Alternative formulations:
 
@@ -1076,7 +1076,7 @@ class ConfusionMatrix2(ContingencyTable):
     def markedness(self):
         """Markedness (Precision corrected for chance)
 
-        Complement to informednes. It can be thought of as precision corrected
+        Complement to informedness. It can be thought of as precision corrected
         for chance.
 
         Alternative formulation:
@@ -1224,8 +1224,8 @@ class ConfusionMatrix2(ContingencyTable):
                contingency tables. Weather and Forecasting, 5(4), 576-585.
                <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
 
-        .. [6] `Heidke, Paul. "Berechnung des Erfolges und der Güte der
-               Windstärkevorhersagen im Sturmwarnungsdienst." Geografiska
+        .. [6] `Heidke, Paul. "Berechnung des Erfolges und der Gute der
+               Windstarkevorhersagen im Sturmwarnungsdienst." Geografiska
                Annaler (1926): 301-349.
                <http://www.jstor.org/stable/519729>`_
 
@@ -1323,7 +1323,7 @@ class ConfusionMatrix2(ContingencyTable):
         return copysign(1, self.covar()) * sqrt(rsquare)
 
     def yule_q(self):
-        """Yule's Q (asociation index)
+        """Yule's Q (association index)
 
         this index relates to the D odds ratio:
 
