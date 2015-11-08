@@ -102,11 +102,11 @@ from pymaptools.containers import labels_to_clusters
 
 
 def num2bool(num):
-    """Returns True if num > 0, False otherwise
+    """True if zero or positive real, False otherwise
 
     When binarizing class labels, this lets us be consistent with Scikit-Learn
     where binary labels can be {0, 1} with 0 being negativeve or {-1, 1} with -1
-    being negative
+    being negative.
 
     """
     return num > 0
@@ -114,7 +114,7 @@ def num2bool(num):
 
 class LiftCurve(object):
 
-    """Area under Lift Curve (AUL) for cluster-size correlated classification
+    """Lift Curve for cluster-size correlated classification
 
     """
 
@@ -156,7 +156,7 @@ class LiftCurve(object):
             List of lists of class labels
 
         is_class_pos: label_true -> Bool
-            Boolean predicate used to num2bool true (class) labels
+            Boolean predicate used to binarize true (class) labels
 
         """
         # take all non-empty clusters, score them by size and by number of
@@ -180,7 +180,7 @@ class LiftCurve(object):
             Cluster labels to evaluate
 
         is_class_pos: label_true -> Bool
-            Boolean predicate used to num2bool true (class) labels
+            Boolean predicate used to binarixe true (class) labels
 
         """
         clusters = labels_to_clusters(labels_true, labels_pred)
@@ -333,7 +333,7 @@ def aul_score_from_clusters(clusters):
 
 
 def aul_score_from_labels(y_true, labels_pred):
-    """Calculate AUL score given array of classes and array of cluster sizes
+    """AUL score given array of classes and array of cluster sizes
 
     Parameters
     ----------
@@ -411,7 +411,7 @@ class RocCurve(object):
             Predicted scores
 
         is_class_pos: label_true -> Bool
-            Boolean predicate used to num2bool true (class) labels
+            Boolean predicate used to binarize true (class) labels
         """
 
         # num2bool Y labels
@@ -434,7 +434,7 @@ class RocCurve(object):
             List of lists of class labels
 
         is_class_pos: label_true -> Bool
-            Boolean predicate used to num2bool true (class) labels
+            Boolean predicate used to binarize true (class) labels
 
         """
         y_true = []
@@ -458,7 +458,7 @@ class RocCurve(object):
         return auc(self.fprs, self.tprs, reorder=False)
 
     def optimal_cutoff(self, scoring_method):
-        """Calculate optimal cutoff point according to ``scoring_method`` lambda
+        """Optimal cutoff point on ROC curve under scoring method
 
         The scoring method must take two arguments: fpr and tpr.
         """
@@ -476,7 +476,7 @@ class RocCurve(object):
         return tpr - fpr
 
     def max_informedness(self):
-        """Calculates maximum value of Informedness (TPR - FPR) on a ROC curve
+        """Maximum value of Informedness (TPR minus FPR) on a ROC curve
 
         A diagram of what this measure looks like is shown in [1]_. Note that a
         dual measure could be defined using markedness, where the delta
@@ -495,6 +495,8 @@ class RocCurve(object):
 
 
 def roc_auc_score(y_true, y_score, sample_weight=None):
-    """Replaces Scikit Learn implementation (for binary y_true vectors only)
+    """AUC score for a ROC curve
+
+    Replaces Scikit Learn implementation (given binary ``y_true``).
     """
     return RocCurve.from_labels(y_true, y_score).auc_score()

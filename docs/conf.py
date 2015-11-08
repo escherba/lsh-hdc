@@ -58,6 +58,8 @@ project = u'LSH-HDC'
 copyright = u'2015, Eugene Scherba'
 author = u'Eugene Scherba'
 
+mathjax_path="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.

@@ -200,6 +200,8 @@ class ContingencyTable(TableOfCounts):
     # one to iterate on all the zeros, which is horrible...
 
     def to_array(self):
+        """Convert to NumPy array
+        """
         return np.array(self.to_rows())
 
     def chisq_score(self):
@@ -265,13 +267,13 @@ class ContingencyTable(TableOfCounts):
         return I_CK / self.grand_total
 
     def entropy_metrics(self):
-        """Calculate three entropy-based metrics used for clustering evaluation
+        """Gives three entropy-based metrics for a RxC table
 
         The metrics are: Homogeneity, Completeness, and V-measure
 
         The V-measure metric is also known as Normalized Mutual Information
         (NMI), and is calculated here as the harmonic mean of Homogeneity and
-        Completeness ('NMI_sum'). There exist other definitions of NMI (see
+        Completeness (:math:`NMI_{sum}`). There exist other definitions of NMI (see
         Table 2 in [1]_ for a good review).
 
         Homogeneity and Completeness are duals of each other and can be thought
@@ -283,7 +285,7 @@ class ContingencyTable(TableOfCounts):
 
         This method replaces the equivalent function in Scikit-Learn known as
         `homogeneity_completeness_v_measure` (the Scikit-Learn version takes up
-        O(n^2) space because it stores data in a dense NumPy array) while the
+        :math:`O(n^2)` space because it stores data in a dense NumPy array) while the
         given version is sub-quadratic because of sparse underlying storage.
 
         Note that the entropy variables H in the code below are improperly
@@ -350,9 +352,10 @@ class ContingencyTable(TableOfCounts):
     def vi_distance(self, normalize=True):
         """Variation of Information distance
 
-        Defined in [1]_. This measure is one of several possible entropy-
-        based distance measure that could be defined on a RxC matrix. Per Table
-        2 in [2]_, the given measure is equivalent to '2 * D_sum'.
+        Defined in [1]_. This measure is one of several possible entropy- based
+        distance measure that could be defined on a RxC matrix. The given
+        measure is equivalent to :math:`2 D_{sum}` as listed in Table 2 in
+        [2]_.
 
         Note that the entropy variables H below are calculated using natural
         logs, so a base correction may be necessary if you need your result in
@@ -539,7 +542,7 @@ class ClusteringMetrics(ContingencyTable):
 
     @property
     def pairwise_(self):
-        """Compute a confusion matrix describing pairs from two partitionings
+        """Confusion matrix on all pair assignments from two partitionings
 
         Given two partitionings A and B and a co-occurrence matrix of point pairs,
 
@@ -565,7 +568,7 @@ class ClusteringMetrics(ContingencyTable):
         return pairwise
 
     def get_score(self, scoring_method, *args, **kwargs):
-        """Convenience method that looks up and runs a scoring method
+        """Evaluate specified scoring method
         """
         try:
             method = getattr(self, scoring_method)
@@ -574,12 +577,15 @@ class ClusteringMetrics(ContingencyTable):
         return method(*args, **kwargs)
 
     def adjusted_rand_score(self):
-        """Memory-efficient replacement for a similar Scikit-Learn function
+        """Rand score (accuracy) corrected for chance
+
+        This is a memory-efficient replacement for a similar Scikit-Learn
+        function.
         """
         return self.pairwise_.kappa()
 
     def adjusted_jaccard_coeff(self):
-        """Jaccard similarity coefficient with correction for chance
+        """Jaccard similarity with correction for chance
 
         Uses Taylor series-based correction described in [1]_.
 
@@ -604,7 +610,7 @@ class ClusteringMetrics(ContingencyTable):
         return adjusted
 
     def adjusted_sokal_sneath_coeff(self):
-        """Sokal-Sneath similarity coefficient with correction for chance
+        """Sokal-Sneath similarity with correction for chance
 
         Uses Taylor series-based correction.
 
@@ -626,7 +632,7 @@ class ClusteringMetrics(ContingencyTable):
         return adjusted
 
     def adjusted_rogers_tanimoto_coeff(self):
-        """Rogers-Tanimoto similarity coefficient with correction for chance
+        """Rogers-Tanimoto similarity with correction for chance
 
         Uses Taylor series-based correction.
 
@@ -650,7 +656,7 @@ class ClusteringMetrics(ContingencyTable):
         return adjusted
 
     def adjusted_gower_legendre_coeff(self):
-        """Gower-Legendre similarity coefficient with correction for chance
+        """Gower-Legendre similarity with correction for chance
 
         Uses Taylor series-based correction.
 
@@ -692,10 +698,22 @@ class ConfusionMatrix2(ContingencyTable):
     TP/FP/FN/TN terminology does not apply, although the algorithms should work
     the same way (with the obvious distinction that different assumptions will
     be made).
+
+    Attributes
+    ----------
+
+    TP :
+        True positive count
+    FP :
+        False positive count
+    TN :
+        True negative count
+    FN :
+        False negative count
     """
 
     def __repr__(self):
-        return ("ConfusionMatrix2(rows=%s)" % repr(self.to_rows()))
+        return "ConfusionMatrix2(rows=%s)" % repr(self.to_rows())
 
     def __init__(self, TP=None, FN=None, FP=None, TN=None, rows=None):
         if rows is None:
@@ -704,7 +722,7 @@ class ConfusionMatrix2(ContingencyTable):
 
     @classmethod
     def from_sets(cls, set1, set2, universe_size=None):
-        """Create a confusion matrix for comparison of two sets
+        """Instantiate from two sets
 
         Accepts an optional universe_size parameter which allows us to take into
         account TN class and use probability-based similarity metrics.  Most of
@@ -730,19 +748,23 @@ class ConfusionMatrix2(ContingencyTable):
 
     @classmethod
     def from_random_counts(cls, low=0, high=100):
-        """Return a matrix instance initialized with random values
+        """Instantiate from random values
         """
         return cls(*np.random.randint(low=low, high=high, size=(4,)))
 
     @classmethod
     def from_ccw(cls, TP, FP, TN, FN):
+        """Instantiate from counter-clockwise form of TP FP TN FN
+        """
         return cls(TP, FN, FP, TN)
 
     def to_ccw(self):
+        """Convert to counter-clockwise form of TP FP TN FN
+        """
         return confmat2_type(TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN)
 
     def get_score(self, scoring_method, *args, **kwargs):
-        """Convenience method that looks up and runs a scoring method
+        """Evaluate specified scoring method
         """
         method = getattr(self, scoring_method)
         return method(*args, **kwargs)
@@ -764,14 +786,14 @@ class ConfusionMatrix2(ContingencyTable):
         return self.rows[1][1]
 
     def ACC(self):
-        """Accuracy
+        """Accuracy (Rand Index)
 
         Synonyms: Simple Matching Coefficient, Rand Index
         """
         return _div(self.TP + self.TN, self.grand_total)
 
     def PPV(self):
-        """Positive Predictive Value
+        """Positive Predictive Value (Precision)
 
         Synonyms: precision, frequency of hits, post agreement, success ratio
         """
@@ -785,7 +807,7 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(self.TN, self.TN + self.FN)
 
     def TPR(self):
-        """True Positive Rate
+        """True Positive Rate (Recall, Sensitivity)
 
         Synonyms: recall, sensitivity, hit rate, probability of detection,
         prefigurance
@@ -800,7 +822,7 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(self.FP, self.TN + self.FP)
 
     def TNR(self):
-        """True Negative Rate
+        """True Negative Rate (Specificity)
 
         Synonyms: specificity
         """
@@ -840,7 +862,12 @@ class ConfusionMatrix2(ContingencyTable):
     def DOR(self):
         """Diagnostics odds ratio
 
-        Equal to PLL / NLL
+        Defined as
+
+        .. math::
+
+            DOR = \\frac{PLL}{NLL}
+
         """
         return _div(self.TP * self.TN, self.FP * self.FN)
 
@@ -858,7 +885,7 @@ class ConfusionMatrix2(ContingencyTable):
         return harmonic_mean_weighted(self.precision(), self.recall(), beta ** 2)
 
     def dice_coeff(self):
-        """Dice similarity coefficient (Nei-Li coefficient)
+        """Dice similarity (Nei-Li coefficient)
 
         This is the same as F1-score, but calculated slightly differently here.
         Note that Dice can be zero if total number of positives is zero, but
@@ -874,7 +901,7 @@ class ConfusionMatrix2(ContingencyTable):
     def rogers_tanimoto_coeff(self):
         """Rogers-Tanimoto similarity coefficient
 
-        Like Gower-Legendre but upweights 'b + c'
+        Like Gower-Legendre but upweights :math:`b + c`
 
         See Also
         --------
@@ -886,7 +913,7 @@ class ConfusionMatrix2(ContingencyTable):
     def gower_legendre_coeff(self):
         """Gower-Legendre similarity coefficient
 
-        Like Rogers-Tanimoto but downweights 'b + c'
+        Like Rogers-Tanimoto but downweights :math:`b + c`
 
         See Also
         --------
@@ -911,7 +938,10 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(self.TP, self.TP + self.FP + self.FN)
 
     def ochiai_coeff(self):
-        """Ochiai similarity coefficient (Fowlkes-Mallows, Cosine similarity)
+        """Ochiai similarity coefficient (Fowlkes-Mallows)
+
+        Gives cosine similarity for a 2x2 table. Also known as Fowlkes-Mallows
+        Index in clustering evaluation.
 
         This similarity index has an interpretation that it is the geometric
         mean of the conditional probability of an element (in the case of
@@ -935,15 +965,15 @@ class ConfusionMatrix2(ContingencyTable):
     def sokal_sneath_coeff(self):
         """Sokal and Sneath similarity index
 
-        In a 2x2 matrix,
+        In a 2x2 matrix
 
-        ::
+        .. math::
 
-            a b
-            c d,
+            \\begin{matrix} a & b \\\\ c & d \\end{matrix}
 
-        Dice places more weight on 'a' component, Jaccard places equal weight on
-        'a' and 'b + c', while Sokal and Sneath places more weight on 'b + c'.
+        Dice places more weight on :math:`a` component, Jaccard places equal
+        weight on :math:`a` and :math:`b + c`, while Sokal and Sneath places
+        more weight on :math:`b + c`.
 
         See Also
         --------
@@ -958,14 +988,20 @@ class ConfusionMatrix2(ContingencyTable):
         In interrater agreement studies, prevalence is high when the proportion
         of agreements on the positive classification differs from that of the
         negative classification.  Example of a confusion matrix with high
-        prevalence::
+        prevalence:
 
-            3   27
-            28  132
+        .. math::
+
+            \\begin{matrix} 3 & 27 \\\\ 28 & 132 \\end{matrix}
 
         In the example given, both raters agree that there are very few positive
         examples relative to the number of negatives. In other word, the
         negative rating is very prevalent.
+
+        See Also
+        --------
+
+        bias_index
         """
         return _div(abs(self.TP - self.TN), self.grand_total)
 
@@ -981,16 +1017,22 @@ class ConfusionMatrix2(ContingencyTable):
 
         In interrater agreement studies, bias is the extent to which the raters
         disagree on the positive-negative ratio of the binary variable studied.
-        Example of a confusion matrix with high bias::
+        Example of a confusion matrix with high bias:
 
-            17  14
-            78  81
+        .. math::
 
-        Note that rater whose judgment is represented by rows (A) believes
-        there are a lot more negative examples than positive ones while the
+            \\begin{matrix} 17 & 14 \\\\ 78 & 81 \\end{matrix}
+
+        Note that the rater whose judgment is represented by rows (A) believes
+        there are a lot more negative examples than positive ones, while the
         rater whose judgment is represented by columns (B) thinks the number of
         positives is roughly equal to the number of negatives. In other words,
         the rater A appears to be negatively biased.
+
+        See Also
+        --------
+
+        prevalence_index
         """
         return _div(abs(self.FN - self.FP), self.grand_total)
 
@@ -1001,10 +1043,12 @@ class ConfusionMatrix2(ContingencyTable):
         and also used in meteorology under the name "True Skill Score" [2]_. It
         can be thought of as recall corrected for chance.
 
-        Alternative formulations::
+        Alternative formulations:
 
-            Informedness = Sensitivity + Specificity - 1.0
-                         = TPR - FPR
+        .. math::
+
+            Informedness &= Sensitivity + Specificity - 1.0 \\\\
+                         &= TPR - FPR
 
         Synonyms: Youden's J, True Skill Score, Hannssen-Kuiper Score,
         Attributable Risk, DeltaP.
@@ -1035,10 +1079,12 @@ class ConfusionMatrix2(ContingencyTable):
         Complement to informednes. It can be thought of as precision corrected
         for chance.
 
-        Alternative formulation::
+        Alternative formulation:
 
-            Markedness = PPV + NPV - 1.0
-                       = PPV - FOR
+        .. math::
+
+            Markedness &= PPV + NPV - 1.0 \\\\
+                       &= PPV - FOR
 
         Synonyms: DeltaP′
 
@@ -1052,7 +1098,7 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(self.covar(), p2 * q2)
 
     def kappa0(self):
-        """One-sided component of Kappa, Matthews, and Loevinger indices
+        """One-sided component of ``kappa`` and MCC
 
         Roughly corresponds to precision
         """
@@ -1061,7 +1107,7 @@ class ConfusionMatrix2(ContingencyTable):
         return _div(self.covar(), p2 * q1)
 
     def kappa1(self):
-        """One-sided component of Kappa, Matthews, and Loevinger indices
+        """One-sided component of ``kappa`` and MCC
 
         Roughly corresponds to recall
         """
@@ -1119,31 +1165,34 @@ class ConfusionMatrix2(ContingencyTable):
 
         Kappa can be derived by correcting Accuracy (Simple Matching
         Coefficient, Rand Index) for chance. Tbe general formula for chance
-        correction of an association measure M is::
+        correction of an association measure :math:`M` is:
 
-                      M - E(M)
-            M_adj = ------------ ,
-                    M_max - E(M)
+        .. math::
 
-        where M_max is the maximum value a measure M can achieve, and E(M) is
-        the expected value of M under statistical independence given fixed table
-        margins.
+            M_{adj} = \\frac{M - E(M)}{M_{max} - E(M)},
+
+        where :math:`M_{max}` is the maximum value a measure :math:`M` can
+        achieve, and :math:`E(M)` is the expected value of :math:`M` under
+        statistical independence given fixed table margins.
 
         Kappa can be decomposed into a pair of components (regression
-        coefficients for a problem and its dual), of which it is a harmonic
-        mean::
+        coefficients), :math:`k_1` (recall-like) and :math:`k_0`
+        (precision-like), of which it is a harmonic mean:
 
-            k1 = cov / (p1 * q2)       # recall-like
-            k0 = cov / (p2 * q1)       # precision-like
+        .. math::
+
+            k_1 = \\frac{cov}{p_1 q_2},
+
+            k_0 = \\frac{cov}{p_2 q_1}.
 
         It is interesting to note that if one takes a geometric mean of the
         above two components, one obtains Matthews' Correlation Coefficient.
         The latter is also obtained from a geometric mean of informedness and
-        markedness (which are similar to, but not the same, as k1 and k0).
-        Unlike informedness and markedness, k0 and k1 don't have a lower bound.
-        For that reason, when characterizing one-way dependence in a 2x2
-        confusion matrix, it is arguably better to use use informedness and
-        markedness.
+        markedness (which are similar to, but not the same, as :math:`k_1` and
+        :math:`k_0`).  Unlike informedness and markedness, :math:`k_1` and
+        :math:`k_0` don't have a lower bound.  For that reason, when
+        characterizing one-way dependence in a 2x2 confusion matrix, it is
+        arguably better to use use informedness and markedness.
 
         Synonyms: Adjusted Rand Index, Heidke Skill Score
 
@@ -1196,9 +1245,9 @@ class ConfusionMatrix2(ContingencyTable):
             return _div(2 * self.covar(), p1 * q2 + p2 * q1)
 
     def mp_corr(self):
-        """Maxwell & Pilliner's chance-corrected association index
+        """Maxwell & Pilliner's association index
 
-        Another covariance-based association index.
+        Another covariance-based association index corrected for chance.
         """
         p1, q1 = self.row_totals.values()
         p2, q2 = self.col_totals.values()
@@ -1244,7 +1293,7 @@ class ConfusionMatrix2(ContingencyTable):
             return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
 
     def mi_corr1(self):
-        """One-sided regression coefficient based on mutual information
+        """One-sided component of ``mi_corr``
 
         Roughly equivalent to informedness
         """
@@ -1252,7 +1301,7 @@ class ConfusionMatrix2(ContingencyTable):
         return copysign(1, self.covar()) * sqrt(h)
 
     def mi_corr0(self):
-        """One-sided regression coefficient based on mutual information
+        """One-sided component of ``mi_corr``
 
         Roughly equivalent to markedness
         """
@@ -1260,7 +1309,7 @@ class ConfusionMatrix2(ContingencyTable):
         return copysign(1, self.covar()) * sqrt(c)
 
     def mi_corr(self):
-        """Two-sided correlation coefficient based on mutual information
+        """Mutual information-based correlation
 
         The coefficient decomposes into regression coefficients defined
         according to fixed-margin tables. The ``mi_corr1`` coefficient, for
@@ -1274,20 +1323,20 @@ class ConfusionMatrix2(ContingencyTable):
         return copysign(1, self.covar()) * sqrt(rsquare)
 
     def yule_q(self):
-        """Yule's Q (index of association)
+        """Yule's Q (asociation index)
 
-        this index relates to the D odds ratio::
+        this index relates to the D odds ratio:
 
-                   DOR - 1
-           Q  =    ------- .
-                   DOR + 1
+        .. math::
+
+            Q = \\frac{DOR - 1}{DOR + 1}.
 
         """
         a, c, d, b = self.to_ccw()
         return _div(self.covar(), a * d + b * c)
 
     def yule_y(self):
-        """Yule's Y (Colligation Coefficient)
+        """Yule's Y (colligation coefficient)
 
         The Y metric was used to produce a new association metric by adjusting
         for entropy in [1]_.
@@ -1308,7 +1357,7 @@ class ConfusionMatrix2(ContingencyTable):
                     sqrt(ad) + sqrt(bc))
 
     def covar(self):
-        """Determinant of a 2x2 matrix
+        """Covariance (determinant of a 2x2 matrix)
         """
         return self.TP * self.TN - self.FP * self.FN
 
@@ -1358,7 +1407,10 @@ def homogeneity_completeness_v_measure(labels_true, labels_pred):
 
 
 def adjusted_rand_score(labels_true, labels_pred):
-    """Memory-efficient replacement for equivalently named Scikit-Learn function
+    """Rand score (accuracy) corrected for chance
+
+    This is a memory-efficient replacement for the equivalently named
+    Scikit-Learn function
 
     In a supplement to [1]_, the following example is given::
 
@@ -1387,16 +1439,16 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
     This is a memory-efficient replacement for the equivalently named
     Scikit-Learn function.
 
-    Perfect labelings are both homogeneous and complete, hence have
-    score 1.0::
+    Perfect labelings are both homogeneous and complete, hence AMI has the
+    perfect score of one::
 
         >>> adjusted_mutual_info_score([0, 0, 1, 1], [0, 0, 1, 1])
         1.0
         >>> adjusted_mutual_info_score([0, 0, 1, 1], [1, 1, 0, 0])
         1.0
 
-    If classes members are completely split across different clusters,
-    the assignment is totally in-complete, hence the AMI is 0.0::
+    If classes members are completely split across different clusters, the
+    assignment is utterly incomplete, hence AMI equals zero::
 
         >>> adjusted_mutual_info_score([0, 0, 0, 0], [0, 1, 2, 3])
         0.0
