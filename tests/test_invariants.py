@@ -77,16 +77,17 @@ def test_2x2_invariants():
 
         # informedness
         actual_info = cm.informedness()
-        expected_info_1 = cm.sensitivity() + cm.specificity() - 1.0
+        expected_info_1 = cm.TPR() + cm.TNR() - 1.0
         expected_info_2 = cm.TPR() - cm.FPR()
         check_with_nans(actual_info, expected_info_1, 4, ensure_nans=False)
         check_with_nans(actual_info, expected_info_2, 4, ensure_nans=False)
 
         # markedness
         actual_mark = cm.markedness()
-        expected_mark = cm.PPV() + cm.NPV() - 1.0
-        check_with_nans(actual_mark, expected_mark, 4, ensure_nans=False,
-                        msg="Markedness must be equal to expected")
+        expected_mark_1 = cm.PPV() + cm.NPV() - 1.0
+        expected_mark_2 = cm.PPV() - cm.FOR()
+        check_with_nans(actual_mark, expected_mark_1, 4, ensure_nans=False)
+        check_with_nans(actual_mark, expected_mark_2, 4, ensure_nans=False)
 
         # matthews corr coeff
         actual_mcc = cm.matthews_corr()
