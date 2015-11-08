@@ -1009,6 +1009,11 @@ class ConfusionMatrix2(ContingencyTable):
         Synonyms: Youden's J, True Skill Score, Hannssen-Kuiper Score,
         Attributable Risk, DeltaP.
 
+        See Also
+        --------
+
+        markedness
+
         References
         ----------
 
@@ -1033,8 +1038,15 @@ class ConfusionMatrix2(ContingencyTable):
         Alternative formulation::
 
             Markedness = PPV + NPV - 1.0
+                       = PPV - FOR
 
         Synonyms: DeltaP′
+
+        See Also
+        --------
+
+        informedness
+
         """
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)

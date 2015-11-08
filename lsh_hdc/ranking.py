@@ -476,9 +476,14 @@ class RocCurve(object):
         return tpr - fpr
 
     def max_informedness(self):
-        """Calculates maximum value of Informedness on a ROC curve
+        """Calculates maximum value of Informedness (TPR - FPR) on a ROC curve
 
-        This is also known as Youden's J [1]_
+        A diagram of what this measure looks like is shown in [1]_. Note that a
+        dual measure could be defined using markedness, where the delta
+        measured would be that of PPV and FOR (this would require constructing
+        a dual to standard ROC as well). Also note the correspondence between
+        the definitions of this measure and of Kolmogorov-Smirnov's supremum
+        statistic.
 
         References
         ----------
