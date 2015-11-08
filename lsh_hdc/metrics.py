@@ -30,10 +30,12 @@ be represented as rows and columns in a table.  Roughly adhering to the
 terminology proposed in [1]_, we distinguish four types of experimental design
 all involving contingency tables.
 
-    * Under Model O, sampling is entirely random. Columns, rows, and the grand total are variable.
-    * Under Model I, random sampling occurs both row- and column-wise, but the grand total is fixed.
-    * Under Model II, one side (either row or column totals) is fixed.
-    * Under Model III, both rows and column totals are fixed.
+========= ===================================
+Model O   all margins and totals are variable
+Model I   only the grand total is fixed
+Model II  one margin (either row or column totals) is fixed
+Model III both margins are fixed
+========= ===================================
 
 Model O is rarely employed in practice because researchers almost always have
 some rough total number of samples in mind that they would like to measure
@@ -283,10 +285,10 @@ class ContingencyTable(TableOfCounts):
         Because of the dual property, in a symmetric matrix, all three scores
         are the same.
 
-        This method replaces the equivalent function in Scikit-Learn known as
-        `homogeneity_completeness_v_measure` (the Scikit-Learn version takes up
-        :math:`O(n^2)` space because it stores data in a dense NumPy array) while the
-        given version is sub-quadratic because of sparse underlying storage.
+        This method replaces ``homogeneity_completeness_v_measure`` method in
+        Scikit-Learn.  The Scikit-Learn version takes up :math:`O(n^2)` space
+        because it stores data in a dense NumPy array, while the given version
+        is sub-quadratic because of sparse underlying storage.
 
         Note that the entropy variables H in the code below are improperly
         defined because they ought to be divided by N (the grand total for the
@@ -546,10 +548,12 @@ class ClusteringMetrics(ContingencyTable):
 
         Given two partitionings A and B and a co-occurrence matrix of point pairs,
 
-            * TP - count of pairs found in the same partition in both A and B
-            * FP - count of pairs found in the same partition in A but not in B
-            * FN - count of pairs found in the same partition in B but not in A
-            * TN - count of pairs in different partitions in both A and B
+        == =============================================================
+        TP count of pairs found in the same partition in both A and B
+        FP count of pairs found in the same partition in A but not in B
+        FN count of pairs found in the same partition in B but not in A
+        TN count of pairs in different partitions in both A and B
+        == =============================================================
 
         Note that although the resulting confusion matrix has the form of a
         correlation table for two binary variables, it is not symmetric if the
