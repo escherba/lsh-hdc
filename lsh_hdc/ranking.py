@@ -94,7 +94,7 @@ References
 
 import warnings
 import numpy as np
-from itertools import izip
+from itertools import izip, chain
 from operator import itemgetter
 from sklearn.metrics.ranking import auc, roc_curve
 from pymaptools.iter import aggregate_tuples
@@ -401,8 +401,20 @@ class RocCurve(object):
             plt.close(fig)
 
     @classmethod
+    def from_scores(cls, scores_neg, scores_pos):
+        """Instantiate given scores of two ground truth classes
+
+        The score arrays don't have to be the same length.
+        """
+
+        scores_pos = ((1, x) for x in scores_pos)
+        scores_neg = ((0, x) for x in scores_neg)
+        all_scores = zip(*chain(scores_neg, scores_pos)) or ([], [])
+        return cls.from_labels(*all_scores)
+
+    @classmethod
     def from_labels(cls, labels_true, y_score, is_class_pos=num2bool):
-        """Instantiates class assuming binary labeling of {0, 1}
+        """Instantiate assuming binary labeling of {0, 1}
 
         labels_true : array, shape = [n_samples]
             Class labels. If binary, 'is_class_pos' is optional
