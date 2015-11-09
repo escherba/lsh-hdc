@@ -3,7 +3,7 @@ import os
 import warnings
 import random
 from operator import itemgetter
-from itertools import product, izip, chain, imap
+from itertools import product, izip, imap
 from pymaptools.iter import izip_with_cycles, isiterable
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
 from lsh_hdc.ranking import auc
@@ -247,11 +247,11 @@ class Grid(object):
             if matches(mx):
                 return idx, mx
 
-    def compute(self, scores, score_dim=1, dtype=np.float16):
+    def compute(self, scores, ndim=1, dtype=np.float16):
         result = {}
         if not isiterable(scores):
             scores = [scores]
-        for score, dim in izip_with_cycles(scores, score_dim):
+        for score, dim in izip_with_cycles(scores, ndim):
             result[score] = np.empty((self.n, dim), dtype=dtype)
         for idx, conf in self.iter_matrices():
             for score in scores:
@@ -259,7 +259,7 @@ class Grid(object):
         return result
 
     @staticmethod
-    def comp_cumul(h0, h1, col=0):
+    def comp_cumul(h0, h1, col=0, reverse=True):
 
         # convert to 1D
         if len(h0.shape) > 1:
@@ -276,13 +276,13 @@ class Grid(object):
         middle = hx.dtype.type(0)
 
         # sort in-place in reverse order
-        hx = sorted(imap(tuple, hx), key=itemgetter(0), reverse=True)
+        hx = sorted(imap(tuple, hx), key=itemgetter(0), reverse=reverse)
 
         # finally calculate cumulatives
         c0 = 0
         c1 = 0
-        alpha = []
-        power = []
+        alpha = [0.0]
+        power = [0.0]
         num0 = float(num0)
         num1 = float(num1)
         for _, label in hx:
@@ -290,30 +290,32 @@ class Grid(object):
                 c1 += 1
             else:
                 c0 += 1
-            power.append(c1 / num1)
             alpha.append(c0 / num0)
+            power.append(c1 / num1)
+        alpha.append(1.0)
+        power.append(1.0)
         return alpha, power
 
-    def compare(self, other, scores, score_dim=1, dtype=np.float16):
-        gr = self.compute(scores, score_dim=score_dim, dtype=dtype)
-        hr = other.compute(scores, score_dim=score_dim, dtype=dtype)
+    def compare(self, other, scores, ndim=1, dtype=np.float16):
+        gr = self.compute(scores, ndim=ndim, dtype=dtype)
+        hr = other.compute(scores, ndim=ndim, dtype=dtype)
         # make some histograms
         from matplotlib import pyplot as plt
         from palettable import colorbrewer
         colors = colorbrewer.get_map('Set1', 'qualitative', 9).mpl_colors
 
-        scores0_all = [gr[scores]] if score_dim == 1 else gr[scores].T
-        scores1_all = [hr[scores]] if score_dim == 1 else hr[scores].T
+        scores0_all = [gr[scores]] if ndim == 1 else gr[scores].T
+        scores1_all = [hr[scores]] if ndim == 1 else hr[scores].T
         for idx, (scores0, scores1) in enumerate(izip(scores0_all, scores1_all)):
-            alpha, power = self.comp_cumul(scores0, scores1)
-            auc_score = auc(alpha, power)
+            alpha0, power0 = self.comp_cumul(scores0, scores1)
+            auc_score0 = auc(alpha0, power0)
             hmin = min(np.min(scores0), np.min(scores1))
             hmax = max(np.max(scores0), np.max(scores1))
             bins = np.linspace(hmin, hmax, 50)
             plt.hist(scores0, bins, alpha=0.5, label='0', color=colors[0], edgecolor="none")
             plt.hist(scores1, bins, alpha=0.5, label='1', color=colors[1], edgecolor="none")
             plt.legend(loc='upper right')
-            plt.title("%s-%d: AUC=%.4f" % (scores, idx, auc_score))
+            plt.title("%s-%d: AUC=%.4f" % (scores, idx, auc_score0))
             plt.show()
 
     def corrplot(self, compute_result, save_to):

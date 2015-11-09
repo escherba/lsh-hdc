@@ -713,7 +713,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def PPV(self):
         """Positive Predictive Value (Precision)
 
-        Synonyms: precision, frequency of hits, post agreement, success ratio
+        Synonyms: precision, frequency of hits, post agreement, success ratio,
+        correct alarm ratio
         """
         return _div(self.TP, self.TP + self.FP)
 
@@ -763,7 +764,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def FOR(self):
         """False omission rate
 
-        Synonyms: detection failure ratio
+        Synonyms: detection failure ratio, miss ratio
         """
         return _div(self.FN, self.TN + self.FN)
 
@@ -960,18 +961,25 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return _div(abs(self.FN - self.FP), self.grand_total)
 
     def informedness(self):
-        """Informedness
+        """Informedness (recall corrected for chance)
 
-        This measure was first proposed for evaluating medical diagnostics
-        tests in [1]_, and also used in meteorology under the name "True Skill
-        Score" [2]_. It can be thought of as recall corrected for chance.
-
-        Alternative formulations:
+        Complement to markedness. Can be thought of as recall corrected for
+        chance. Alternative formulations:
 
         .. math::
 
             Informedness &= Sensitivity + Specificity - 1.0 \\\\
                          &= TPR - FPR
+
+        In the case of ranked predictions, TPR can be plotted on the y-axis
+        with FPR on the x-axis. The resulting plot is known as Receiver
+        Operating Characteristic (ROC) curve. The delta between a point on the
+        ROC curve and the diagonal is equal to the value of informedness at the
+        given FPR threshold.
+
+        This measure was first proposed for evaluating medical diagnostics
+        tests in [1]_, and was also used in meteorology under the name "True
+        Skill Score" [2]_.
 
         Synonyms: Youden's J, True Skill Score, Hannssen-Kuiper Score,
         Attributable Risk, DeltaP.
@@ -997,17 +1005,21 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return _div(self.covar(), p1 * q1)
 
     def markedness(self):
-        """Markedness (Precision corrected for chance)
+        """Markedness (precision corrected for chance)
 
-        Complement to informedness. It can be thought of as precision corrected
-        for chance.
-
-        Alternative formulation:
+        A complement to informedness. Can be thought of as precision corrected
+        for chance. Alternative formulations:
 
         .. math::
 
             Markedness &= PPV + NPV - 1.0 \\\\
                        &= PPV - FOR
+
+        In the case of ranked predictions, PPV can be plotted on the y-axis
+        with FOR on the x-axis. The resulting plot is known as Relative
+        Operating Level (ROL) curve [1]_. The delta between a point on the ROL
+        curve and the diagonal is equal to the value of markedness at the given
+        FOR threshold.
 
         Synonyms: DeltaP′
 
@@ -1016,6 +1028,15 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         informedness
 
+        References
+        ----------
+
+        .. [1] `Mason, S. J., & Graham, N. E. (2002). Areas beneath the
+               relative operating characteristics (ROC) and relative
+               operating levels (ROL) curves: Statistical significance
+               and interpretation. Quarterly Journal of the Royal
+               Meteorological Society, 128(584), 2145-2166.
+               <https://doi.org/10.1256/003590002320603584>`_
         """
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
