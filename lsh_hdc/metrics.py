@@ -963,7 +963,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def informedness(self):
         """Informedness (recall corrected for chance)
 
-        Complement to markedness. Can be thought of as recall corrected for
+        A complement to markedness. Can be thought of as recall corrected for
         chance. Alternative formulations:
 
         .. math::
@@ -973,13 +973,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         In the case of ranked predictions, TPR can be plotted on the y-axis
         with FPR on the x-axis. The resulting plot is known as Receiver
-        Operating Characteristic (ROC) curve. The delta between a point on the
-        ROC curve and the diagonal is equal to the value of informedness at the
-        given FPR threshold.
+        Operating Characteristic (ROC) curve [1]_. The delta between a point on
+        the ROC curve and the diagonal is equal to the value of informedness at
+        the given FPR threshold.
 
         This measure was first proposed for evaluating medical diagnostics
-        tests in [1]_, and was also used in meteorology under the name "True
-        Skill Score" [2]_.
+        tests in [2]_, and was also used in meteorology under the name "True
+        Skill Score" [3]_.
 
         Synonyms: Youden's J, True Skill Score, Hannssen-Kuiper Score,
         Attributable Risk, DeltaP.
@@ -992,11 +992,15 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         References
         ----------
 
-        .. [1] `Youden, W. J. (1950). Index for rating diagnostic tests. Cancer,
+        .. [1] `Fawcett, T. (2006). An introduction to ROC analysis. Pattern
+               recognition letters, 27(8), 861-874.
+               <http://doi.org/10.1016/j.patrec.2005.10.010>`_
+
+        .. [2] `Youden, W. J. (1950). Index for rating diagnostic tests. Cancer,
                3(1), 32-35.
                <http://www.ncbi.nlm.nih.gov/pubmed/15405679>`_
 
-        .. [2] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
+        .. [3] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
                summary measures of skill in rare event forecasting based on
                contingency tables. Weather and Forecasting, 5(4), 576-585.
                <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
