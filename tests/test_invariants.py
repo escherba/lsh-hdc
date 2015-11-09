@@ -132,16 +132,3 @@ def test_2x2_invariants():
         actual_ss2 = cm.sokal_sneath_coeff()
         check_with_nans(actual_ss2, expected_ss2, 6, ensure_nans=False,
                         msg="SS2 coeff must match expected value")
-
-        # association coefficients (3)
-        gl = cm.gower_legendre_coeff()
-        expected_acc = _div(gl, 2.0 - gl)
-        actual_acc = cm.accuracy()
-        check_with_nans(actual_acc, expected_acc, 6, ensure_nans=False,
-                        msg="Accuracy coeff must match expected value")
-
-        # association coefficients (4)
-        expected_rt = _div(actual_acc, 2.0 - actual_acc)
-        actual_rt = cm.rogers_tanimoto_coeff()
-        check_with_nans(actual_rt, expected_rt, 6, ensure_nans=False,
-                        msg="Rogers-Tanimoto coeff must match expected value")

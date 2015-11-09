@@ -478,12 +478,9 @@ class RocCurve(object):
     def max_informedness(self):
         """Maximum value of Informedness (TPR minus FPR) on a ROC curve
 
-        A diagram of what this measure looks like is shown in [1]_. Note that a
-        dual measure could be defined using markedness, where the delta
-        measured would be that of PPV and FOR (this would require constructing
-        a dual to standard ROC as well). Also note the correspondence between
-        the definitions of this measure and of Kolmogorov-Smirnov's supremum
-        statistic.
+        A diagram of what this measure looks like is shown in [1]_. Note a
+        correspondence between the definitions of this measure and that of
+        Kolmogorov-Smirnov's supremum statistic.
 
         References
         ----------

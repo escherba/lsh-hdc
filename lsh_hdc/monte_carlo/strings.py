@@ -354,7 +354,6 @@ PAIRWISE_METRICS = [
 
     # other
     'rand_index', 'accuracy',
-    'gower_legendre_coeff', 'rogers_tanimoto_coeff',
     'dice_coeff', 'jaccard_coeff', 'ochiai_coeff', 'sokal_sneath_coeff',
 ]
 

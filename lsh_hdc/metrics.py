@@ -822,30 +822,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a = self.TP
         return _div(2 * a, 2 * a + self.FN + self.FP)
 
-    def rogers_tanimoto_coeff(self):
-        """Rogers-Tanimoto similarity coefficient
-
-        Like Gower-Legendre but upweights :math:`b + c`
-
-        See Also
-        --------
-        gower_legendre_coeff
-        """
-        a_plus_d = self.TP + self.TN
-        return _div(a_plus_d, a_plus_d + 2 * (self.FN + self.FP))
-
-    def gower_legendre_coeff(self):
-        """Gower-Legendre similarity coefficient
-
-        Like Rogers-Tanimoto but downweights :math:`b + c`
-
-        See Also
-        --------
-        rogers_tanimoto_coeff
-        """
-        a_plus_d = self.TP + self.TN
-        return _div(a_plus_d, a_plus_d + 0.5 * (self.FN + self.FP))
-
     def jaccard_coeff(self):
         """Jaccard similarity coefficient
 
