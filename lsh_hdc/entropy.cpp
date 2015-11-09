@@ -2262,12 +2262,13 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
   Py_ssize_t __pyx_v_j;
   Py_ssize_t __pyx_v_nij;
   __pyx_t_5numpy_int64_t __pyx_v_N;
-  __pyx_t_5numpy_int64_t __pyx_v_N_1;
-  __pyx_t_5numpy_int64_t __pyx_v_N_3;
+  __pyx_t_5numpy_int64_t __pyx_v_N1;
+  __pyx_t_5numpy_int64_t __pyx_v_N3;
   __pyx_t_5numpy_int64_t __pyx_v_max_ab;
   __pyx_t_5numpy_int64_t __pyx_v_ai_1;
   __pyx_t_5numpy_int64_t __pyx_v_bj_1;
-  __pyx_t_5numpy_int64_t __pyx_v_N_ai_bj_1;
+  __pyx_t_5numpy_int64_t __pyx_v_N3_ai_1;
+  __pyx_t_5numpy_int64_t __pyx_v_N3_ai_bj_1;
   __pyx_t_5numpy_float64_t __pyx_v_emi;
   __pyx_t_5numpy_float64_t __pyx_v_log_ai;
   __pyx_t_5numpy_float64_t __pyx_v_log_ab_outer_ij;
@@ -2890,27 +2891,27 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
   /* "lsh_hdc/entropy.pyx":182
  *     # term3 is large, and involved many factorials. Calculate these in log
  *     # space to stop overflows.
- *     N_1 = N + 1LL             # <<<<<<<<<<<<<<
- *     N_3 = N + 3LL
+ *     N1 = N + 1LL             # <<<<<<<<<<<<<<
+ *     N3 = N + 3LL
  * 
  */
-  __pyx_v_N_1 = (__pyx_v_N + 1LL);
+  __pyx_v_N1 = (__pyx_v_N + 1LL);
 
   /* "lsh_hdc/entropy.pyx":183
  *     # space to stop overflows.
- *     N_1 = N + 1LL
- *     N_3 = N + 3LL             # <<<<<<<<<<<<<<
+ *     N1 = N + 1LL
+ *     N3 = N + 3LL             # <<<<<<<<<<<<<<
  * 
  *     a1 = a + 1LL
  */
-  __pyx_v_N_3 = (__pyx_v_N + 3LL);
+  __pyx_v_N3 = (__pyx_v_N + 3LL);
 
   /* "lsh_hdc/entropy.pyx":185
- *     N_3 = N + 3LL
+ *     N3 = N + 3LL
  * 
  *     a1 = a + 1LL             # <<<<<<<<<<<<<<
  *     b1 = b + 1LL
- *     gln_ai_Nai_N = gammaln(a1) + gammaln(N_1 - a) - gammaln(N_1)
+ *     gln_ai_Nai_N = gammaln(a1) + gammaln(N1 - a) - gammaln(N1)
  */
   __pyx_t_4 = PyNumber_Add(((PyObject *)__pyx_v_a), __pyx_int_1L); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 185; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
@@ -2940,8 +2941,8 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
  * 
  *     a1 = a + 1LL
  *     b1 = b + 1LL             # <<<<<<<<<<<<<<
- *     gln_ai_Nai_N = gammaln(a1) + gammaln(N_1 - a) - gammaln(N_1)
- *     gln_b_Nb = gammaln(b1) + gammaln(N_1 - b)
+ *     gln_ai_Nai_N = gammaln(a1) + gammaln(N1 - a) - gammaln(N1)
+ *     gln_b_Nb = gammaln(b1) + gammaln(N1 - b)
  */
   __pyx_t_4 = PyNumber_Add(((PyObject *)__pyx_v_b), __pyx_int_1L); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 186; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
@@ -2970,8 +2971,8 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
   /* "lsh_hdc/entropy.pyx":187
  *     a1 = a + 1LL
  *     b1 = b + 1LL
- *     gln_ai_Nai_N = gammaln(a1) + gammaln(N_1 - a) - gammaln(N_1)             # <<<<<<<<<<<<<<
- *     gln_b_Nb = gammaln(b1) + gammaln(N_1 - b)
+ *     gln_ai_Nai_N = gammaln(a1) + gammaln(N1 - a) - gammaln(N1)             # <<<<<<<<<<<<<<
+ *     gln_b_Nb = gammaln(b1) + gammaln(N1 - b)
  *     gln_nij = gammaln(nijs + 1.0)
  */
   __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_gammaln); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 187; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -3003,7 +3004,7 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_12 = __Pyx_GetModuleGlobalName(__pyx_n_s_gammaln); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 187; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_12);
-  __pyx_t_3 = __Pyx_PyInt_From_npy_int64(__pyx_v_N_1); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 187; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = __Pyx_PyInt_From_npy_int64(__pyx_v_N1); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 187; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_1 = PyNumber_Subtract(__pyx_t_3, ((PyObject *)__pyx_v_a)); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 187; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
@@ -3040,7 +3041,7 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_gammaln); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 187; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_18 = __Pyx_PyInt_From_npy_int64(__pyx_v_N_1); if (unlikely(!__pyx_t_18)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 187; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_18 = __Pyx_PyInt_From_npy_int64(__pyx_v_N1); if (unlikely(!__pyx_t_18)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 187; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_18);
   __pyx_t_1 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_4))) {
@@ -3096,8 +3097,8 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
 
   /* "lsh_hdc/entropy.pyx":188
  *     b1 = b + 1LL
- *     gln_ai_Nai_N = gammaln(a1) + gammaln(N_1 - a) - gammaln(N_1)
- *     gln_b_Nb = gammaln(b1) + gammaln(N_1 - b)             # <<<<<<<<<<<<<<
+ *     gln_ai_Nai_N = gammaln(a1) + gammaln(N1 - a) - gammaln(N1)
+ *     gln_b_Nb = gammaln(b1) + gammaln(N1 - b)             # <<<<<<<<<<<<<<
  *     gln_nij = gammaln(nijs + 1.0)
  * 
  */
@@ -3130,7 +3131,7 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_gammaln); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_12 = __Pyx_PyInt_From_npy_int64(__pyx_v_N_1); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_12 = __Pyx_PyInt_From_npy_int64(__pyx_v_N1); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_12);
   __pyx_t_18 = PyNumber_Subtract(__pyx_t_12, ((PyObject *)__pyx_v_b)); if (unlikely(!__pyx_t_18)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_18);
@@ -3188,8 +3189,8 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
   __pyx_t_3 = 0;
 
   /* "lsh_hdc/entropy.pyx":189
- *     gln_ai_Nai_N = gammaln(a1) + gammaln(N_1 - a) - gammaln(N_1)
- *     gln_b_Nb = gammaln(b1) + gammaln(N_1 - b)
+ *     gln_ai_Nai_N = gammaln(a1) + gammaln(N1 - a) - gammaln(N1)
+ *     gln_b_Nb = gammaln(b1) + gammaln(N1 - b)
  *     gln_nij = gammaln(nijs + 1.0)             # <<<<<<<<<<<<<<
  * 
  *     # emi itself is a summation over the various values.
@@ -3281,7 +3282,7 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
  *         ai_1 = a1[i]
  *         log_ai = log_a[i]             # <<<<<<<<<<<<<<
  *         gln_ai_Nai_Ni = gln_ai_Nai_N[i]
- *         for j in xrange(C):
+ *         N3_ai_1 = N3 - ai_1
  */
     __pyx_t_21 = __pyx_v_i;
     __pyx_v_log_ai = (*__Pyx_BufPtrCContig1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_log_a.rcbuffer->pybuffer.buf, __pyx_t_21, __pyx_pybuffernd_log_a.diminfo[0].strides));
@@ -3290,8 +3291,8 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
  *         ai_1 = a1[i]
  *         log_ai = log_a[i]
  *         gln_ai_Nai_Ni = gln_ai_Nai_N[i]             # <<<<<<<<<<<<<<
+ *         N3_ai_1 = N3 - ai_1
  *         for j in xrange(C):
- *             bj_1 = b1[j]
  */
     __pyx_t_22 = __pyx_v_i;
     __pyx_v_gln_ai_Nai_Ni = (*__Pyx_BufPtrCContig1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_gln_ai_Nai_N.rcbuffer->pybuffer.buf, __pyx_t_22, __pyx_pybuffernd_gln_ai_Nai_N.diminfo[0].strides));
@@ -3299,6 +3300,15 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
     /* "lsh_hdc/entropy.pyx":197
  *         log_ai = log_a[i]
  *         gln_ai_Nai_Ni = gln_ai_Nai_N[i]
+ *         N3_ai_1 = N3 - ai_1             # <<<<<<<<<<<<<<
+ *         for j in xrange(C):
+ *             bj_1 = b1[j]
+ */
+    __pyx_v_N3_ai_1 = (__pyx_v_N3 - __pyx_v_ai_1);
+
+    /* "lsh_hdc/entropy.pyx":198
+ *         gln_ai_Nai_Ni = gln_ai_Nai_N[i]
+ *         N3_ai_1 = N3 - ai_1
  *         for j in xrange(C):             # <<<<<<<<<<<<<<
  *             bj_1 = b1[j]
  *             log_ab_outer_ij = log_ai + log_b[j]
@@ -3307,8 +3317,8 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
     for (__pyx_t_24 = 0; __pyx_t_24 < __pyx_t_23; __pyx_t_24+=1) {
       __pyx_v_j = __pyx_t_24;
 
-      /* "lsh_hdc/entropy.pyx":198
- *         gln_ai_Nai_Ni = gln_ai_Nai_N[i]
+      /* "lsh_hdc/entropy.pyx":199
+ *         N3_ai_1 = N3 - ai_1
  *         for j in xrange(C):
  *             bj_1 = b1[j]             # <<<<<<<<<<<<<<
  *             log_ab_outer_ij = log_ai + log_b[j]
@@ -3317,39 +3327,39 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
       __pyx_t_25 = __pyx_v_j;
       __pyx_v_bj_1 = (*__Pyx_BufPtrCContig1d(__pyx_t_5numpy_int64_t *, __pyx_pybuffernd_b1.rcbuffer->pybuffer.buf, __pyx_t_25, __pyx_pybuffernd_b1.diminfo[0].strides));
 
-      /* "lsh_hdc/entropy.pyx":199
+      /* "lsh_hdc/entropy.pyx":200
  *         for j in xrange(C):
  *             bj_1 = b1[j]
  *             log_ab_outer_ij = log_ai + log_b[j]             # <<<<<<<<<<<<<<
  *             outer_sum = gln_ai_Nai_Ni + gln_b_Nb[j]
- *             N_ai_bj_1 = N_3 - ai_1 - bj_1
+ *             N3_ai_bj_1 = N3_ai_1 - bj_1
  */
       __pyx_t_26 = __pyx_v_j;
       __pyx_v_log_ab_outer_ij = (__pyx_v_log_ai + (*__Pyx_BufPtrCContig1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_log_b.rcbuffer->pybuffer.buf, __pyx_t_26, __pyx_pybuffernd_log_b.diminfo[0].strides)));
 
-      /* "lsh_hdc/entropy.pyx":200
+      /* "lsh_hdc/entropy.pyx":201
  *             bj_1 = b1[j]
  *             log_ab_outer_ij = log_ai + log_b[j]
  *             outer_sum = gln_ai_Nai_Ni + gln_b_Nb[j]             # <<<<<<<<<<<<<<
- *             N_ai_bj_1 = N_3 - ai_1 - bj_1
+ *             N3_ai_bj_1 = N3_ai_1 - bj_1
  * 
  */
       __pyx_t_27 = __pyx_v_j;
       __pyx_v_outer_sum = (__pyx_v_gln_ai_Nai_Ni + (*__Pyx_BufPtrCContig1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_gln_b_Nb.rcbuffer->pybuffer.buf, __pyx_t_27, __pyx_pybuffernd_gln_b_Nb.diminfo[0].strides)));
 
-      /* "lsh_hdc/entropy.pyx":201
+      /* "lsh_hdc/entropy.pyx":202
  *             log_ab_outer_ij = log_ai + log_b[j]
  *             outer_sum = gln_ai_Nai_Ni + gln_b_Nb[j]
- *             N_ai_bj_1 = N_3 - ai_1 - bj_1             # <<<<<<<<<<<<<<
+ *             N3_ai_bj_1 = N3_ai_1 - bj_1             # <<<<<<<<<<<<<<
  * 
- *             for nij in xrange(max(1LL, 1LL - N_ai_bj_1), min(ai_1, bj_1)):
+ *             for nij in xrange(max(1LL, 1LL - N3_ai_bj_1), min(ai_1, bj_1)):
  */
-      __pyx_v_N_ai_bj_1 = ((__pyx_v_N_3 - __pyx_v_ai_1) - __pyx_v_bj_1);
+      __pyx_v_N3_ai_bj_1 = (__pyx_v_N3_ai_1 - __pyx_v_bj_1);
 
-      /* "lsh_hdc/entropy.pyx":203
- *             N_ai_bj_1 = N_3 - ai_1 - bj_1
+      /* "lsh_hdc/entropy.pyx":204
+ *             N3_ai_bj_1 = N3_ai_1 - bj_1
  * 
- *             for nij in xrange(max(1LL, 1LL - N_ai_bj_1), min(ai_1, bj_1)):             # <<<<<<<<<<<<<<
+ *             for nij in xrange(max(1LL, 1LL - N3_ai_bj_1), min(ai_1, bj_1)):             # <<<<<<<<<<<<<<
  *                 # Numerators are positive, denominators are negative.
  *                 emi += (
  */
@@ -3361,7 +3371,7 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
         __pyx_t_15 = __pyx_t_14;
       }
       __pyx_t_11 = __pyx_t_15;
-      __pyx_t_15 = (1LL - __pyx_v_N_ai_bj_1);
+      __pyx_t_15 = (1LL - __pyx_v_N3_ai_bj_1);
       __pyx_t_28 = 1LL;
       if (((__pyx_t_15 > __pyx_t_28) != 0)) {
         __pyx_t_14 = __pyx_t_15;
@@ -3371,7 +3381,7 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
       for (__pyx_t_29 = __pyx_t_14; __pyx_t_29 < __pyx_t_11; __pyx_t_29+=1) {
         __pyx_v_nij = __pyx_t_29;
 
-        /* "lsh_hdc/entropy.pyx":207
+        /* "lsh_hdc/entropy.pyx":208
  *                 emi += (
  *                     <np.float64_t>nij                    # term1
  *                     * (log_Nnij[nij] - log_ab_outer_ij)  # term2             # <<<<<<<<<<<<<<
@@ -3380,7 +3390,7 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
  */
         __pyx_t_30 = __pyx_v_nij;
 
-        /* "lsh_hdc/entropy.pyx":209
+        /* "lsh_hdc/entropy.pyx":210
  *                     * (log_Nnij[nij] - log_ab_outer_ij)  # term2
  *                     * exp(outer_sum                      # term3
  *                         - gln_nij[nij]             # <<<<<<<<<<<<<<
@@ -3389,19 +3399,19 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_emi_from_margins(PyArr
  */
         __pyx_t_31 = __pyx_v_nij;
 
-        /* "lsh_hdc/entropy.pyx":205
- *             for nij in xrange(max(1LL, 1LL - N_ai_bj_1), min(ai_1, bj_1)):
+        /* "lsh_hdc/entropy.pyx":206
+ *             for nij in xrange(max(1LL, 1LL - N3_ai_bj_1), min(ai_1, bj_1)):
  *                 # Numerators are positive, denominators are negative.
  *                 emi += (             # <<<<<<<<<<<<<<
  *                     <np.float64_t>nij                    # term1
  *                     * (log_Nnij[nij] - log_ab_outer_ij)  # term2
  */
-        __pyx_v_emi = (__pyx_v_emi + ((((__pyx_t_5numpy_float64_t)__pyx_v_nij) * ((*__Pyx_BufPtrCContig1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_log_Nnij.rcbuffer->pybuffer.buf, __pyx_t_30, __pyx_pybuffernd_log_Nnij.diminfo[0].strides)) - __pyx_v_log_ab_outer_ij)) * exp(((((__pyx_v_outer_sum - (*__Pyx_BufPtrCContig1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_gln_nij.rcbuffer->pybuffer.buf, __pyx_t_31, __pyx_pybuffernd_gln_nij.diminfo[0].strides))) - sklearn_lgamma((__pyx_v_ai_1 - __pyx_v_nij))) - sklearn_lgamma((__pyx_v_bj_1 - __pyx_v_nij))) - sklearn_lgamma((__pyx_v_nij + __pyx_v_N_ai_bj_1))))));
+        __pyx_v_emi = (__pyx_v_emi + ((((__pyx_t_5numpy_float64_t)__pyx_v_nij) * ((*__Pyx_BufPtrCContig1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_log_Nnij.rcbuffer->pybuffer.buf, __pyx_t_30, __pyx_pybuffernd_log_Nnij.diminfo[0].strides)) - __pyx_v_log_ab_outer_ij)) * exp(((((__pyx_v_outer_sum - (*__Pyx_BufPtrCContig1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_gln_nij.rcbuffer->pybuffer.buf, __pyx_t_31, __pyx_pybuffernd_gln_nij.diminfo[0].strides))) - sklearn_lgamma((__pyx_v_ai_1 - __pyx_v_nij))) - sklearn_lgamma((__pyx_v_bj_1 - __pyx_v_nij))) - sklearn_lgamma((__pyx_v_nij + __pyx_v_N3_ai_bj_1))))));
       }
     }
   }
 
-  /* "lsh_hdc/entropy.pyx":215
+  /* "lsh_hdc/entropy.pyx":216
  *                           )
  *                 )
  *     return emi             # <<<<<<<<<<<<<<
