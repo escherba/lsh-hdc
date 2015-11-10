@@ -82,6 +82,58 @@ def test_roc_simulated():
         assert_almost_equal(auc_expected2, auc_actual, 3)
 
 
+def test_roc_precalculated_t2():
+    """test against precalculated data
+
+    The plot should look like Fig. 1 in Mason & Graham (2002)
+    """
+    t2 = [(1, 98.4),
+          (1, 95.2),
+          (1, 94.4),
+          (0, 92.8),
+          (1, 83.2),
+          (1, 81.6),
+          (1, 58.4),
+          (0, 57.6),
+          (0, 28.0),
+          (0, 13.6),
+          (1, 3.2),
+          (0, 2.4),
+          (0, 1.6),
+          (0, 0.8),
+          (0, 0.0)]
+    rc = RocCurve.from_labels(*zip(*t2))
+    auc = rc.auc_score()
+    assert_almost_equal(auc, 0.875, 3)
+
+
+def test_roc_precalculated_t4():
+    """test against precalculated data (with ties)
+
+    The plot should look like Fig. 2 in Mason & Graham (2002).
+    A naive implementation w/o regard for ties gives an incorrect
+    result in this situation.
+    """
+    t4 = [(1, 100.0),
+          (1, 100.0),
+          (1, 100.0),
+          (1, 100.0),
+          (1, 80.0),
+          (0, 80.0),
+          (0, 80.0),
+          (1, 60.0),
+          (0, 40.0),
+          (0, 20.0),
+          (1, 0.0),
+          (0, 0.0),
+          (0, 0.0),
+          (0, 0.0),
+          (0, 0.0)]
+    rc = RocCurve.from_labels(*zip(*t4))
+    auc = rc.auc_score()
+    assert_almost_equal(auc, 0.839, 3)
+
+
 def test_sample_empty():
     """Empty clusterings have AUL=0.0
     """

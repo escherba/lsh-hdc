@@ -2,11 +2,12 @@ import numpy as np
 import os
 import warnings
 import random
-from operator import itemgetter
-from itertools import product, izip, chain, imap
+from itertools import product, izip
+from collections import defaultdict
+from functools import partial
 from pymaptools.iter import izip_with_cycles, isiterable
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
-from lsh_hdc.ranking import auc
+from lsh_hdc.ranking import RocCurve
 from pymaptools.containers import labels_to_clusters, clusters_to_labels
 from pymaptools.sample import discrete_sample
 
@@ -247,74 +248,52 @@ class Grid(object):
             if matches(mx):
                 return idx, mx
 
-    def compute(self, scores, score_dim=1, dtype=np.float16):
-        result = {}
+    def compute(self, scores, dtype=np.float16):
+        result = defaultdict(partial(np.empty, (self.n,), dtype=dtype))
         if not isiterable(scores):
             scores = [scores]
-        for score, dim in izip_with_cycles(scores, score_dim):
-            result[score] = np.empty((self.n, dim), dtype=dtype)
         for idx, conf in self.iter_matrices():
             for score in scores:
-                result[score][idx, :] = conf.get_score(score)
+                score_arr = conf.get_score(score)
+                if isiterable(score_arr):
+                    for j, val in enumerate(score_arr):
+                        result["%s-%d" % (score, j)][idx] = val
+                else:
+                    result[score][idx] = score_arr
         return result
 
-    @staticmethod
-    def comp_cumul(h0, h1, col=0):
+    def compare(self, others, scores, dtype=np.float16, plot=False):
+        result0 = self.compute(scores, dtype=dtype)
 
-        # convert to 1D
-        if len(h0.shape) > 1:
-            h0 = h0[:, col]
-        if len(h1.shape) > 1:
-            h1 = h1[:, col]
+        if not isiterable(others):
+            others = [others]
 
-        num0 = len(h0)
-        num1 = len(h1)
+        result_grid = []
+        for other in others:
+            result1 = other.compute(scores, dtype=dtype)
 
-        h0 = np.vstack((h0, -np.ones(num0, dtype=h0.dtype))).T
-        h1 = np.vstack((h1, np.ones(num1, dtype=h0.dtype))).T
-        hx = np.vstack((h0, h1))
-        middle = hx.dtype.type(0)
+            if plot:
+                from matplotlib import pyplot as plt
+                from palettable import colorbrewer
+                colors = colorbrewer.get_map('Set1', 'qualitative', 9).mpl_colors
 
-        # sort in-place in reverse order
-        hx = sorted(imap(tuple, hx), key=itemgetter(0), reverse=True)
-
-        # finally calculate cumulatives
-        c0 = 0
-        c1 = 0
-        alpha = []
-        power = []
-        num0 = float(num0)
-        num1 = float(num1)
-        for _, label in hx:
-            if label > middle:
-                c1 += 1
-            else:
-                c0 += 1
-            power.append(c1 / num1)
-            alpha.append(c0 / num0)
-        return alpha, power
-
-    def compare(self, other, scores, score_dim=1, dtype=np.float16):
-        gr = self.compute(scores, score_dim=score_dim, dtype=dtype)
-        hr = other.compute(scores, score_dim=score_dim, dtype=dtype)
-        # make some histograms
-        from matplotlib import pyplot as plt
-        from palettable import colorbrewer
-        colors = colorbrewer.get_map('Set1', 'qualitative', 9).mpl_colors
-
-        scores0_all = [gr[scores]] if score_dim == 1 else gr[scores].T
-        scores1_all = [hr[scores]] if score_dim == 1 else hr[scores].T
-        for idx, (scores0, scores1) in enumerate(izip(scores0_all, scores1_all)):
-            alpha, power = self.comp_cumul(scores0, scores1)
-            auc_score = auc(alpha, power)
-            hmin = min(np.min(scores0), np.min(scores1))
-            hmax = max(np.max(scores0), np.max(scores1))
-            bins = np.linspace(hmin, hmax, 50)
-            plt.hist(scores0, bins, alpha=0.5, label='0', color=colors[0], edgecolor="none")
-            plt.hist(scores1, bins, alpha=0.5, label='1', color=colors[1], edgecolor="none")
-            plt.legend(loc='upper right')
-            plt.title("%s-%d: AUC=%.4f" % (scores, idx, auc_score))
-            plt.show()
+            result_row = {}
+            for score_name, scores0 in result0.iteritems():
+                scores1 = result1[score_name]
+                rc = RocCurve.from_scores(scores0, scores1)
+                auc_score = rc.auc_score()
+                result_row[score_name] = auc_score
+                if plot:
+                    hmin = min(np.min(scores0), np.min(scores1))
+                    hmax = max(np.max(scores0), np.max(scores1))
+                    bins = np.linspace(hmin, hmax, 50)
+                    plt.hist(scores0, bins, alpha=0.5, label='0', color=colors[0], edgecolor="none")
+                    plt.hist(scores1, bins, alpha=0.5, label='1', color=colors[1], edgecolor="none")
+                    plt.legend(loc='upper right')
+                    plt.title("%s: AUC=%.4f" % (score_name, auc_score))
+                    plt.show()
+            result_grid.append(result_row)
+        return result_grid
 
     def corrplot(self, compute_result, save_to):
         items = compute_result.items()

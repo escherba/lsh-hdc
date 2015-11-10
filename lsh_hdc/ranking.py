@@ -94,7 +94,7 @@ References
 
 import warnings
 import numpy as np
-from itertools import izip
+from itertools import izip, chain
 from operator import itemgetter
 from sklearn.metrics.ranking import auc, roc_curve
 from pymaptools.iter import aggregate_tuples
@@ -374,7 +374,7 @@ class RocCurve(object):
         self.pos_label = pos_label
         self.sample_weight = sample_weight
 
-    def plot(self, fill=True, save_to=None):  # pragma: no cover
+    def plot(self, fill=True, marker=None, save_to=None):  # pragma: no cover
         """Plot the ROC curve
         """
         from matplotlib import pyplot as plt
@@ -383,7 +383,7 @@ class RocCurve(object):
         xs, ys = self.fprs, self.tprs
 
         fig, ax = plt.subplots()
-        ax.plot(xs, ys, linestyle='-')
+        ax.plot(xs, ys, marker=marker, linestyle='-')
         if fill:
             ax.fill([0.0] + list(xs) + [1.0], [0.0] + list(ys) + [0.0], 'b', alpha=0.2)
         ax.plot([0.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
@@ -401,8 +401,20 @@ class RocCurve(object):
             plt.close(fig)
 
     @classmethod
+    def from_scores(cls, scores_neg, scores_pos):
+        """Instantiate given scores of two ground truth classes
+
+        The score arrays don't have to be the same length.
+        """
+
+        scores_pos = ((1, x) for x in scores_pos)
+        scores_neg = ((0, x) for x in scores_neg)
+        all_scores = zip(*chain(scores_neg, scores_pos)) or ([], [])
+        return cls.from_labels(*all_scores)
+
+    @classmethod
     def from_labels(cls, labels_true, y_score, is_class_pos=num2bool):
-        """Instantiates class assuming binary labeling of {0, 1}
+        """Instantiate assuming binary labeling of {0, 1}
 
         labels_true : array, shape = [n_samples]
             Class labels. If binary, 'is_class_pos' is optional
@@ -478,12 +490,9 @@ class RocCurve(object):
     def max_informedness(self):
         """Maximum value of Informedness (TPR minus FPR) on a ROC curve
 
-        A diagram of what this measure looks like is shown in [1]_. Note that a
-        dual measure could be defined using markedness, where the delta
-        measured would be that of PPV and FOR (this would require constructing
-        a dual to standard ROC as well). Also note the correspondence between
-        the definitions of this measure and of Kolmogorov-Smirnov's supremum
-        statistic.
+        A diagram of what this measure looks like is shown in [1]_. Note a
+        correspondence between the definitions of this measure and that of
+        Kolmogorov-Smirnov's supremum statistic.
 
         References
         ----------
