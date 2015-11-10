@@ -16,7 +16,7 @@ from collections import OrderedDict
 from itertools import izip, cycle
 from lsh_hdc import Shingler, HASH_FUNC_TABLE
 from lsh_hdc.cluster import MinHashCluster as Cluster
-from lsh_hdc.utils import random_string
+from lsh_hdc.utils import random_string, get_df_subset
 from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
     PathArgumentParser, write_json_line
 from pymaptools.iter import intersperse
@@ -489,7 +489,7 @@ def create_plots(args, df, metrics):
             fig.savefig(fig_path)
 
 
-def do_simul_clust_analy(args):
+def do_mapper(args):
     if args.seed is not None:
         random.seed(args.seed)
     namespace = serialize_args(args)
@@ -502,16 +502,11 @@ def do_simul_clust_analy(args):
     args.output.write("%s\n" % json.dumps(namespace))
 
 
-def create_df_subset(df, fields):
-    subset_fields = [field for field in fields if field in df]
-    return df[subset_fields]
-
-
-def do_summa(args):
+def do_reducer(args):
     import pandas as pd
     obj = ndjson2col(read_json_lines(args.input))
     df = pd.DataFrame.from_dict(obj)
-    subset = create_df_subset(
+    subset = get_df_subset(
         df, [args.group_by, args.x_axis, args.trial] + args.metrics)
     csv_path = os.path.join(args.output, "summary.csv")
     logging.info("Writing brief summary to %s", csv_path)
@@ -637,26 +632,26 @@ def parse_args(args=None):
         '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
     p_analy.set_defaults(func=do_analyze)
 
-    p_simul_clust_analy = subparsers.add_parser(
-        'simul_clust_analy', help='Perform multiple steps')
-    add_simul_args(p_simul_clust_analy)
-    add_clust_args(p_simul_clust_analy)
-    add_analy_args(p_simul_clust_analy)
-    p_simul_clust_analy.add_argument(
+    p_mapper = subparsers.add_parser(
+        'mapper', help='Perform multiple steps')
+    add_simul_args(p_mapper)
+    add_clust_args(p_mapper)
+    add_analy_args(p_mapper)
+    p_mapper.add_argument(
         '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
-    p_simul_clust_analy.set_defaults(func=do_simul_clust_analy)
+    p_mapper.set_defaults(func=do_mapper)
 
-    p_summa = subparsers.add_parser('summarize', help='summarize analysis results')
-    add_analy_args(p_summa)
-    p_summa.add_argument(
+    p_reducer = subparsers.add_parser('reducer', help='summarize analysis results')
+    add_analy_args(p_reducer)
+    p_reducer.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
-    p_summa.add_argument(
+    p_reducer.add_argument(
         '--fig_title', type=str, default=None, help='Title (for figures generated)')
-    p_summa.add_argument(
+    p_reducer.add_argument(
         '--fig_format', type=str, default='svg', help='Figure format')
-    p_summa.add_argument(
+    p_reducer.add_argument(
         '--output', type=str, metavar='DIR', help='Output directory')
-    p_summa.set_defaults(func=do_summa)
+    p_reducer.set_defaults(func=do_reducer)
 
     namespace = parser.parse_args()
     return namespace

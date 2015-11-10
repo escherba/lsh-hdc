@@ -4,14 +4,14 @@
 # Experiment-independent defaults
 METRICS := \
 	homogeneity completeness nmi_score \
-	adjusted_rand_score mi_corr1 mi_corr0 jaccard_coeff \
+	adjusted_rand_score jaccard_coeff \
 	informedness markedness \
 	aul_score roc_max_info roc_auc \
 	adjusted_mutual_info_score \
-	split_join_similarity mirkin_match_coeff talburt_wang_index \
+	split_join_similarity talburt_wang_index \
 	time_cpu \
 
-SIMUL_CLUST_ANALY_ARGS := --sim_size 100000 --metrics $(METRICS)
+SIMUL_CLUST_ANALY_ARGS := --sim_size 1000 --metrics $(METRICS)
 
 TRIAL_FIELD := seed
 TRIALS := $(shell seq 10 15)
@@ -46,9 +46,10 @@ TRIAL_RESULTS := $(shell \
 
 .INTERMEDIATE: $(TRIAL_RESULTS)
 
+# Mapper
 $(EXPERIMENT)/%.json: $(EXPERIMENT)/config.mk
 	@mkdir -p $(@D)
-	@$(PYTHON) -m lsh_hdc.monte_carlo.strings simul_clust_analy \
+	@$(PYTHON) -m lsh_hdc.monte_carlo.strings mapper \
 		$(SIMUL_CLUST_ANALY_ARGS) $(EXPERIMENT_ARGS) \
 		--$(GROUP_FIELD) $(word 1,$(subst -, ,$*)) \
 		--$(PARAM_FIELD) $(word 2,$(subst -, ,$*)) \
@@ -66,6 +67,8 @@ $(EXPERIMENT)/summary.ndjson: $(TRIAL_RESULTS)
 	@mkdir -p $(@D)
 	@cat $^ > $@
 
+# Reducer
+#
 # if a previous version of the target already exists,
 # archive the whole directory where the target lives.
 $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
@@ -78,7 +81,7 @@ $(EXPERIMENT)/summary.csv: $(EXPERIMENT)/summary.ndjson
 		` $(@D); \
 	fi
 	@echo "writing 'summary.csv' under $(@D)"
-	@$(PYTHON) -m lsh_hdc.monte_carlo.strings summarize \
+	@$(PYTHON) -m lsh_hdc.monte_carlo.strings reducer \
 		--metrics $(METRICS) \
 		--group_by $(GROUP_FIELD) \
 		--x_axis $(PARAM_FIELD) \
