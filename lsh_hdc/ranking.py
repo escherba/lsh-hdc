@@ -374,7 +374,7 @@ class RocCurve(object):
         self.pos_label = pos_label
         self.sample_weight = sample_weight
 
-    def plot(self, fill=True, save_to=None):  # pragma: no cover
+    def plot(self, fill=True, marker=None, save_to=None):  # pragma: no cover
         """Plot the ROC curve
         """
         from matplotlib import pyplot as plt
@@ -383,7 +383,7 @@ class RocCurve(object):
         xs, ys = self.fprs, self.tprs
 
         fig, ax = plt.subplots()
-        ax.plot(xs, ys, linestyle='-')
+        ax.plot(xs, ys, marker=marker, linestyle='-')
         if fill:
             ax.fill([0.0] + list(xs) + [1.0], [0.0] + list(ys) + [0.0], 'b', alpha=0.2)
         ax.plot([0.0, 1.0], [0.0, 1.0], linestyle='--', color='grey')
