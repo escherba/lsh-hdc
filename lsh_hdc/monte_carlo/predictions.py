@@ -3,6 +3,8 @@ import os
 import warnings
 import random
 from itertools import product, izip
+from collections import defaultdict
+from functools import partial
 from pymaptools.iter import izip_with_cycles, isiterable
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
 from lsh_hdc.ranking import RocCurve
@@ -246,28 +248,30 @@ class Grid(object):
             if matches(mx):
                 return idx, mx
 
-    def compute(self, scores, ndim=1, dtype=np.float16):
-        result = {}
+    def compute(self, scores, dtype=np.float16):
+        result = defaultdict(partial(np.empty, (self.n,), dtype=dtype))
         if not isiterable(scores):
             scores = [scores]
-        for score, dim in izip_with_cycles(scores, ndim):
-            result[score] = np.empty((self.n, dim), dtype=dtype)
         for idx, conf in self.iter_matrices():
             for score in scores:
-                result[score][idx, :] = conf.get_score(score)
+                score_arr = conf.get_score(score)
+                if isiterable(score_arr):
+                    for j, val in enumerate(score_arr):
+                        result["%s-%d" % (score, j)][idx] = val
+                else:
+                    result[score][idx] = score_arr
         return result
 
-    def compare(self, other, scores, ndim=1, dtype=np.float16):
-        gr = self.compute(scores, ndim=ndim, dtype=dtype)
-        hr = other.compute(scores, ndim=ndim, dtype=dtype)
-        # make some histograms
+    def compare(self, other, scores, dtype=np.float16):
+        result0 = self.compute(scores, dtype=dtype)
+        result1 = other.compute(scores, dtype=dtype)
+
         from matplotlib import pyplot as plt
         from palettable import colorbrewer
         colors = colorbrewer.get_map('Set1', 'qualitative', 9).mpl_colors
 
-        scores0_all = [gr[scores]] if ndim == 1 else gr[scores].T
-        scores1_all = [hr[scores]] if ndim == 1 else hr[scores].T
-        for idx, (scores0, scores1) in enumerate(izip(scores0_all, scores1_all)):
+        for score_name, scores0 in result0.iteritems():
+            scores1 = result1[score_name]
             rc = RocCurve.from_scores(scores0, scores1)
             auc_score = rc.auc_score()
             hmin = min(np.min(scores0), np.min(scores1))
@@ -276,7 +280,7 @@ class Grid(object):
             plt.hist(scores0, bins, alpha=0.5, label='0', color=colors[0], edgecolor="none")
             plt.hist(scores1, bins, alpha=0.5, label='1', color=colors[1], edgecolor="none")
             plt.legend(loc='upper right')
-            plt.title("%s-%d: AUC=%.4f" % (scores, idx, auc_score))
+            plt.title("%s: AUC=%.4f" % (score_name, auc_score))
             plt.show()
 
     def corrplot(self, compute_result, save_to):
