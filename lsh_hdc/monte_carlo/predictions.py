@@ -262,26 +262,38 @@ class Grid(object):
                     result[score][idx] = score_arr
         return result
 
-    def compare(self, other, scores, dtype=np.float16):
+    def compare(self, others, scores, dtype=np.float16, plot=False):
         result0 = self.compute(scores, dtype=dtype)
-        result1 = other.compute(scores, dtype=dtype)
 
-        from matplotlib import pyplot as plt
-        from palettable import colorbrewer
-        colors = colorbrewer.get_map('Set1', 'qualitative', 9).mpl_colors
+        if not isiterable(others):
+            others = [others]
 
-        for score_name, scores0 in result0.iteritems():
-            scores1 = result1[score_name]
-            rc = RocCurve.from_scores(scores0, scores1)
-            auc_score = rc.auc_score()
-            hmin = min(np.min(scores0), np.min(scores1))
-            hmax = max(np.max(scores0), np.max(scores1))
-            bins = np.linspace(hmin, hmax, 50)
-            plt.hist(scores0, bins, alpha=0.5, label='0', color=colors[0], edgecolor="none")
-            plt.hist(scores1, bins, alpha=0.5, label='1', color=colors[1], edgecolor="none")
-            plt.legend(loc='upper right')
-            plt.title("%s: AUC=%.4f" % (score_name, auc_score))
-            plt.show()
+        result_grid = []
+        for other in others:
+            result1 = other.compute(scores, dtype=dtype)
+
+            if plot:
+                from matplotlib import pyplot as plt
+                from palettable import colorbrewer
+                colors = colorbrewer.get_map('Set1', 'qualitative', 9).mpl_colors
+
+            result_row = {}
+            for score_name, scores0 in result0.iteritems():
+                scores1 = result1[score_name]
+                rc = RocCurve.from_scores(scores0, scores1)
+                auc_score = rc.auc_score()
+                result_row[score_name] = auc_score
+                if plot:
+                    hmin = min(np.min(scores0), np.min(scores1))
+                    hmax = max(np.max(scores0), np.max(scores1))
+                    bins = np.linspace(hmin, hmax, 50)
+                    plt.hist(scores0, bins, alpha=0.5, label='0', color=colors[0], edgecolor="none")
+                    plt.hist(scores1, bins, alpha=0.5, label='1', color=colors[1], edgecolor="none")
+                    plt.legend(loc='upper right')
+                    plt.title("%s: AUC=%.4f" % (score_name, auc_score))
+                    plt.show()
+            result_grid.append(result_row)
+        return result_grid
 
     def corrplot(self, compute_result, save_to):
         items = compute_result.items()
