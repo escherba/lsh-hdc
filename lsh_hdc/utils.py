@@ -10,7 +10,7 @@ from pymaptools.iter import isiterable
 def get_df_subset(df, fields):
     """Give a subset of a ``pandas.DataFrame`` instance
     """
-    subset_fields = [field for field in fields if field in df]
+    subset_fields = [field for field in set(fields) if field in df]
     return df[subset_fields]
 
 

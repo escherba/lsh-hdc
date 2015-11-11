@@ -1,4 +1,4 @@
-EXPERIMENT_ARGS := \
+EXP_MAPPER_ARGS := \
 	--double_negs 0 --join_negs 1 --cluster_size 20 \
 	--p_err 0.0 --pos_ratio 0.1
 
