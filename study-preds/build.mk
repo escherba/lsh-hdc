@@ -40,23 +40,27 @@ endef
 
 
 # Study definition
-METRICS := \
+COMPUTE_METRICS := \
 	entropy_metrics \
-	adjusted_rand_score jaccard_coeff \
+	adjusted_rand_score rand_index matthews_corr mi_corr mi_corr1 mi_corr0 ochiai_coeff dice_coeff jaccard_coeff \
 	informedness markedness \
 	adjusted_mutual_info_score \
-	split_join_similarity talburt_wang_index
+	split_join_similarity talburt_wang_index vi_similarity
 
-REDUCER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions reducer \
-	--metrics $(METRICS) \
-	--group_by $(GROUP_FIELD) \
-	--x_axis $(PARAM_FIELD) \
-	$(EXP_REDUCER_ARGS)
+PLOT_METRICS := entropy_metrics-0 entropy_metrics-1 entropy_metrics-2 \
+	mi_corr adjusted_mutual_info_score split_join_similarity talburt_wang_index \
+	informedness markedness
 
 MAPPER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions mapper \
 	--sim_size 10000 \
-	--metrics $(METRICS) \
+	--metrics $(COMPUTE_METRICS) \
 	$(EXP_MAPPER_ARGS)
+
+REDUCER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions reducer \
+	--metrics $(PLOT_METRICS) $(COMPUTE_METRICS) \
+	--group_by $(GROUP_FIELD) \
+	--x_axis $(PARAM_FIELD) \
+	$(EXP_REDUCER_ARGS)
 
 MAPPER_FIELDS := $(GROUP_FIELD) $(PARAM_FIELD)
 FIELD_PRODUCT := $(call prod2,$(GROUPS),$(PARAMS))

@@ -4,18 +4,19 @@ import warnings
 import random
 import sys
 import logging
-from itertools import product, izip
+from itertools import product, izip, chain, cycle
 from collections import defaultdict
 from functools import partial
-from pymaptools.iter import izip_with_cycles, isiterable
+from pymaptools.iter import izip_with_cycles, isiterable, take
 from pymaptools.containers import labels_to_clusters, clusters_to_labels
 from pymaptools.sample import discrete_sample
 from pymaptools.io import GzipFileType, PathArgumentParser, write_json_line, read_json_lines, ndjson2col
+from pymaptools.benchmark import PMTimer
 
 from lsh_hdc.monte_carlo import utils
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
 from lsh_hdc.ranking import RocCurve
-from lsh_hdc.utils import get_df_subset
+from sklearn.metrics.ranking import auc
 
 
 def parse_args(args=None):
@@ -38,6 +39,8 @@ def parse_args(args=None):
                           help='ratio of positives to population')
     p_mapper.add_argument('--sim_size', type=int, default=1000,
                           help='Simulation size')
+    p_mapper.add_argument('--nclusters', type=int, default=20,
+                          help='number of clusters to generate')
     p_mapper.add_argument('--sampling_warnings', type=int, default=0,
                           help='if true, show sampling warnings')
     p_mapper.add_argument('--output', type=GzipFileType('w'),
@@ -61,6 +64,8 @@ def parse_args(args=None):
     p_reducer.add_argument(
         '--output', type=str, metavar='DIR', help='Output directory')
     p_reducer.add_argument(
+        '--fig_title', type=str, default=None, help='Title (for figures generated)')
+    p_reducer.add_argument(
         '--legend_loc', type=str, default='lower left',
         help='legend location')
     p_reducer.set_defaults(func=do_reducer)
@@ -73,17 +78,21 @@ def do_mapper(args):
     h0 = Grid.with_sim_clusters(
         n=args.sim_size,
         p_err=args.h0_err,
+        nclusters=args.nclusters,
         population_size=args.population_size,
         with_warnings=args.sampling_warnings,
     )
     h1 = Grid.with_sim_clusters(
         n=args.sim_size,
         p_err=args.h1_err,
+        nclusters=args.nclusters,
         population_size=args.population_size,
         with_warnings=args.sampling_warnings,
     )
-    results = h0.compare(h1, args.metrics)
+    with PMTimer() as timer:
+        results = h0.compare(h1, args.metrics)
     for result in results:
+        result.update(timer.to_dict())
         result.update(utils.serialize_args(args))
         write_json_line(args.output, result)
 
@@ -94,15 +103,34 @@ def create_plots(args, df):
     from matplotlib.font_manager import FontProperties
 
     fontP = FontProperties()
-    fontP.set_size('small')
+    fontP.set_size('xx-small')
 
     groups = df.groupby([args.group_by])
+    plottable_metrics = [m for m in set(args.metrics) if m in df]
+    colors = take(len(plottable_metrics), cycle(chain(
+        colorbrewer.qualitative.Set2_8.mpl_colors,
+        colorbrewer.qualitative.Dark2_8.mpl_colors
+    )))
     for group_name, group in groups:
-        subset = get_df_subset(group, [args.x_axis] + args.metrics)
+
+        if args.fig_title is None:
+            fig_title = '%s=%s' % (args.group_by, group_name)
+        else:
+            fig_title = args.fig_title
+
+        # compute AUC scores
+        xs = group[args.x_axis]
+        aucs = []
+        for metric in plottable_metrics:
+            ys = group[metric]
+            aucs.append(auc(xs, ys))
+        ys = sorted(zip(aucs, plottable_metrics, colors), reverse=True)
+
         fig, ax = plt.subplots()
-        ax.set_color_cycle(colorbrewer.qualitative.Dark2_8.mpl_colors)
-        subset.plot(args.x_axis, ax=ax)
-        ax.legend(loc=args.legend_loc, prop=fontP)
+        group.plot(x=args.x_axis, y=list(zip(*ys)[1]), ax=ax,
+                   title=fig_title, color=zip(*ys)[2])
+        labels = [("%s (%.4f)" % (lbl, score)) for score, lbl, _ in ys]
+        ax.legend(labels=labels, loc=args.legend_loc, prop=fontP)
         fig.savefig(os.path.join(args.output, 'fig-%s.svg' % group_name))
 
 
