@@ -148,6 +148,7 @@ def create_plots(args, df):
         ax.set_ylim(0.4, 1.0)
         ax.legend(labels=list(zip(*ys)[3]), loc=args.legend_loc, prop=fontP)
         fig.savefig(os.path.join(args.output, 'fig-%s.svg' % group_name))
+        plt.close(fig)
 
 
 def do_reducer(args):

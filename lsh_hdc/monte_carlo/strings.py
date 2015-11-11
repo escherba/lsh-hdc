@@ -444,6 +444,7 @@ def create_plots(args, df, metrics):
             fig_path = os.path.join(args.output, fig_filename)
             ax.legend(prop=fontP, **LEGEND_METRIC_KWARGS.get(metric, {'loc': 'lower right'}))
             fig.savefig(fig_path)
+            plt.close(fig)
 
 
 def do_mapper(args):
