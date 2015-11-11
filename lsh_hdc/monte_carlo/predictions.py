@@ -97,6 +97,16 @@ def do_mapper(args):
         write_json_line(args.output, result)
 
 
+def auc_xscaled(xs, ys):
+    """AUC score scaled to fill x interval
+    """
+    xmin = min(xs)
+    xmax = max(xs)
+    denom = float(xmax - xmin)
+    xs_corr = [(x - xmin) / denom for x in xs]
+    return auc(xs_corr, ys)
+
+
 def create_plots(args, df):
     import matplotlib.pyplot as plt
     from palettable import colorbrewer
@@ -106,12 +116,15 @@ def create_plots(args, df):
     fontP.set_size('xx-small')
 
     groups = df.groupby([args.group_by])
-    plottable_metrics = [m for m in set(args.metrics) if m in df]
-    colors = take(len(plottable_metrics), cycle(chain(
+    metrics = list(set(args.metrics) & set(df.keys()))
+    colors = take(len(metrics), cycle(chain(
+        colorbrewer.qualitative.Dark2_8.mpl_colors,
         colorbrewer.qualitative.Set2_8.mpl_colors,
-        colorbrewer.qualitative.Dark2_8.mpl_colors
     )))
     for group_name, group in groups:
+
+        # always sort by X values
+        sorted_group = group.sort([args.x_axis])
 
         if args.fig_title is None:
             fig_title = '%s=%s' % (args.group_by, group_name)
@@ -119,19 +132,23 @@ def create_plots(args, df):
             fig_title = args.fig_title
 
         # compute AUC scores
-        xs = group[args.x_axis]
-        aucs = []
-        for metric in plottable_metrics:
-            ys = group[metric]
-            aucs.append(auc(xs, ys))
-        ys = sorted(zip(aucs, plottable_metrics, colors), reverse=True)
+        ys = []
+        for metric, color in zip(metrics, colors):
+            score = auc_xscaled(sorted_group[args.x_axis], sorted_group[metric])
+            label = "%s (%.4f)" % (metric, score)
+            ys.append((score, metric, color, label))
+        ys.sort(reverse=True)
 
+        # create plots
         fig, ax = plt.subplots()
-        group.plot(x=args.x_axis, y=list(zip(*ys)[1]), ax=ax,
-                   title=fig_title, color=zip(*ys)[2])
-        labels = [("%s (%.4f)" % (lbl, score)) for score, lbl, _ in ys]
-        ax.legend(labels=labels, loc=args.legend_loc, prop=fontP)
+        sorted_group.plot(
+            x=args.x_axis, y=list(zip(*ys)[1]), ax=ax,
+            title=fig_title, color=list(zip(*ys)[2]))
+        ax.set_xlim(min(sorted_group[args.x_axis]), max(sorted_group[args.x_axis]))
+        ax.set_ylim(0.4, 1.0)
+        ax.legend(labels=list(zip(*ys)[3]), loc=args.legend_loc, prop=fontP)
         fig.savefig(os.path.join(args.output, 'fig-%s.svg' % group_name))
+        plt.close(fig)
 
 
 def do_reducer(args):
