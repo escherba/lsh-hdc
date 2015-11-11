@@ -36,6 +36,8 @@ def parse_args(args=None):
                           help='population size')
     p_mapper.add_argument('--pos_ratio', type=float, default=0.2,
                           help='ratio of positives to population')
+    p_mapper.add_argument('--sim_size', type=int, default=1000,
+                          help='Simulation size')
     p_mapper.add_argument('--sampling_warnings', type=int, default=0,
                           help='if true, show sampling warnings')
     p_mapper.add_argument('--output', type=GzipFileType('w'),
@@ -69,11 +71,13 @@ def parse_args(args=None):
 
 def do_mapper(args):
     h0 = Grid.with_sim_clusters(
+        n=args.sim_size,
         p_err=args.h0_err,
         population_size=args.population_size,
         with_warnings=args.sampling_warnings,
     )
     h1 = Grid.with_sim_clusters(
+        n=args.sim_size,
         p_err=args.h1_err,
         population_size=args.population_size,
         with_warnings=args.sampling_warnings,
@@ -97,7 +101,7 @@ def create_plots(args, df):
         fig, ax = plt.subplots()
         subset.plot(args.x_axis, ax=ax)
         ax.legend(loc=args.legend_loc, prop=fontP)
-        fig.savefig(os.path.join(args.output, 'fig-%s.png' % group_name))
+        fig.savefig(os.path.join(args.output, 'fig-%s.svg' % group_name))
 
 
 def do_reducer(args):

@@ -52,6 +52,7 @@ REDUCER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions reducer \
 	$(EXP_REDUCER_ARGS)
 
 MAPPER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions mapper \
+	--sim_size 10000 \
 	--metrics $(METRICS) \
 	$(EXP_MAPPER_ARGS)
 
