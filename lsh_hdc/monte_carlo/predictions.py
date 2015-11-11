@@ -90,6 +90,7 @@ def do_mapper(args):
 
 def create_plots(args, df):
     import matplotlib.pyplot as plt
+    from palettable import colorbrewer
     from matplotlib.font_manager import FontProperties
 
     fontP = FontProperties()
@@ -99,6 +100,7 @@ def create_plots(args, df):
     for group_name, group in groups:
         subset = get_df_subset(group, [args.x_axis] + args.metrics)
         fig, ax = plt.subplots()
+        ax.set_color_cycle(colorbrewer.qualitative.Dark2_8.mpl_colors)
         subset.plot(args.x_axis, ax=ax)
         ax.legend(loc=args.legend_loc, prop=fontP)
         fig.savefig(os.path.join(args.output, 'fig-%s.svg' % group_name))

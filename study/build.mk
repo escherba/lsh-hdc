@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 # disable built-in rules
 .SUFFIXES:
 
