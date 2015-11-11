@@ -16,9 +16,10 @@ from collections import OrderedDict
 from itertools import izip, cycle
 from lsh_hdc import Shingler, HASH_FUNC_TABLE
 from lsh_hdc.cluster import MinHashCluster as Cluster
-from lsh_hdc.utils import random_string
+from lsh_hdc.utils import random_string, get_df_subset
 from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
     PathArgumentParser, write_json_line
+from lsh_hdc.monte_carlo import utils
 from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 from pymaptools.benchmark import PMTimer
@@ -310,61 +311,17 @@ def clusters_to_labels(cluster_iter, double_negs=False, join_negs=True):
     return labels_true, labels_pred
 
 
-def serialize_args(args):
-    namespace = dict(args.__dict__)
-    fields_to_delete = ["input", "output", "func", "logging"]
-    for field in fields_to_delete:
-        try:
-            del namespace[field]
-        except KeyError:
-            pass
-    return namespace
-
-
 def do_simulation(args):
     if args.seed is not None:
         random.seed(args.seed)
     data, stats = perform_simulation(args)
-    namespace = serialize_args(args)
+    namespace = utils.serialize_args(args)
     namespace.update(stats)
     output = args.output
     write_json_line(output, namespace)
     for i, seq in data:
         output.write("%s %s\n" % (i, seq))
 
-
-BENCHMARKS = ['time_cpu']
-
-# square of mutual entropy correlation coefficients (for RxC matrices)
-ENTROPY_METRICS = [
-    'homogeneity', 'completeness', 'nmi_score',
-]
-
-CONTINGENCY_METRICS = [
-    'adjusted_mutual_info_score', 'talburt_wang_index',
-    'split_join_similarity', 'mirkin_match_coeff'
-]
-
-PAIRWISE_METRICS = [
-    # correlation triples
-    'adjusted_rand_score', 'kappa1', 'kappa0',
-    'mi_corr', 'mi_corr1', 'mi_corr0',
-    'matthews_corr', 'informedness', 'markedness',
-    'fscore', 'precision', 'recall',
-
-    # other
-    'rand_index', 'accuracy',
-    'dice_coeff', 'jaccard_coeff', 'ochiai_coeff', 'sokal_sneath_coeff',
-]
-
-INCIDENCE_METRICS = PAIRWISE_METRICS + CONTINGENCY_METRICS + ENTROPY_METRICS
-
-ROC_METRICS = ['roc_max_info', 'roc_auc']
-LIFT_METRICS = ['aul_score']
-
-RANKING_METRICS = ROC_METRICS + LIFT_METRICS
-
-METRICS = RANKING_METRICS + INCIDENCE_METRICS + BENCHMARKS
 
 LEGEND_METRIC_KWARGS = {
     'time_wall': dict(loc='upper left'),
@@ -386,8 +343,8 @@ def append_scores(cm, pairs, metrics):
 def add_incidence_metrics(args, clusters, pairs):
     """Add metrics based on incidence matrix of classes and clusters
     """
-    args_metrics = METRICS
-    if set(INCIDENCE_METRICS) & set(args_metrics):
+    args_metrics = utils.METRICS
+    if set(utils.INCIDENCE_METRICS) & set(args_metrics):
 
         from lsh_hdc.metrics import ClusteringMetrics
         labels = clusters_to_labels(
@@ -397,28 +354,28 @@ def add_incidence_metrics(args, clusters, pairs):
         )
         cm = ClusteringMetrics.from_labels(*labels)
 
-        if set(ENTROPY_METRICS) & set(args_metrics):
-            pairs.extend(zip(ENTROPY_METRICS, cm.entropy_metrics()))
+        if set(utils.ENTROPY_METRICS) & set(args_metrics):
+            pairs.extend(zip(utils.ENTROPY_METRICS, cm.entropy_metrics()))
 
-        pairwise_metrics = set(PAIRWISE_METRICS) & set(args_metrics)
+        pairwise_metrics = set(utils.PAIRWISE_METRICS) & set(args_metrics)
         append_scores(cm, pairs, pairwise_metrics)
 
-        contingency_metrics = set(CONTINGENCY_METRICS) & set(args_metrics)
+        contingency_metrics = set(utils.CONTINGENCY_METRICS) & set(args_metrics)
         append_scores(cm, pairs, contingency_metrics)
 
 
 def add_ranking_metrics(args, clusters, pairs):
     """Add metrics based on ROC and Lift curves
     """
-    args_metrics = METRICS
-    if set(ROC_METRICS) & set(args_metrics):
+    args_metrics = utils.METRICS
+    if set(utils.ROC_METRICS) & set(args_metrics):
         from lsh_hdc.ranking import RocCurve
         rc = RocCurve.from_clusters(clusters, is_class_pos=class_is_positive)
         if 'roc_auc' in args_metrics:
             pairs.append(('roc_auc', rc.auc_score()))
         if 'roc_max_info' in args_metrics:
             pairs.append(('roc_max_info', rc.max_informedness()))
-    if set(LIFT_METRICS) & set(args_metrics):
+    if set(utils.LIFT_METRICS) & set(args_metrics):
         from lsh_hdc.ranking import aul_score_from_clusters as aul_score
         clusters_2xc = ([class_is_positive(point) for point in cluster]
                         for cluster in clusters)
@@ -445,7 +402,7 @@ def do_cluster(args):
     sim_namespace, simulation = load_simulation(args)
     namespace.update(sim_namespace)
     clustering_results, clustering_stats = perform_clustering(args, simulation)
-    clustering_namespace = serialize_args(args)
+    clustering_namespace = utils.serialize_args(args)
     namespace.update(clustering_namespace)
     namespace.update(clustering_stats)
     write_json_line(args.output, namespace)
@@ -489,10 +446,10 @@ def create_plots(args, df, metrics):
             fig.savefig(fig_path)
 
 
-def do_simul_clust_analy(args):
+def do_mapper(args):
     if args.seed is not None:
         random.seed(args.seed)
-    namespace = serialize_args(args)
+    namespace = utils.serialize_args(args)
     simulation, simulation_stats = perform_simulation(args)
     namespace.update(simulation_stats)
     clustering, clustering_stats = perform_clustering(args, simulation)
@@ -502,21 +459,16 @@ def do_simul_clust_analy(args):
     args.output.write("%s\n" % json.dumps(namespace))
 
 
-def create_df_subset(df, fields):
-    subset_fields = [field for field in fields if field in df]
-    return df[subset_fields]
-
-
-def do_summa(args):
+def do_reducer(args):
     import pandas as pd
     obj = ndjson2col(read_json_lines(args.input))
     df = pd.DataFrame.from_dict(obj)
-    subset = create_df_subset(
+    subset = get_df_subset(
         df, [args.group_by, args.x_axis, args.trial] + args.metrics)
     csv_path = os.path.join(args.output, "summary.csv")
     logging.info("Writing brief summary to %s", csv_path)
     subset.to_csv(csv_path)
-    create_plots(args, subset, METRICS)
+    create_plots(args, subset, utils.METRICS)
 
 
 def add_simul_args(p_simul):
@@ -600,7 +552,7 @@ def add_analy_args(parser):
         '--join_negs', type=int, default=1,
         help='label negative classes and clusters with the same label')
     parser.add_argument(
-        '--metrics', type=str, nargs='*', choices=METRICS,
+        '--metrics', type=str, nargs='*', choices=utils.METRICS,
         default=('roc_auc', 'nmi_score', 'time_cpu'),
         help='Which metrics to calculate')
 
@@ -637,26 +589,26 @@ def parse_args(args=None):
         '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
     p_analy.set_defaults(func=do_analyze)
 
-    p_simul_clust_analy = subparsers.add_parser(
-        'simul_clust_analy', help='Perform multiple steps')
-    add_simul_args(p_simul_clust_analy)
-    add_clust_args(p_simul_clust_analy)
-    add_analy_args(p_simul_clust_analy)
-    p_simul_clust_analy.add_argument(
+    p_mapper = subparsers.add_parser(
+        'mapper', help='Perform multiple steps')
+    add_simul_args(p_mapper)
+    add_clust_args(p_mapper)
+    add_analy_args(p_mapper)
+    p_mapper.add_argument(
         '--output', type=GzipFileType('w'), default=sys.stdout, help='File output')
-    p_simul_clust_analy.set_defaults(func=do_simul_clust_analy)
+    p_mapper.set_defaults(func=do_mapper)
 
-    p_summa = subparsers.add_parser('summarize', help='summarize analysis results')
-    add_analy_args(p_summa)
-    p_summa.add_argument(
+    p_reducer = subparsers.add_parser('reducer', help='summarize analysis results')
+    add_analy_args(p_reducer)
+    p_reducer.add_argument(
         '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
-    p_summa.add_argument(
+    p_reducer.add_argument(
         '--fig_title', type=str, default=None, help='Title (for figures generated)')
-    p_summa.add_argument(
+    p_reducer.add_argument(
         '--fig_format', type=str, default='svg', help='Figure format')
-    p_summa.add_argument(
+    p_reducer.add_argument(
         '--output', type=str, metavar='DIR', help='Output directory')
-    p_summa.set_defaults(func=do_summa)
+    p_reducer.set_defaults(func=do_reducer)
 
     namespace = parser.parse_args()
     return namespace

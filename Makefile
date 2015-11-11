@@ -20,7 +20,7 @@ PYTHON := $(PYENV) python
 PIP := $(PYENV) pip
 
 
-include study/build.mk
+include study-preds/build.mk
 
 doc_sources:
 	sphinx-apidoc \

@@ -41,28 +41,25 @@ endef
 
 # Study definition
 METRICS := \
-	homogeneity completeness nmi_score \
+	entropy_metrics \
 	adjusted_rand_score jaccard_coeff \
 	informedness markedness \
-	aul_score roc_max_info roc_auc \
 	adjusted_mutual_info_score \
-	split_join_similarity talburt_wang_index \
-	time_cpu
+	split_join_similarity talburt_wang_index
 
-REDUCER := $(PYTHON) -m lsh_hdc.monte_carlo.strings reducer \
+REDUCER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions reducer \
 	--metrics $(METRICS) \
 	--group_by $(GROUP_FIELD) \
 	--x_axis $(PARAM_FIELD) \
-	--fig_title "$(GROUP_FIELD)" \
 	$(EXP_REDUCER_ARGS)
 
-MAPPER := $(PYTHON) -m lsh_hdc.monte_carlo.strings mapper \
-	--sim_size 1000 \
+MAPPER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions mapper \
+	--sim_size 10000 \
 	--metrics $(METRICS) \
 	$(EXP_MAPPER_ARGS)
 
-MAPPER_FIELDS := $(GROUP_FIELD) $(PARAM_FIELD) $(TRIAL_FIELD)
-FIELD_PRODUCT := $(call prod3,$(GROUPS),$(PARAMS),$(TRIALS))
+MAPPER_FIELDS := $(GROUP_FIELD) $(PARAM_FIELD)
+FIELD_PRODUCT := $(call prod2,$(GROUPS),$(PARAMS))
 
 
 

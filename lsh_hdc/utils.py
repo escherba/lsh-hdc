@@ -7,6 +7,13 @@ from operator import itemgetter
 from pymaptools.iter import isiterable
 
 
+def get_df_subset(df, fields):
+    """Give a subset of a ``pandas.DataFrame`` instance
+    """
+    subset_fields = [field for field in set(fields) if field in df]
+    return df[subset_fields]
+
+
 def fill_with_last(lst, k):
     """
     extend a list to length k by duplicating last item

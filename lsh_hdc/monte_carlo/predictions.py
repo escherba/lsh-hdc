@@ -2,14 +2,123 @@ import numpy as np
 import os
 import warnings
 import random
+import sys
+import logging
 from itertools import product, izip
 from collections import defaultdict
 from functools import partial
 from pymaptools.iter import izip_with_cycles, isiterable
-from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
-from lsh_hdc.ranking import RocCurve
 from pymaptools.containers import labels_to_clusters, clusters_to_labels
 from pymaptools.sample import discrete_sample
+from pymaptools.io import GzipFileType, PathArgumentParser, write_json_line, read_json_lines, ndjson2col
+
+from lsh_hdc.monte_carlo import utils
+from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
+from lsh_hdc.ranking import RocCurve
+from lsh_hdc.utils import get_df_subset
+
+
+def parse_args(args=None):
+    parser = PathArgumentParser()
+
+    parser.add_argument(
+        '--logging', type=str, default='WARN', help="Logging level",
+        choices=[key for key in logging._levelNames.keys() if isinstance(key, str)])
+
+    subparsers = parser.add_subparsers()
+
+    p_mapper = subparsers.add_parser('mapper')
+    p_mapper.add_argument('--h0_err', type=float, default=1.0,
+                          help='H0 error rate')
+    p_mapper.add_argument('--h1_err', type=float, default=0.5,
+                          help='H1 error rate')
+    p_mapper.add_argument('--population_size', type=int, default=2000,
+                          help='population size')
+    p_mapper.add_argument('--pos_ratio', type=float, default=0.2,
+                          help='ratio of positives to population')
+    p_mapper.add_argument('--sim_size', type=int, default=1000,
+                          help='Simulation size')
+    p_mapper.add_argument('--sampling_warnings', type=int, default=0,
+                          help='if true, show sampling warnings')
+    p_mapper.add_argument('--output', type=GzipFileType('w'),
+                          default=sys.stdout, help='Output file')
+    p_mapper.add_argument('--metrics', type=str, required=True, nargs='*',
+                          help='Which metrics to compute')
+    p_mapper.set_defaults(func=do_mapper)
+
+    p_reducer = subparsers.add_parser('reducer')
+    p_reducer.add_argument(
+        '--group_by', type=str, default=None,
+        help='Field to group by')
+    p_reducer.add_argument(
+        '--x_axis', type=str, default=None,
+        help='Which column to plot as X axis')
+    p_reducer.add_argument(
+        '--metrics', type=str, required=True, nargs='*',
+        help='Which metrics to compute')
+    p_reducer.add_argument(
+        '--input', type=GzipFileType('r'), default=sys.stdin, help='File input')
+    p_reducer.add_argument(
+        '--output', type=str, metavar='DIR', help='Output directory')
+    p_reducer.add_argument(
+        '--legend_loc', type=str, default='lower left',
+        help='legend location')
+    p_reducer.set_defaults(func=do_reducer)
+
+    namespace = parser.parse_args(args)
+    return namespace
+
+
+def do_mapper(args):
+    h0 = Grid.with_sim_clusters(
+        n=args.sim_size,
+        p_err=args.h0_err,
+        population_size=args.population_size,
+        with_warnings=args.sampling_warnings,
+    )
+    h1 = Grid.with_sim_clusters(
+        n=args.sim_size,
+        p_err=args.h1_err,
+        population_size=args.population_size,
+        with_warnings=args.sampling_warnings,
+    )
+    results = h0.compare(h1, args.metrics)
+    for result in results:
+        result.update(utils.serialize_args(args))
+        write_json_line(args.output, result)
+
+
+def create_plots(args, df):
+    import matplotlib.pyplot as plt
+    from palettable import colorbrewer
+    from matplotlib.font_manager import FontProperties
+
+    fontP = FontProperties()
+    fontP.set_size('small')
+
+    groups = df.groupby([args.group_by])
+    for group_name, group in groups:
+        subset = get_df_subset(group, [args.x_axis] + args.metrics)
+        fig, ax = plt.subplots()
+        ax.set_color_cycle(colorbrewer.qualitative.Dark2_8.mpl_colors)
+        subset.plot(args.x_axis, ax=ax)
+        ax.legend(loc=args.legend_loc, prop=fontP)
+        fig.savefig(os.path.join(args.output, 'fig-%s.svg' % group_name))
+
+
+def do_reducer(args):
+    import pandas as pd
+    obj = ndjson2col(read_json_lines(args.input))
+    df = pd.DataFrame.from_dict(obj)
+    csv_path = os.path.join(args.output, "summary.csv")
+    logging.info("Writing brief summary to %s", csv_path)
+    df.to_csv(csv_path)
+    create_plots(args, df)
+
+
+def run(args):
+    logging.basicConfig(level=getattr(logging, args.logging))
+    args.func(args)
 
 
 def get_conf(obj):
@@ -30,7 +139,7 @@ def simulate_labeling(sample_size=2000, **kwargs):
 
 
 def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
-                        p_err=0.05, population_size=2000):
+                        p_err=0.05, population_size=2000, with_warnings=True):
     csizes = map(int, np.random.gamma(galpha, gbeta, nclusters))
     num_pos = sum(csizes)
     if num_pos == 0:
@@ -41,8 +150,9 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
     actual_neg_ratio = (num_neg - expected_num_neg) / float(expected_num_neg)
     if abs(actual_neg_ratio) > 0.2:
         word = "fewer" if actual_neg_ratio < 0.0 else "more"
-        warnings.warn("{:.1%} {} negatives than expected. Got: {} (expected: {}. Recommended population_size: {})"
-                      .format(abs(actual_neg_ratio), word, num_neg, int(expected_num_neg), int(expected_num_neg + num_pos)))
+        if with_warnings:
+            warnings.warn("{:.1%} {} negatives than expected. Got: {} (expected: {}. Recommended population_size: {})"
+                        .format(abs(actual_neg_ratio), word, num_neg, int(expected_num_neg), int(expected_num_neg + num_pos)))
 
     # the larger the cluster, the more probable it is some unclustered
     # items belong to it
@@ -102,21 +212,21 @@ class Grid(object):
         self.show_record = None
 
     @classmethod
-    def with_clusters(cls, n=1000, size=200, max_classes=5, seed=None):
-        obj = cls(seed=seed)
-
-        obj.grid = obj.fill_clusters(max_classes=max_classes, size=size, n=n)
-        obj.grid_type = 'clusters'
-        obj.get_matrix = obj.matrix_from_labels
-        obj.show_record = obj.show_cluster
-        return obj
-
-    @classmethod
     def with_sim_clusters(cls, n=1000, size=200, seed=None, **kwargs):
         obj = cls(seed=seed)
 
         obj.grid = obj.fill_sim_clusters(size=size, n=n, **kwargs)
         obj.grid_type = 'sim_clusters'
+        obj.get_matrix = obj.matrix_from_labels
+        obj.show_record = obj.show_cluster
+        return obj
+
+    @classmethod
+    def with_clusters(cls, n=1000, size=200, max_classes=5, seed=None):
+        obj = cls(seed=seed)
+
+        obj.grid = obj.fill_clusters(max_classes=max_classes, size=size, n=n)
+        obj.grid_type = 'clusters'
         obj.get_matrix = obj.matrix_from_labels
         obj.show_record = obj.show_cluster
         return obj
@@ -355,3 +465,7 @@ class Grid(object):
         else:
             fig.savefig(save_to)
             plt.close(fig)
+
+
+if __name__ == "__main__":
+    run(parse_args())
