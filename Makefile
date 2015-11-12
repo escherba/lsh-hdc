@@ -1,7 +1,6 @@
 .PHONY: clean coverage develop env extras package release test virtualenv build_ext shell docs doc_sources
 
 PYMODULE := lsh_hdc
-EXTENSION_EXT := .cpp
 PYPI_HOST := pypi
 DISTRIBUTE := sdist bdist_wheel
 SHELL_PRELOAD := $(PYMODULE)/workspace.py
@@ -9,9 +8,15 @@ SHELL_PRELOAD := $(PYMODULE)/workspace.py
 SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 SHELL_PRELOAD := $(SRC_ROOT)/$(SHELL_PRELOAD)
 
-EXTENSION_DEPS := $(shell find $(PYMODULE) -type f -name '*.pyx')
-EXTENSION_INTS := $(patsubst %.pyx,%$(EXTENSION_EXT),$(EXTENSION_DEPS))
-EXTENSION_LIBS := $(patsubst %$(EXTENSION_EXT),%.so,$(EXTENSION_INTS))
+EXTENSION_PYX := $(shell find $(PYMODULE) -type f -name '*.pyx')
+EXTENSION_PYX_MOD := $(patsubst %.pyx,%.cpp,$(EXTENSION_PYX))
+
+EXTENSION_PYF := $(shell find $(PYMODULE) -type f -name '*.pyf')
+EXTENSION_PYF_MOD := $(patsubst %.pyf,%module.c,$(EXTENSION_PYF))
+
+EXTENSION_SO := \
+	$(patsubst %.pyf,%.so,$(EXTENSION_PYF)) \
+	$(patsubst %.cpp,%.so,$(EXTENSION_PYX_MOD))
 
 EXTRAS_REQS := $(wildcard extras-*-requirements.txt)
 
@@ -68,13 +73,14 @@ nuke: clean
 clean:
 	-python setup.py clean
 	rm -rf dist build
-	rm -f $(EXTENSION_LIBS) $(EXTENSION_INTS)
+	rm -f $(EXTENSION_SO) $(EXTENSION_PYF_MOD) $(EXTENSION_PYX_MOD)
 	find . -path ./env -prune -o -type f -name "*.pyc" -exec rm -f {} \;
 
 build_ext: env
 	$(PYTHON) setup.py build_ext --inplace
+	$(PYENV) find $(PYMODULE) -type f -name "setup.py" -exec python {} build_ext --inplace \;
 
-$(EXTENSION_LIBS): build_ext
+$(EXTENSION_SO): build_ext
 	@echo "done building $@"
 
 develop: build_ext

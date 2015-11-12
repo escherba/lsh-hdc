@@ -75,3 +75,6 @@ results/
 
 # ignore Sphinx build dir
 docs/_build/
+
+# debug symbols
+*.dSYM/

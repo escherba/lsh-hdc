@@ -319,16 +319,23 @@ class ContingencyTable(CrossTab):
     def adjusted_mutual_info_score(self):
         """Adjusted Mutual Information between two clusterings
 
-        For a mathematical definition, see [1]_
+        For a mathematical definition, see [1]_ and [2]_.
 
         References
         ----------
 
-        .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
-            measures for clusterings comparison: Variants, properties,
-            normalization and correction for chance. The Journal of Machine
-            Learning Research, 11, 2837-2854.
-            <http://www.jmlr.org/papers/v11/vinh10a.html>`_
+        .. [1] `Vinh, N. X., Epps, J., & Bailey, J. (2009, June). Information
+               theoretic measures for clusterings comparison: is a correction
+               for chance necessary?. In Proceedings of the 26th Annual
+               International Conference on Machine Learning (pp. 1073-1080).
+               ACM.
+               <https://doi.org/10.1145/1553374.1553511>`_
+
+        .. [2] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
+               measures for clusterings comparison: Variants, properties,
+               normalization and correction for chance. The Journal of Machine
+               Learning Research, 11, 2837-2854.
+               <http://www.jmlr.org/papers/v11/vinh10a.html>`_
 
         """
         # Prepare row totals and check for special cases
@@ -819,8 +826,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         --------
         fscore, jaccard_coeff, ochiai_coeff
         """
-        a = self.TP
-        return _div(2 * a, 2 * a + self.FN + self.FP)
+        (a, b), (c, _) = self.rows
+        return _div(2 * a, 2 * a + b + c)
 
     def jaccard_coeff(self):
         """Jaccard similarity coefficient
@@ -835,7 +842,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         --------
         dice_coeff, ochiai_coeff
         """
-        return _div(self.TP, self.TP + self.FP + self.FN)
+        (a, b), (c, _) = self.rows
+        return _div(a, a + b + c)
 
     def ochiai_coeff(self):
         """Ochiai similarity coefficient (Fowlkes-Mallows)
@@ -859,7 +867,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                Topic model validation. Neurocomputing, 76(1), 125-133.
                <http://dx.doi.org/10.1016/j.neucom.2011.04.032>`_
         """
-        a, b, c = self.TP, self.FN, self.FP
+        (a, b), (c, _) = self.rows
         return _div(a, sqrt((a + b) * (a + c)))
 
     def sokal_sneath_coeff(self):
@@ -879,8 +887,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         --------
         dice_coeff, jaccard_coeff
         """
-        a = self.TP
-        return _div(a, a + 2 * (self.FN + self.FP))
+        (a, b), (c, _) = self.rows
+        return _div(a, a + 2 * (b + c))
 
     def prevalence_index(self):
         """Prevalence
@@ -1118,6 +1126,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         characterizing one-way dependence in a 2x2 confusion matrix, it is
         arguably better to use use informedness and markedness.
 
+        As 'd' approaches infinity, kappa turns into Dice coefficient (F-score).
+
         Synonyms: Adjusted Rand Index, Heidke Skill Score
 
         References
@@ -1154,10 +1164,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                <http://www.jstor.org/stable/519729>`_
 
         """
-        p1, q1 = self.row_totals.values()
-        p2, q2 = self.col_totals.values()
-        a, c, d, b = self.to_ccw()
-        n = self.grand_total
+        (a, b), (c, d) = self.rows
+        p1 = a + b
+        q1 = c + d
+        p2 = a + c
+        q2 = b + d
+        n = p1 + q1
         if a == n or b == n or c == n or d == n:
             # only one cell is non-zero
             return np.nan
@@ -1171,12 +1183,15 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def mp_corr(self):
         """Maxwell & Pilliner's association index
 
-        Another covariance-based association index corrected for chance.
+        Another covariance-based association index corrected for chance. Turns
+        into Dice coefficient (F-score) as 'd' approaches infinity.
         """
-        p1, q1 = self.row_totals.values()
-        p2, q2 = self.col_totals.values()
-        a, c, d, b = self.to_ccw()
-        n = self.grand_total
+        (a, b), (c, d) = self.rows
+        p1 = a + b
+        q1 = c + d
+        p2 = a + c
+        q2 = b + d
+        n = p1 + q1
         if a == n or b == n or c == n or d == n:
             # only one cell is non-zero
             return np.nan
@@ -1197,15 +1212,18 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         taking a square root.
 
         MCC is a also a geometric mean of informedness and markedness (the
-        regression coefficients of the problem and its dual).
+        regression coefficients of the problem and its dual). As the value of
+        'd' approaches infinity, MCC turns into Ochiai coefficient.
 
         Other names for MCC are Phi Coefficient and Yule's Q with correction for
         chance.
         """
-        p1, q1 = self.row_totals.values()
-        p2, q2 = self.col_totals.values()
-        a, c, d, b = self.to_ccw()
-        n = self.grand_total
+        (a, b), (c, d) = self.rows
+        p1 = a + b
+        q1 = c + d
+        p2 = a + c
+        q2 = b + d
+        n = p1 + q1
         if a == n or b == n or c == n or d == n:
             # only one cell is non-zero
             return np.nan
@@ -1256,7 +1274,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             Q = \\frac{DOR - 1}{DOR + 1}.
 
         """
-        a, c, d, b = self.to_ccw()
+        (a, b), (c, d) = self.rows
         return _div(self.covar(), a * d + b * c)
 
     def yule_y(self):
@@ -1274,7 +1292,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                 <http://arxiv.org/pdf/1302.6161v1.pdf>`_
 
         """
-        a, c, d, b = self.to_ccw()
+        (a, b), (c, d) = self.rows
         ad = a * d
         bc = b * c
         return _div(sqrt(ad) - sqrt(bc),
@@ -1283,7 +1301,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def covar(self):
         """Covariance (determinant of a 2x2 matrix)
         """
-        return self.TP * self.TN - self.FP * self.FN
+        (a, b), (c, d) = self.rows
+        return a * d - b * c
 
     # various silly terminologies follow
 

@@ -30,7 +30,7 @@ rewriting of every single individual spam message is too expensive for spammers
 to employ, or because, even if human or algorithmic rewriting is applied, one
 can still find features that link individual spam messages to their creator or
 to the product or service being promoted in the spam campaign. The finding was
-consistent with what is reported in literature [1]_.
+consistent with what is reported in literature [104]_.
 
 Algorithm
 ---------
@@ -38,7 +38,7 @@ Algorithm
 Given a clustering, we order the clusters from the largest one to the smallest
 one. We then plot a cumulative step function where the width of the bin under a
 given "step" is proportional to cluster size, and the height of the bin is
-proportional to the expected number of positive samples seen so far [3]_. If a
+proportional to the expected number of positive samples seen so far [103]_. If a
 sample is in a cluster of size one, we assume it is likely to be negative and
 is therefore checked on an individual basis (the specific setting of cluster
 size at which the expectation changes is our 'threshold' parameter. The result
@@ -67,12 +67,12 @@ corner to the top right one. This way, a complete absence of clustering (i.e.
 all clusters are of size one) will always result in AUL of 0.5.
 
 The resulting AUL measure has some similarity with the Gini coefficient of
-inequality [2]_ except we plot the corresponding curve in the opposite
+inequality [105]_ except we plot the corresponding curve in the opposite
 direction (from "richest" to "poorest"), and do not subtract 0.5 from the
 resulting score.
 
 
-.. [3] We take the expected number of positives and not the actual number seen
+.. [103] We take the expected number of positives and not the actual number seen
        so far as the vertical scale in order to penalize non-homogeneous
        clusters. Otherwise the y=1.0 ceiling would be reached early in the
        process even in very bad cases, for example when there is only one giant
@@ -81,14 +81,14 @@ resulting score.
 References
 ----------
 
-.. [1] `Whissell, J. S., & Clarke, C. L. (2011, September). Clustering for
-        semi-supervised spam filtering. In Proceedings of the 8th Annual
-        Collaboration, Electronic messaging, Anti-Abuse and Spam Conference
-        (pp. 125-134). ACM.
-        <https://doi.org/10.1145/2030376.2030391>`_
+.. [104] `Whissell, J. S., & Clarke, C. L. (2011, September). Clustering for
+         semi-supervised spam filtering. In Proceedings of the 8th Annual
+         Collaboration, Electronic messaging, Anti-Abuse and Spam Conference
+         (pp. 125-134). ACM.
+         <https://doi.org/10.1145/2030376.2030391>`_
 
-.. [2] `Wikipedia entry for Gini coefficient of inequality
-        <https://en.wikipedia.org/wiki/Gini_coefficient>`_
+.. [105] `Wikipedia entry for Gini coefficient of inequality
+         <https://en.wikipedia.org/wiki/Gini_coefficient>`_
 
 """
 
@@ -490,15 +490,15 @@ class RocCurve(object):
     def max_informedness(self):
         """Maximum value of Informedness (TPR minus FPR) on a ROC curve
 
-        A diagram of what this measure looks like is shown in [1]_. Note a
+        A diagram of what this measure looks like is shown in [101]_. Note a
         correspondence between the definitions of this measure and that of
         Kolmogorov-Smirnov's supremum statistic.
 
         References
         ----------
 
-        .. [1] `Wikipedia entry for Youden's J statistic
-               <https://en.wikipedia.org/wiki/Youden%27s_J_statistic>`_
+        .. [101] `Wikipedia entry for Youden's J statistic
+                 <https://en.wikipedia.org/wiki/Youden%27s_J_statistic>`_
         """
         return self.optimal_cutoff(self._informedness)[1]
 
