@@ -14,6 +14,7 @@ from pymaptools.io import GzipFileType, PathArgumentParser, write_json_line, rea
 from pymaptools.benchmark import PMTimer
 
 from lsh_hdc.monte_carlo import utils
+from lsh_hdc.fent import minmaxr
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
 from lsh_hdc.ranking import RocCurve
 from sklearn.metrics.ranking import auc
@@ -66,6 +67,8 @@ def parse_args(args=None):
     p_reducer.add_argument(
         '--fig_title', type=str, default=None, help='Title (for figures generated)')
     p_reducer.add_argument(
+        '--fig_format', type=str, default='svg', help='Figure format')
+    p_reducer.add_argument(
         '--legend_loc', type=str, default='lower left',
         help='legend location')
     p_reducer.set_defaults(func=do_reducer)
@@ -100,8 +103,7 @@ def do_mapper(args):
 def auc_xscaled(xs, ys):
     """AUC score scaled to fill x interval
     """
-    xmin = min(xs)
-    xmax = max(xs)
+    xmin, xmax = minmaxr(xs)
     denom = float(xmax - xmin)
     xs_corr = [(x - xmin) / denom for x in xs]
     return auc(xs_corr, ys)
@@ -115,6 +117,7 @@ def create_plots(args, df):
     fontP = FontProperties()
     fontP.set_size('xx-small')
 
+    #groups = df.set_index(args.x_axis).groupby([args.group_by])
     groups = df.groupby([args.group_by])
     metrics = list(set(args.metrics) & set(df.keys()))
     colors = take(len(metrics), cycle(chain(
@@ -124,7 +127,7 @@ def create_plots(args, df):
     for group_name, group in groups:
 
         # always sort by X values
-        sorted_group = group.sort([args.x_axis])
+        group = group.sort([args.x_axis])
 
         if args.fig_title is None:
             fig_title = '%s=%s' % (args.group_by, group_name)
@@ -134,20 +137,27 @@ def create_plots(args, df):
         # compute AUC scores
         ys = []
         for metric, color in zip(metrics, colors):
-            score = auc_xscaled(sorted_group[args.x_axis], sorted_group[metric])
+            series = group[metric]
+            score = auc_xscaled(group[args.x_axis].values, series.values)
             label = "%s (%.4f)" % (metric, score)
-            ys.append((score, metric, color, label))
+            ys.append((score, metric, label, color))
         ys.sort(reverse=True)
+
+        lbls_old, lbls_new, colors = zip(*ys)[1:4]
+        group = group[[args.x_axis] + list(lbls_old)] \
+            .set_index(args.x_axis) \
+            .rename(columns=dict(zip(lbls_old, lbls_new)))
 
         # create plots
         fig, ax = plt.subplots()
-        sorted_group.plot(
-            x=args.x_axis, y=list(zip(*ys)[1]), ax=ax,
-            title=fig_title, color=list(zip(*ys)[2]))
-        ax.set_xlim(min(sorted_group[args.x_axis]), max(sorted_group[args.x_axis]))
+        group.plot(ax=ax, title=fig_title, color=list(colors))
+        ax.set_xlim(*minmaxr(group.index.values))
         ax.set_ylim(0.4, 1.0)
-        ax.legend(labels=list(zip(*ys)[3]), loc=args.legend_loc, prop=fontP)
-        fig.savefig(os.path.join(args.output, 'fig-%s.svg' % group_name))
+        ax.legend(loc=args.legend_loc, prop=fontP)
+        fig_path = os.path.join(args.output, 'fig-%s.%s' % (group_name, args.fig_format))
+        csv_path = os.path.join(args.output, 'fig-%s.csv' % group_name)
+        group.to_csv(csv_path)
+        fig.savefig(fig_path, format=args.fig_format)
         plt.close(fig)
 
 
@@ -439,9 +449,9 @@ class Grid(object):
                 auc_score = rc.auc_score()
                 result_row[score_name] = auc_score
                 if plot:
-                    hmin = min(np.min(scores0), np.min(scores1))
-                    hmax = max(np.max(scores0), np.max(scores1))
-                    bins = np.linspace(hmin, hmax, 50)
+                    hmin0, hmax0 = minmaxr(scores0)
+                    hmin1, hmax1 = minmaxr(scores1)
+                    bins = np.linspace(min(hmin0, hmin1), max(hmax0, hmax1), 50)
                     plt.hist(scores0, bins, alpha=0.5, label='0', color=colors[0], edgecolor="none")
                     plt.hist(scores1, bins, alpha=0.5, label='1', color=colors[1], edgecolor="none")
                     plt.legend(loc='upper right')
