@@ -1,131 +1,14 @@
 <html>
-<head>
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/plottable.js/1.6.1/plottable.min.js"></script>
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/plottable.js/1.6.1/plottable.min.css">
-</head>
-<body>
-  <svg id="chart"></svg>
-  <script type="text/javascript">
-
-    var xField = "nclusters";
-    var dataFile = "exp-20151111083101/fig-16000.csv";
-
-    var fieldAccessor = function(field) {
-        return function(d) {
-            return d[field];
-        };
-    }
-
-    var transformData = function(raw_data) {
-        var result = {};
-        var tmp = {};
-        result['data'] = [];
-        result['columns'] = [];
-        result['xmax'] = -Infinity;
-        result['xmin'] = Infinity;
-        result['ymax'] = -Infinity;
-        result['ymin'] = Infinity;
-        for (var i = 0; i < raw_data.length; i++) {
-            row = raw_data[i];
-            for (var prop in row) {
-                if (prop != xField && row.hasOwnProperty(prop)) {
-                    var yval = parseFloat(row[prop]);
-                    var xval = parseFloat(row[xField]);
-                    if (xval < result.xmin) {
-                        result.xmin = xval;
-                    } else if (xval > result.xmax) {
-                        result.xmax = xval;
-                    }
-                    if (yval < result.ymin) {
-                        result.ymin = yval;
-                    } else if (yval > result.ymax) {
-                        result.ymax = yval;
-                    }
-                    obj = {name: prop, x: xval, y: yval};
-                    if (tmp.hasOwnProperty(prop)) {
-                        tmp[prop].push(obj)
-                    } else {
-                        tmp[prop] = [obj];
-                    }
-                }
-            }
-        }
-        for (var prop in tmp) {
-            if (tmp.hasOwnProperty(prop)) {
-                result['columns'].push(prop);
-                result['data'].push(tmp[prop])
-            }
-        }
-        return result;
-    }
-
-    d3.csv(dataFile, function(raw_data) {
-
-        var transformed = transformData(raw_data);
-
-        var xScale = new Plottable.Scales.Linear();
-        var yScale = new Plottable.Scales.Linear();
-        yScale.domain([0.4, 1.0]);
-
-        var colorScale = new Plottable.Scales.Color();
-        colorScale.domain(transformed.columns);
-
-        var legend = new Plottable.Components.Legend(colorScale);
-        legend.maxEntriesPerRow(Infinity);
-
-        var linePlot = new Plottable.Plots.Line()
-            .x(fieldAccessor('x'), xScale)
-            .y(fieldAccessor('y'), yScale)
-            .attr("stroke-width", 3)
-            .attr("stroke", fieldAccessor('name'), colorScale);
-
-        transformed.data.forEach(function(d) {
-            var dataSet = new Plottable.Dataset(d, {name: d[0].name});
-            linePlot.addDataset(dataSet);
-        });
-
-        var plots = new Plottable.Components.Group([
-                linePlot,
-        ]);
-
-        var xAxis = new Plottable.Axes.Numeric(xScale, "bottom");
-        var yAxis = new Plottable.Axes.Numeric(yScale, "left");
-
-        var xLabel = new Plottable.Components.AxisLabel(xField, "0");
-        var yLabel = new Plottable.Components.AxisLabel("AUC", "270");
-
-        var table = new Plottable.Components.Table([
-                [null,   null,  legend],
-                [yLabel, yAxis, plots],
-                [null,   null,  xAxis],
-                [null,   null,  xLabel]
-        ]);
-
-        table.renderTo("svg#chart");
-
-        var adjustOpacity = function(plot, legendText) {
-            plot.attr("opacity", function(d, i, ds) {
-                return ds.metadata().name == legendText ? 1 : .05;
-            });
-        }
-
-        new Plottable.Interactions.Click()
-            .attachTo(legend)
-            .onClick(function(p) {
-                if (legend.entitiesAt(p)[0] !== undefined) {
-                    var selected = legend.entitiesAt(p)[0].datum;
-                    adjustOpacity(linePlot, selected);
-                }
-            });
-
-        new Plottable.Interactions.Click()
-            .attachTo(plots)
-            .onClick(function() {
-                linePlot.attr("opacity", 1);
-            });
-
-    });
-  </script>
-</body>
+    <head>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/plottable.js/1.6.1/plottable.min.js"></script>
+        <script type="text/javascript" src="powerviewer.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/plottable.js/1.6.1/plottable.min.css">
+    </head>
+    <body>
+        <svg id="chart"></svg>
+        <script type="text/javascript">
+            drawPlot("exp-20151111015627/fig-20.csv", "h1_err", "svg#chart");
+        </script>
+    </body>
 </html>
