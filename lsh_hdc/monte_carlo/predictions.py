@@ -110,6 +110,7 @@ def auc_xscaled(xs, ys):
 
 
 def create_plots(args, df):
+    import jinja2
     import matplotlib.pyplot as plt
     from palettable import colorbrewer
     from matplotlib.font_manager import FontProperties
@@ -124,6 +125,11 @@ def create_plots(args, df):
         colorbrewer.qualitative.Dark2_8.mpl_colors,
         colorbrewer.qualitative.Set2_8.mpl_colors,
     )))
+
+    template_loader = jinja2.FileSystemLoader(os.path.join(args.output, '..'))
+    template_env = jinja2.Environment(loader=template_loader)
+    viewer_template = template_env.get_template('powerview.html')
+
     for group_name, group in groups:
 
         # always sort by X values
@@ -155,8 +161,13 @@ def create_plots(args, df):
         ax.set_ylim(0.4, 1.0)
         ax.legend(loc=args.legend_loc, prop=fontP)
         fig_path = os.path.join(args.output, 'fig-%s.%s' % (group_name, args.fig_format))
-        csv_path = os.path.join(args.output, 'fig-%s.csv' % group_name)
+        csv_name = 'fig-%s.csv' % group_name
+        csv_path = os.path.join(args.output, csv_name)
         group.to_csv(csv_path)
+        html_path = os.path.join(args.output, 'fig-%s.html' % group_name)
+        with open(html_path, 'w') as fh:
+            html = viewer_template.render(csv_path=csv_name, x_field=args.x_axis)
+            fh.write(html)
         fig.savefig(fig_path, format=args.fig_format)
         plt.close(fig)
 

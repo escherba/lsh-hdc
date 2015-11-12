@@ -79,7 +79,7 @@ function drawPlot(dataFile, xField, svgElementId) {
         var chancePlot = new Plottable.Plots.Line()
             .x(data.xAccessor, xScale)
             .y(function (d) { return 0.5; }, yScale)
-            .attr("stroke-width", 1)
+            .attr("stroke-width", 2)
             .attr("stroke", "#dddddd")
             .attr("stroke-dasharray", 4);
 
@@ -90,8 +90,8 @@ function drawPlot(dataFile, xField, svgElementId) {
         });
 
         var plots = new Plottable.Components.Group([
-                linePlot,
-                chancePlot
+                chancePlot,
+                linePlot
         ]);
 
         var xAxis = new Plottable.Axes.Numeric(xScale, "bottom");
