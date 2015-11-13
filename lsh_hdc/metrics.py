@@ -545,10 +545,18 @@ class ClusteringMetrics(ContingencyTable):
 
     A subclass of ContingencyTable that builds a pairwise co-association matrix
     for clustering comparisons.
+
+    ::
+
+        >>> Y1 = {(1, 2, 3), (4, 5, 6)}
+        >>> Y2 = {(1, 2), (3, 4, 5), (6,)}
+        >>> cm = ClusteringMetrics.from_partitions(Y1, Y2)
+        >>> cm.split_join_similarity()
+        0.75
     """
 
     def __init__(self, *args, **kwargs):
-        ContingencyTable.__init__(self, *args, **kwargs)
+        super(ClusteringMetrics, self).__init__(*args, **kwargs)
         self._pairwise_ = None
 
     @property
@@ -1194,8 +1202,10 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def mp_corr(self):
         """Maxwell & Pilliner's association index
 
-        Another covariance-based association index corrected for chance. Turns
-        into Dice coefficient (F-score) as 'd' approaches infinity.
+        Another covariance-based association index corrected for chance. Like
+        MCC, based on a mean of informedness and markedness, except uses a
+        harmonic mean instea of geometric. Like Kappa, turns into Dice
+        coefficient (F-score) as 'd' approaches infinity.
         """
         (a, b), (c, d) = self.rows
         p1 = a + b
