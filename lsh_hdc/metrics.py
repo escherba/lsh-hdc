@@ -582,6 +582,39 @@ class ContingencyTable(CrossTab):
         fscore = harmonic_mean(recall, precision)
         return recall, precision, fscore
 
+    def bc_metrics(self):
+        """'B-cubed' recall, precision, and fscore
+
+        As described in [1]_ and [2]_.
+
+        References
+        ----------
+
+        .. [1] `Bagga, A., & Baldwin, B. (1998, August). Entity-based cross-
+               document coreferencing using the vector space model. In
+               Proceedings of the 36th Annual Meeting of the Association for
+               Computational Linguistics and 17th International Conference on
+               Computational Linguistics-Volume 1 (pp. 79-85).  Association for
+               Computational Linguistics.
+               <https://aclweb.org/anthology/P/P98/P98-1012.pdf>`_
+
+        .. [2] `Bagga, A., & Baldwin, B. (1998, May). Algorithms for scoring
+               coreference chains. In The first international conference on
+               language resources and evaluation workshop on linguistics
+               coreference (Vol. 1, pp. 563-566).
+               <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.47.5848>`_
+        """
+        precision = 0.0
+        recall = 0.0
+        N = self.grand_total
+        for rm, cm, observed in self.iter_vals_with_margins():
+            precision += (observed ** 2) / float(cm)
+            recall += (observed ** 2) / float(rm)
+        precision /= N
+        recall /= N
+        fscore = harmonic_mean(recall, precision)
+        return recall, precision, fscore
+
 
 class ClusteringMetrics(ContingencyTable):
 

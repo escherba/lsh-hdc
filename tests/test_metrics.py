@@ -262,6 +262,22 @@ def test_split_join():
     assert_equal(cm.split_join_distance(normalize=False), 4)
 
 
+def test_bc_metrics():
+    """Examples 1 and 2, listing in Figure 9, Bagga & Baldwin (1998)
+    """
+    p1 = ["1 2 3 4 5".split(), "6 7".split(), "8 9 A B C".split()]
+
+    p2 = ["1 2 3 4 5".split(), "6 7 8 9 A B C".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.bc_metrics()[:2], [1.0, 0.76], 2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.9], 4)
+
+    p2 = ["1 2 3 4 5 8 9 A B C".split(), "6 7".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.bc_metrics()[:2], [1.0, 0.58], 2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.9], 4)
+
+
 def test_mt_metrics():
     """Table 1 in Vilain et al. (1995)
     """
