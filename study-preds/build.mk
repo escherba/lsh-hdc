@@ -45,7 +45,7 @@ COMPUTE_METRICS := \
 	adjusted_rand_score rand_index matthews_corr mi_corr mi_corr1 mi_corr0 ochiai_coeff dice_coeff jaccard_coeff \
 	informedness markedness \
 	adjusted_mutual_info_score \
-	split_join_similarity talburt_wang_index vi_similarity
+	split_join_similarity talburt_wang_index vi_similarity mirkin_match_coeff
 
 PLOT_METRICS := entropy_metrics-0 entropy_metrics-1 entropy_metrics-2 \
 	mi_corr adjusted_mutual_info_score split_join_similarity talburt_wang_index \

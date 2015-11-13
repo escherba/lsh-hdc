@@ -506,7 +506,7 @@ class ContingencyTable(CrossTab):
         return score
 
     def talburt_wang_index(self):
-        """Talburt-Wang index of similarity of two partitionings
+        """Talburt-Wang index of similarity of two partitions
 
         A relatively decent clustering::
 
@@ -553,9 +553,12 @@ class ClusteringMetrics(ContingencyTable):
 
     @property
     def pairwise_(self):
-        """Confusion matrix on all pair assignments from two partitionings
+        """Confusion matrix on all pair assignments from two partitions
 
-        Given two partitionings A and B and a co-occurrence matrix of point pairs,
+        A partition of N is a set of disjoint clusters s.t. every point in N
+        belongs to one and only one cluster and every cluster consits of at
+        least one point. Given two partitions A and B and a co-occurrence
+        matrix of point pairs,
 
         == =============================================================
         TP count of pairs found in the same partition in both A and B
@@ -566,7 +569,7 @@ class ClusteringMetrics(ContingencyTable):
 
         Note that although the resulting confusion matrix has the form of a
         correlation table for two binary variables, it is not symmetric if the
-        original partitionings are not symmetric.
+        original partitions are not symmetric.
 
         """
         pairwise = self._pairwise_
@@ -1090,10 +1093,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def kappa(self):
         """Cohen's Kappa (Interrater Agreement)
 
-        Kappa index is best known in psychology field where it was introduced to
-        measure interrater agreement [1]_. It has also been used in replication
-        studies [2]_, clustering evaluation [3]_, feature selection [4]_, and
-        forecasting [5]_. The first derivation of this measure is in [6]_.
+        Kappa coefficient is best known in the psychology field where it was
+        introduced to measure interrater agreement [1]_. It has also been used
+        in replication studies [2]_, clustering evaluation [3]_, image
+        segmentation [4]_, feature selection [5]_, and forecasting [56]_. The
+        first derivation of this measure is in [7]_.
 
         Kappa can be derived by correcting Accuracy (Simple Matching
         Coefficient, Rand Index) for chance. Tbe general formula for chance
@@ -1126,7 +1130,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         characterizing one-way dependence in a 2x2 confusion matrix, it is
         arguably better to use use informedness and markedness.
 
-        As 'd' approaches infinity, kappa turns into Dice coefficient (F-score).
+        As 'd' approaches infinity, kappa turns into Dice coefficient
+        (F-score).
 
         Synonyms: Adjusted Rand Index, Heidke Skill Score
 
@@ -1147,18 +1152,24 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                25(2), 177-183.
                <https://doi.org/10.1007/s00357-008-9023-7>`_
 
-        .. [4] `Santos, J. M., & Embrechts, M. (2009). On the use of the
+        .. [4] `Briggman, K., Denk, W., Seung, S., Helmstaedter, M. N., &
+               Turaga, S. C. (2009). Maximin affinity learning of image
+               segmentation. In Advances in Neural Information Processing
+               Systems (pp. 1865-1873).
+               <http://books.nips.cc/papers/files/nips22/NIPS2009_0084.pdf>`_
+
+        .. [5] `Santos, J. M., & Embrechts, M. (2009). On the use of the
                adjusted rand index as a metric for evaluating supervised
                classification. In Artificial neural networks - ICANN 2009 (pp.
                175-184).  Springer Berlin Heidelberg.
                <https://doi.org/10.1007/978-3-642-04277-5_18>`_
 
-        .. [5] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
+        .. [6] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
                summary measures of skill in rare event forecasting based on
                contingency tables. Weather and Forecasting, 5(4), 576-585.
                <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
 
-        .. [6] `Heidke, Paul. "Berechnung des Erfolges und der Gute der
+        .. [7] `Heidke, Paul. "Berechnung des Erfolges und der Gute der
                Windstarkevorhersagen im Sturmwarnungsdienst." Geografiska
                Annaler (1926): 301-349.
                <http://www.jstor.org/stable/519729>`_
