@@ -62,13 +62,13 @@ function drawPlot(dataFile, xField, svgElementId) {
 
         var xScale = new Plottable.Scales.Linear();
         var yScale = new Plottable.Scales.Linear();
-        yScale.domain([0.4, 1.0]);
+        yScale.domain([0.45, 1.05]);
 
         var colorScale = new Plottable.Scales.Color();
         colorScale.domain(data.seriesNames);
 
         var legend = new Plottable.Components.Legend(colorScale);
-        legend.maxEntriesPerRow(Infinity);
+        legend.maxEntriesPerRow(1);
 
         var linePlot = new Plottable.Plots.Line()
             .x(data.xAccessor, xScale)
