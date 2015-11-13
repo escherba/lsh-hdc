@@ -1,8 +1,24 @@
-var accessor = function(field) {
+function accessor(field) {
+    // returns accessor (item getter) function
     return function(d) {
         return d[field];
     };
 }
+
+function sorted(arr) {
+    // sorts array without mutating
+    return arr.slice(0).sort();
+}
+
+function indexMap(arr) {
+    // given an array, map values to their indices
+    var result = {};
+    for (var i = 0, n = arr.length; i < n; i++) {
+        result[arr[i]] = i;
+    }
+    return result;
+}
+
 
 var projectX = function(rawData, xField) {
     // A transformer that projects CSV-type data onto a specific X-field
@@ -65,10 +81,17 @@ function drawPlot(dataFile, xField, title, svgElementId) {
         yScale.domain([0.45, 1.05]);
 
         var colorScale = new Plottable.Scales.Color();
-        colorScale.domain(data.seriesNames);
+        colorScale.domain(sorted(data.seriesNames));
+
+        var order = indexMap(data.seriesNames);
 
         var legend = new Plottable.Components.Legend(colorScale);
         legend.maxEntriesPerRow(1);
+        legend.comparator(
+            function (a, b) {
+                return order[a] - order[b];
+            }
+        );
 
         var linePlot = new Plottable.Plots.Line()
             .x(data.xAccessor, xScale)
