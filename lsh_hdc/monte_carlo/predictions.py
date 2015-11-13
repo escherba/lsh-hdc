@@ -128,9 +128,12 @@ def create_plots(args, df):
 
     template_loader = jinja2.FileSystemLoader(os.path.join(args.output, '..'))
     template_env = jinja2.Environment(loader=template_loader)
-    viewer_template = template_env.get_template('powerview.html')
+    template_interactive = template_env.get_template('template_fig_interactive.html')
+    template_static = template_env.get_template('template_fig_static.html')
 
-    template_vars = []
+    table_interactive = []
+    table_static = []
+
     for group_name, group in groups:
 
         # always sort by X values
@@ -161,22 +164,27 @@ def create_plots(args, df):
         ax.set_xlim(*minmaxr(group.index.values))
         ax.set_ylim(0.4, 1.0)
         ax.legend(loc=args.legend_loc, prop=fontP)
-        fig_path = os.path.join(args.output, 'fig-%s.%s' % (group_name, args.fig_format))
+        fig_name = 'fig-%s.%s' % (group_name, args.fig_format)
+        fig_path = os.path.join(args.output, fig_name)
         csv_name = 'fig-%s.csv' % group_name
         csv_path = os.path.join(args.output, csv_name)
         group.to_csv(csv_path)
-        template_vars.append((
+
+        table_interactive.append((
             csv_name,
             args.x_axis,
             "%s=%s" % (args.group_by, group_name),
         ))
+        table_static.append(fig_name)
+
         fig.savefig(fig_path, format=args.fig_format)
         plt.close(fig)
 
-    html_path = os.path.join(args.output, 'figures.html')
-    html = viewer_template.render(table=template_vars)
-    with open(html_path, 'w') as fh:
-        fh.write(html)
+    with open(os.path.join(args.output, 'fig_interactive.html'), 'w') as fh:
+        fh.write(template_interactive.render(table=table_interactive))
+
+    with open(os.path.join(args.output, 'fig_static.html'), 'w') as fh:
+        fh.write(template_static.render(table=table_static))
 
 
 def do_reducer(args):
