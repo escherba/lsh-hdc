@@ -1,3 +1,4 @@
 pandas
 matplotlib
 palettable
+Jinja2==2.8

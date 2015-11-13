@@ -1,8 +1,24 @@
-var accessor = function(field) {
+function accessor(field) {
+    // returns accessor (item getter) function
     return function(d) {
         return d[field];
     };
 }
+
+function sorted(arr) {
+    // sorts array without mutating
+    return arr.slice(0).sort();
+}
+
+function indexMap(arr) {
+    // given an array, map values to their indices
+    var result = {};
+    for (var i = 0, n = arr.length; i < n; i++) {
+        result[arr[i]] = i;
+    }
+    return result;
+}
+
 
 var projectX = function(rawData, xField) {
     // A transformer that projects CSV-type data onto a specific X-field
@@ -55,20 +71,27 @@ var projectX = function(rawData, xField) {
     return result;
 }
 
-function drawPlot(dataFile, xField, svgElementId) {
+function drawPlot(dataFile, xField, title, svgElementId) {
     d3.csv(dataFile, function(rawData) {
 
         var data = projectX(rawData, xField);
 
         var xScale = new Plottable.Scales.Linear();
         var yScale = new Plottable.Scales.Linear();
-        yScale.domain([0.4, 1.0]);
+        yScale.domain([0.45, 1.05]);
 
         var colorScale = new Plottable.Scales.Color();
-        colorScale.domain(data.seriesNames);
+        colorScale.domain(sorted(data.seriesNames));
+
+        var order = indexMap(data.seriesNames);
 
         var legend = new Plottable.Components.Legend(colorScale);
-        legend.maxEntriesPerRow(Infinity);
+        legend.maxEntriesPerRow(1);
+        legend.comparator(
+            function (a, b) {
+                return order[a] - order[b];
+            }
+        );
 
         var linePlot = new Plottable.Plots.Line()
             .x(data.xAccessor, xScale)
@@ -79,7 +102,7 @@ function drawPlot(dataFile, xField, svgElementId) {
         var chancePlot = new Plottable.Plots.Line()
             .x(data.xAccessor, xScale)
             .y(function (d) { return 0.5; }, yScale)
-            .attr("stroke-width", 1)
+            .attr("stroke-width", 2)
             .attr("stroke", "#dddddd")
             .attr("stroke-dasharray", 4);
 
@@ -90,22 +113,22 @@ function drawPlot(dataFile, xField, svgElementId) {
         });
 
         var plots = new Plottable.Components.Group([
-                linePlot,
-                chancePlot
+                chancePlot,
+                linePlot
         ]);
 
         var xAxis = new Plottable.Axes.Numeric(xScale, "bottom");
         var yAxis = new Plottable.Axes.Numeric(yScale, "left");
 
-        var title = new Plottable.Components.TitleLabel("Resolving power (AUC) vs. " + xField, "0");
+        var titleLabel = new Plottable.Components.TitleLabel(title, "0");
         var xLabel = new Plottable.Components.AxisLabel(xField, "0");
-        var yLabel = new Plottable.Components.AxisLabel("AUC", "270");
+        var yLabel = new Plottable.Components.AxisLabel("Resolving power (AUC)", "270");
 
         var table = new Plottable.Components.Table([
-                [null,   null,  title, null],
-                [yLabel, yAxis, plots, legend],
-                [null,   null,  xAxis, null],
-                [null,   null,  xLabel, null]
+                [null,   null,  titleLabel, null   ],
+                [yLabel, yAxis, plots,      legend ],
+                [null,   null,  xAxis,      null   ],
+                [null,   null,  xLabel,     null   ]
         ]);
 
         table.renderTo(svgElementId);
