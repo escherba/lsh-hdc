@@ -1096,7 +1096,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         Kappa coefficient is best known in the psychology field where it was
         introduced to measure interrater agreement [1]_. It has also been used
         in replication studies [2]_, clustering evaluation [3]_, image
-        segmentation [4]_, feature selection [5]_, and forecasting [56]_. The
+        segmentation [4]_, feature selection [5]_, and forecasting [6]_. The
         first derivation of this measure is in [7]_.
 
         Kappa can be derived by correcting Accuracy (Simple Matching
