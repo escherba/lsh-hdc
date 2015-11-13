@@ -71,7 +71,7 @@ var projectX = function(rawData, xField) {
     return result;
 }
 
-function drawPlot(dataFile, xField, title, svgElementId) {
+function drawPlot(dataFile, xField, title, containerId) {
     d3.csv(dataFile, function(rawData) {
 
         var data = projectX(rawData, xField);
@@ -131,7 +131,15 @@ function drawPlot(dataFile, xField, title, svgElementId) {
                 [null,   null,  xLabel,     null   ]
         ]);
 
-        table.renderTo(svgElementId);
+        var svg = d3.select(containerId)
+            .append("div")
+            .attr("style", "display:block; height:640px;")
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", "600px")
+            ;
+
+        table.renderTo(svg);
 
         var adjustOpacity = function(plot, legendText) {
             plot.attr("opacity", function(d, i, ds) {

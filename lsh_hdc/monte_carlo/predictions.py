@@ -130,6 +130,7 @@ def create_plots(args, df):
     template_env = jinja2.Environment(loader=template_loader)
     viewer_template = template_env.get_template('powerview.html')
 
+    template_vars = []
     for group_name, group in groups:
 
         # always sort by X values
@@ -164,16 +165,18 @@ def create_plots(args, df):
         csv_name = 'fig-%s.csv' % group_name
         csv_path = os.path.join(args.output, csv_name)
         group.to_csv(csv_path)
-        html_path = os.path.join(args.output, 'fig-%s.html' % group_name)
-        with open(html_path, 'w') as fh:
-            html = viewer_template.render(
-                csv_path=csv_name,
-                title="%s=%s" % (args.group_by, group_name),
-                x_field=args.x_axis
-            )
-            fh.write(html)
+        template_vars.append((
+            csv_name,
+            args.x_axis,
+            "%s=%s" % (args.group_by, group_name),
+        ))
         fig.savefig(fig_path, format=args.fig_format)
         plt.close(fig)
+
+    html_path = os.path.join(args.output, 'figures.html')
+    html = viewer_template.render(table=template_vars)
+    with open(html_path, 'w') as fh:
+        fh.write(html)
 
 
 def do_reducer(args):

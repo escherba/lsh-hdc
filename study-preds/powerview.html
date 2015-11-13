@@ -7,9 +7,11 @@
         <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/plottable.js/1.6.1/plottable.min.css">
     </head>
     <body>
-        <svg id="chart" width="1000px" height="600px"></svg>
+        <div id="charts"></div>
         <script type="text/javascript">
-            drawPlot("{{csv_path}}", "{{x_field}}", "{{title}}", "svg#chart");
+        {% for csv_path, x_field, title in table %}
+            drawPlot("{{csv_path}}", "{{x_field}}", "{{title}}", "#charts");
+        {% endfor %}
         </script>
     </body>
 </html>
