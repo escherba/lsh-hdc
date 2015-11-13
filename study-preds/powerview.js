@@ -131,9 +131,13 @@ function drawPlot(dataFile, xField, title, containerId) {
                 [null,   null,  xLabel,     null   ]
         ]);
 
-        var svg = d3.select(containerId).append("svg")
-            .attr("width", "1000px")
-            .attr("height", "600px");
+        var svg = d3.select(containerId)
+            .append("div")
+            .attr("style", "display:block; height:640px;")
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", "600px")
+            ;
 
         table.renderTo(svg);
 
