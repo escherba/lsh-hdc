@@ -55,7 +55,7 @@ var projectX = function(rawData, xField) {
     return result;
 }
 
-function drawPlot(dataFile, xField, svgElementId) {
+function drawPlot(dataFile, xField, title, svgElementId) {
     d3.csv(dataFile, function(rawData) {
 
         var data = projectX(rawData, xField);
@@ -97,15 +97,15 @@ function drawPlot(dataFile, xField, svgElementId) {
         var xAxis = new Plottable.Axes.Numeric(xScale, "bottom");
         var yAxis = new Plottable.Axes.Numeric(yScale, "left");
 
-        var title = new Plottable.Components.TitleLabel("Resolving power (AUC) vs. " + xField, "0");
+        var titleLabel = new Plottable.Components.TitleLabel(title, "0");
         var xLabel = new Plottable.Components.AxisLabel(xField, "0");
-        var yLabel = new Plottable.Components.AxisLabel("AUC", "270");
+        var yLabel = new Plottable.Components.AxisLabel("Resolving power (AUC)", "270");
 
         var table = new Plottable.Components.Table([
-                [null,   null,  title, null],
-                [yLabel, yAxis, plots, legend],
-                [null,   null,  xAxis, null],
-                [null,   null,  xLabel, null]
+                [null,   null,  titleLabel, null   ],
+                [yLabel, yAxis, plots,      legend ],
+                [null,   null,  xAxis,      null   ],
+                [null,   null,  xLabel,     null   ]
         ]);
 
         table.renderTo(svgElementId);

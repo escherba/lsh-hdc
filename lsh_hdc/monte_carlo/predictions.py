@@ -166,7 +166,11 @@ def create_plots(args, df):
         group.to_csv(csv_path)
         html_path = os.path.join(args.output, 'fig-%s.html' % group_name)
         with open(html_path, 'w') as fh:
-            html = viewer_template.render(csv_path=csv_name, x_field=args.x_axis)
+            html = viewer_template.render(
+                csv_path=csv_name,
+                title="%s=%s" % (args.group_by, group_name),
+                x_field=args.x_axis
+            )
             fh.write(html)
         fig.savefig(fig_path, format=args.fig_format)
         plt.close(fig)
