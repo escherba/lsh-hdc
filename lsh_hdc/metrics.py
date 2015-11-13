@@ -404,25 +404,7 @@ class ContingencyTable(CrossTab):
         return score
 
     def split_join_distance(self, normalize=True):
-        """Projection distance between partitions
-
-        Used in graph community analysis. Originally defined in [1]_.
-        Example::
-
-            >>> p1 = [{1, 2, 3, 4}, {5, 6, 7}, {8, 9, 10, 11, 12}]
-            >>> p2 = [{2, 4, 6, 8, 10}, {3, 9, 12}, {1, 5, 7}, {11}]
-            >>> t = ClusteringMetrics.from_partitions(p1, p2)
-            >>> t.split_join_distance(normalize=False)
-            11
-
-        References
-        ----------
-
-        .. [1] `Dongen, S. V. (2000). Performance criteria for graph clustering
-               and Markov cluster experiments. Information Systems [INS],
-               (R 0012), 1-36.
-               <http://dl.acm.org/citation.cfm?id=868979>`_
-
+        """Distance metric based on ``split_join_similarity``
         """
         sim = self.split_join_similarity(normalize=False)
         max_sim = 2 * self.grand_total
@@ -433,6 +415,17 @@ class ContingencyTable(CrossTab):
 
     def split_join_similarity(self, normalize=True):
         """Split-join similarity score
+
+        Split-join similarity is a two-way assignment-based score first
+        proposed in [1]_. The distance variant of this measure has metric
+        properties.  Like the better known purity score (a one-way
+        coefficient), this measure implicitly performs class-cluster
+        assignment, except the assignment is performed twice: based on the
+        corresponding maximum frequency in the contingency table, each class is
+        given a cluster with the assignment weighted according to the
+        frequency, then the procedure is inversed to assign a class to each
+        cluster. The final unnormalized distance score comprises of a simple
+        sum of the two one-way assignment scores.
 
         A relatively decent clustering::
 
@@ -449,6 +442,14 @@ class ContingencyTable(CrossTab):
             >>> t = ContingencyTable.from_clusters(clusters)
             >>> t.split_join_similarity()
             0.74
+
+        References
+        ----------
+
+        .. [1] `Dongen, S. V. (2000). Performance criteria for graph clustering
+               and Markov cluster experiments. Information Systems [INS],
+               (R 0012), 1-36.
+               <http://dl.acm.org/citation.cfm?id=868979>`_
 
         """
         pa_B = sum(max(row) for row in self.iter_rows())
@@ -537,6 +538,49 @@ class ContingencyTable(CrossTab):
         B_card = ilen(self.iter_col_totals())
         V_card = sum(ilen(row) for row in self.iter_rows())
         return _div(sqrt(A_card * B_card), V_card)
+
+    def mt_metrics(self):
+        """'model-theoretic' metrics for coreference scoring
+
+        Described in [1]_.
+
+        ::
+
+            >>> p1 = [x.split() for x in ["A B C", "D E F G"]]
+            >>> p2 = [x.split() for x in ["A B", "C", "D", "E", "F G"]]
+            >>> cm = ClusteringMetrics.from_partitions(p1, p2)
+            >>> cm.mt_metrics()[:2]
+            (0.4, 1.0)
+
+        Elements that are part of neither partition (in this case, E) are
+        excluded from consideration::
+
+            >>> p1 = [x.split() for x in ["A B", "C", "D", "F G", "H"]]
+            >>> p2 = [x.split() for x in ["A B", "C D", "F G H"]]
+            >>> cm = ClusteringMetrics.from_partitions(p1, p2)
+            >>> cm.mt_metrics()[:2]
+            (1.0, 0.5)
+
+        References
+        ----------
+
+        .. [1] `Vilain, M., Burger, J., Aberdeen, J., Connolly, D., &
+               Hirschman, L. (1995, November). A model-theoretic coreference
+               scoring scheme. In Proceedings of the 6th conference on Message
+               understanding (pp. 45-52).  Association for Computational
+               Linguistics.
+               <http://www.aclweb.org/anthology/M/M95/M95-1005.pdf>`_
+        """
+        A_card = ilen(self.iter_row_totals())
+        A_sum = sum(ilen(row) for row in self.iter_rows())
+        B_card = ilen(self.iter_col_totals())
+        B_sum = sum(ilen(col) for col in self.iter_cols())
+        N = self.grand_total
+
+        recall = _div(N - A_sum,  N - A_card)
+        precision = _div(N - B_sum,  N - B_card)
+        fscore = harmonic_mean(recall, precision)
+        return recall, precision, fscore
 
 
 class ClusteringMetrics(ContingencyTable):

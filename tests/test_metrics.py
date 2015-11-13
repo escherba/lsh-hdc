@@ -262,6 +262,37 @@ def test_split_join():
     assert_equal(cm.split_join_distance(normalize=False), 4)
 
 
+def test_mt_metrics():
+    """Table 1 in Vilain et al. (1995)
+    """
+
+    # row 1
+    p1 = ["A B C D".split()]
+    p2 = ["A B".split(), "C D".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [0.6667, 1.0], 4)
+
+    # row 2
+    p1 = ["A B".split(), "C D".split()]
+    p2 = ["A B C D".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.6667], 4)
+
+    # row 3
+    p1 = ["A B C D".split()]
+    p2 = ["A B C D".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 1.0], 4)
+
+    # row 4 is exactly the same as row 1
+
+    # row 5
+    p1 = ["A B C".split()]
+    p2 = ["A C".split(), "B"]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [0.5, 1.0], 4)
+
+
 def test_IR_example():
     """Test example from IR book by Manning et al.
 
