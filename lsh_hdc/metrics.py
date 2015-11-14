@@ -285,7 +285,9 @@ class ContingencyTable(CrossTab):
         coefficients of a given clustering vs true labels (homogeneity) and of
         the dual problem of true labels vs given clustering (completeness).
         Because of the dual property, in a symmetric matrix, all three scores
-        are the same.
+        are the same. Homogeneity has an overall profile similar to that of
+        precision in information retrieval. Completeness roughly corresponds to
+        recall.
 
         This method replaces ``homogeneity_completeness_v_measure`` method in
         Scikit-Learn.  The Scikit-Learn version takes up :math:`O(n^2)` space
@@ -540,7 +542,8 @@ class ContingencyTable(CrossTab):
     def mt_metrics(self):
         """'model-theoretic' metrics for coreference scoring
 
-        Described in [1]_.
+        As described in [1]_. The compound fscore-like metric performs
+        similarly to Ochiai association coefficient.
 
         ::
 
@@ -548,7 +551,7 @@ class ContingencyTable(CrossTab):
             >>> p2 = [x.split() for x in ["A B", "C", "D", "E", "F G"]]
             >>> cm = ClusteringMetrics.from_partitions(p1, p2)
             >>> cm.mt_metrics()[:2]
-            (0.4, 1.0)
+            (1.0, 0.4)
 
         Elements that are part of neither partition (in this case, E) are
         excluded from consideration::
@@ -557,7 +560,7 @@ class ContingencyTable(CrossTab):
             >>> p2 = [x.split() for x in ["A B", "C D", "F G H"]]
             >>> cm = ClusteringMetrics.from_partitions(p1, p2)
             >>> cm.mt_metrics()[:2]
-            (1.0, 0.5)
+            (0.5, 1.0)
 
         References
         ----------
@@ -578,12 +581,13 @@ class ContingencyTable(CrossTab):
         recall = _div(N - A_sum,  N - A_card)
         precision = _div(N - B_sum,  N - B_card)
         fscore = harmonic_mean(recall, precision)
-        return recall, precision, fscore
+        return precision, recall, fscore
 
     def bc_metrics(self):
-        """'B-cubed' recall, precision, and fscore
+        """'B-cubed' precision, recall, and fscore
 
-        As described in [1]_ and [2]_.
+        As described in [1]_ and [2]_. These metrics perform very similarly to
+        normalized entropy metrics (homogeneity, completeness, V-measure).
 
         References
         ----------
@@ -611,7 +615,7 @@ class ContingencyTable(CrossTab):
         precision /= N
         recall /= N
         fscore = harmonic_mean(recall, precision)
-        return recall, precision, fscore
+        return precision, recall, fscore
 
 
 class ClusteringMetrics(ContingencyTable):
@@ -631,7 +635,7 @@ class ClusteringMetrics(ContingencyTable):
     """
 
     def __init__(self, *args, **kwargs):
-        super(ClusteringMetrics, self).__init__(*args, **kwargs)
+        ContingencyTable.__init__(self, *args, **kwargs)
         self._pairwise_ = None
 
     @property
@@ -1129,23 +1133,24 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         p2, q2 = self.col_totals.values()
         return _div(self.covar(), p2 * q2)
 
-    def kappa0(self):
-        """One-sided component of ``kappa`` and MCC
+    def kappas(self):
+        """Kappa and its harmonic components
 
-        Roughly corresponds to precision
+        ``kappa0`` roughly corresponds to precision while ``kappa1``
+        roughly corresponds to recall.
         """
-        _, q1 = self.row_totals.values()
-        p2, _ = self.col_totals.values()
-        return _div(self.covar(), p2 * q1)
-
-    def kappa1(self):
-        """One-sided component of ``kappa`` and MCC
-
-        Roughly corresponds to recall
-        """
-        p1, _ = self.row_totals.values()
-        _, q2 = self.col_totals.values()
-        return _div(self.covar(), p1 * q2)
+        (a, b), (c, d) = self.rows
+        p1 = a + b
+        q1 = c + d
+        p2 = a + c
+        q2 = b + d
+        p2_q1 = p2 * q1
+        p1_q2 = p1 * q2
+        cov = self.covar()
+        kappa0 = _div(cov, p2_q1)
+        kappa1 = _div(cov, p1_q2)
+        kappa2 = _div(2 * cov,  p2_q1 + p1_q2)
+        return kappa0, kappa1, kappa2
 
     def loevinger_coeff(self):
         """Loevinger two-sided coefficient of homogeneity
@@ -1344,35 +1349,26 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             # no more than one cell is zero
             return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
 
-    def mi_corr1(self):
-        """One-sided component of ``mi_corr``
-
-        Roughly equivalent to informedness
-        """
-        h, _, _ = self.entropy_metrics()
-        return copysign(1, self.covar()) * sqrt(h)
-
-    def mi_corr0(self):
-        """One-sided component of ``mi_corr``
-
-        Roughly equivalent to markedness
-        """
-        _, c, _ = self.entropy_metrics()
-        return copysign(1, self.covar()) * sqrt(c)
-
-    def mi_corr(self):
+    def mic_scores(self):
         """Mutual information-based correlation
 
         The coefficient decomposes into regression coefficients defined
-        according to fixed-margin tables. The ``mi_corr1`` coefficient, for
+        according to fixed-margin tables. The ``mic1`` coefficient, for
         example, is obtained by dividing the G-score by the maximum achievable
         value on a table with fixed true class counts (which here correspond to
-        row totals).  The ``mi_corr0`` is its dual, defined by dividing the
-        G-score by its maximum achievable value with fixed predicted label
-        counts (here represented as column totals).
+        row totals).  The ``mic0`` is its dual, defined by dividing the G-score
+        by its maximum achievable value with fixed predicted label counts (here
+        represented as column totals).
+
+        ``mic0`` roughly corresponds to precision (homogeneity) while ``mic1``
+        roughly corresponds to recall (completeness).
         """
-        _, _, rsquare = self.entropy_metrics()
-        return copysign(1, self.covar()) * sqrt(rsquare)
+        h, c, rsquare = self.entropy_metrics()
+        cov = copysign(1, self.covar())
+        mic0 = cov * sqrt(c)
+        mic1 = cov * sqrt(h)
+        mic2 = cov * sqrt(rsquare)
+        return mic0, mic1, mic2
 
     def yule_q(self):
         """Yule's Q (association index)
