@@ -274,13 +274,13 @@ def test_bc_metrics():
 
     p2 = ["1 2 3 4 5".split(), "6 7 8 9 A B C".split()]
     cm = ClusteringMetrics.from_partitions(p1, p2)
-    assert_array_almost_equal(cm.bc_metrics()[:2], [1.0, 0.76], 2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.9], 4)
+    assert_array_almost_equal(cm.bc_metrics()[:2], [0.76, 1.0], 2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [0.9, 1.0], 4)
 
     p2 = ["1 2 3 4 5 8 9 A B C".split(), "6 7".split()]
     cm = ClusteringMetrics.from_partitions(p1, p2)
-    assert_array_almost_equal(cm.bc_metrics()[:2], [1.0, 0.58], 2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.9], 4)
+    assert_array_almost_equal(cm.bc_metrics()[:2], [0.58, 1.0], 2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [0.9, 1.0], 4)
 
 
 def test_mt_metrics():
@@ -291,13 +291,13 @@ def test_mt_metrics():
     p1 = ["A B C D".split()]
     p2 = ["A B".split(), "C D".split()]
     cm = ClusteringMetrics.from_partitions(p1, p2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [0.6667, 1.0], 4)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.6667], 4)
 
     # row 2
     p1 = ["A B".split(), "C D".split()]
     p2 = ["A B C D".split()]
     cm = ClusteringMetrics.from_partitions(p1, p2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.6667], 4)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [0.6667, 1.0], 4)
 
     # row 3
     p1 = ["A B C D".split()]
@@ -311,7 +311,7 @@ def test_mt_metrics():
     p1 = ["A B C".split()]
     p2 = ["A C".split(), "B"]
     cm = ClusteringMetrics.from_partitions(p1, p2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [0.5, 1.0], 4)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.5], 4)
 
 
 def test_IR_example():
@@ -346,7 +346,7 @@ def test_IR_example():
     assert_almost_equal(conf.sokal_sneath_coeff(),  0.185185, 6)
 
     assert_almost_equal(conf.kappa(),               0.242915, 6)
-    assert_almost_equal(conf.rand_index(),          0.676471, 6)
+    assert_almost_equal(conf.accuracy(),            0.676471, 6)
     assert_almost_equal(conf.precision(),           0.500000, 6)
     assert_almost_equal(conf.recall(),              0.454545, 6)
 
@@ -378,17 +378,19 @@ def test_twoway_confusion_1():
     assert_almost_equal(cm.g_score(),       126.1, 1)
     assert_almost_equal(cm.chisq_score(),   397.9, 1)
 
-    assert_almost_equal(cm.mi_corr(),       0.429, 3)
-    assert_almost_equal(cm.mi_corr1(),      0.497, 3)
-    assert_almost_equal(cm.mi_corr0(),      0.382, 3)
+    mic0, mic1, mic2 = cm.mic_scores()
+    assert_almost_equal(mic2,       0.429, 3)
+    assert_almost_equal(mic1,       0.497, 3)
+    assert_almost_equal(mic0,       0.382, 3)
 
     assert_almost_equal(cm.matthews_corr(), 0.377, 3)
     assert_almost_equal(cm.informedness(),  0.523, 3)
     assert_almost_equal(cm.markedness(),    0.271, 3)
 
-    assert_almost_equal(cm.kappa(),         0.355, 3)
-    assert_almost_equal(cm.kappa1(),        0.532, 3)
-    assert_almost_equal(cm.kappa0(),        0.267, 3)
+    kappa0, kappa1, kappa2 = cm.kappas()
+    assert_almost_equal(kappa0,        0.267, 3)
+    assert_almost_equal(kappa1,        0.532, 3)
+    assert_almost_equal(kappa2,        0.355, 3)
 
 
 def test_twoway_confusion_2():
@@ -399,17 +401,19 @@ def test_twoway_confusion_2():
     assert_almost_equal(cm.g_score(),       70.83, 2)
     assert_almost_equal(cm.chisq_score(),   314.3, 1)
 
-    assert_almost_equal(cm.mi_corr(),       0.614, 3)
-    assert_almost_equal(cm.mi_corr1(),      0.698, 3)
-    assert_almost_equal(cm.mi_corr0(),      0.555, 3)
+    mic0, mic1, mic2 = cm.mic_scores()
+    assert_almost_equal(mic0,      0.555, 3)
+    assert_almost_equal(mic1,      0.698, 3)
+    assert_almost_equal(mic2,      0.614, 3)
 
     assert_almost_equal(cm.matthews_corr(), 0.580, 3)
     assert_almost_equal(cm.informedness(),  0.770, 3)
     assert_almost_equal(cm.markedness(),    0.437, 3)
 
-    assert_almost_equal(cm.kappa(),         0.556, 3)
-    assert_almost_equal(cm.kappa1(),        0.780, 3)
-    assert_almost_equal(cm.kappa0(),        0.431, 3)
+    kappa0, kappa1, kappa2 = cm.kappas()
+    assert_almost_equal(kappa0,        0.431, 3)
+    assert_almost_equal(kappa1,        0.780, 3)
+    assert_almost_equal(kappa2,        0.556, 3)
 
 
 def test_negative_correlation():
@@ -419,9 +423,11 @@ def test_negative_correlation():
     assert_almost_equal(cm.g_score(),        384.52, 2)
     assert_almost_equal(cm.chisq_score(),    355.70, 2)
 
-    assert_almost_equal(cm.mi_corr(),       -0.8510, 4)
-    assert_almost_equal(cm.mi_corr1(),      -0.8524, 4)
-    assert_almost_equal(cm.mi_corr0(),      -0.8496, 4)
+    mic0, mic1, mic2 = cm.mic_scores()
+    assert_almost_equal(mic0,      -0.8496, 4)
+    assert_almost_equal(mic1,      -0.8524, 4)
+    assert_almost_equal(mic2,      -0.8510, 4)
+
     assert_almost_equal(cm.matthews_corr(), -0.9012, 4)
     assert_almost_equal(cm.informedness(),  -0.9052, 4)
     assert_almost_equal(cm.markedness(),    -0.8971, 4)

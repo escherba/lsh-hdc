@@ -41,9 +41,8 @@ endef
 
 # Study definition
 COMPUTE_METRICS := \
-	entropy_metrics adjusted_mutual_info_score \
-	adjusted_rand_score rand_index matthews_corr mi_corr \
-	mi_corr1 mi_corr0 \
+	entropy_metrics adjusted_mutual_info \
+	adjusted_rand_index rand_index matthews_corr mic_scores \
 	informedness markedness \
 	ochiai_coeff dice_coeff jaccard_coeff \
 	split_join_similarity talburt_wang_index vi_similarity mirkin_match_coeff \
@@ -52,7 +51,8 @@ COMPUTE_METRICS := \
 PLOT_METRICS := $(COMPUTE_METRICS) \
 	entropy_metrics-0 entropy_metrics-1 entropy_metrics-2 \
 	mt_metrics-0 mt_metrics-1 mt_metrics-2 \
-	bc_metrics-0 bc_metrics-1 bc_metrics-2
+	bc_metrics-0 bc_metrics-1 bc_metrics-2 \
+	mic_scores-0 mic_scores-1 mic_scores-2
 
 MAPPER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions mapper \
 	--sim_size 10000 \

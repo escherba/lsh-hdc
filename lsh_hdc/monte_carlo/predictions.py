@@ -4,6 +4,7 @@ import warnings
 import random
 import sys
 import logging
+import scipy
 from itertools import product, izip, chain, cycle
 from collections import defaultdict
 from functools import partial
@@ -508,6 +509,7 @@ class Grid(object):
                 seen_pairs.add((lbl1, lbl2))
                 seen_pairs.add((lbl2, lbl1))
                 continue
+
             self.plot([(arr1, arr2)], save_to=filepath, title=filename,
                       xlabel=lbl1, ylabel=lbl2)
             seen_pairs.add((lbl1, lbl2))
@@ -520,6 +522,10 @@ class Grid(object):
         fig, ax = plt.subplots()
         for (xs, ys), jitter_, marker_, s_, color_, label_, alpha_ in \
                 izip_with_cycles(pairs, jitter, marker, s, color, label, alpha):
+
+            corr_coeff = scipy.stats.pearsonr(xs, ys)
+            ax.annotate('r = %.3f' % corr_coeff[0], (0.05, 0.9), xycoords='axes fraction')
+
             if jitter_ is not None:
                 xs = np.random.normal(xs, jitter_)
                 ys = np.random.normal(ys, jitter_)

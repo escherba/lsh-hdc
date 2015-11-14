@@ -16,9 +16,9 @@ from IPython import get_ipython
 
 
 METHODS = {
-    'hcv': 'homogeneity_completeness_v_measure',
-    'ami': 'adjusted_mutual_info_score',
-    'ari': 'adjusted_rand_score'
+    'hcv': ('homogeneity_completeness_v_measure', 'entropy_metrics'),
+    'ami': ('adjusted_mutual_info_score', 'adjusted_mutual_info'),
+    'ari': ('adjusted_rand_score', 'adjusted_rand_index')
 }
 
 
@@ -28,7 +28,7 @@ def parse_args(args=None):
                         choices=['sklearn', 'proposed', 'oo'],
                         help='which implementation to benchmark')
     parser.add_argument('--method', type=str, help='method to benchmark',
-                        default='adjusted_mutual_info_score',
+                        default='ami',
                         choices=METHODS.keys())
     parser.add_argument('--num_tests', type=int, default=3,
                         help='how many tests to run')
@@ -71,15 +71,15 @@ else:
 if ARGS.implementation == 'oo':
     from lsh_hdc.metrics import ClusteringMetrics
     cm = ClusteringMetrics.from_labels(ltrue, lpred)
-    method = getattr(cm, METHODS[ARGS.method])
+    method = getattr(cm, METHODS[ARGS.method][1])
     line = "method()"
 elif ARGS.implementation == 'sklearn':
     import sklearn.metrics.cluster as module
-    method = getattr(module, METHODS[ARGS.method])
+    method = getattr(module, METHODS[ARGS.method][0])
     line = "method(ltrue, lpred)"
 elif ARGS.implementation == 'proposed':
     import lsh_hdc.metrics as module
-    method = getattr(module, METHODS[ARGS.method])
+    method = getattr(module, METHODS[ARGS.method][0])
     line = "method(ltrue, lpred)"
 else:
     raise argparse.ArgumentError('Unknown value for --implementation')

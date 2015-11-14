@@ -9,9 +9,11 @@
     <body>
         <div id="charts"></div>
         <script type="text/javascript">
-        {% for csv_path, x_field, title in table %}
-            drawPlot("{{csv_path}}", "{{x_field}}", "{{title}}", "#charts");
-        {% endfor %}
+            var documentURL = window.location.href;
+            var documentRoot = documentURL.substr(0, documentURL.lastIndexOf('/'));
+            {% for csv_path, x_field, title in table %}
+                drawPlot(documentRoot + "/{{csv_path}}", "{{x_field}}", "{{title}}", "#charts");
+            {% endfor %}
         </script>
     </body>
 </html>
