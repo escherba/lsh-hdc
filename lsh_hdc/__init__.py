@@ -123,18 +123,39 @@ def create_hash_factory(hashfun, complex_types=False, universe_size=None):
     return hash_factory
 
 
-def create_getters(lot):
-    """A wrapper that fixes operator.itemgetter behavior
-    where it returns a scalar for tuple input of cardinality one
+def create_getters(tuples):
+    """Create a series of itemgetters that return tuples
 
-    :param lot: a list of tuples
-    :type lot: list
+    :param tuples: a list of tuples
+    :type tuples: collections.Iterable
     :returns: a generator of item getters
     :rtype: generator
 
+    ::
+
+        >>> gs = list(create_getters([(0, 2), (), (1,)]))
+        >>> d = ['a', 'b', 'c', 'd']
+        >>> gs[0](d)
+        ('a', 'c')
+        >>> gs[1](d)
+        ()
+        >>> gs[2](d)
+        ('b',)
     """
-    for tup in lot:
-        yield itemgetter(*tup) if tup else lambda x: ()
+    def tgetter0():
+        return lambda x: ()
+
+    def tgetter1(key):
+        it = itemgetter(key)
+        return lambda x: (it(x),)
+
+    for t in tuples:
+        if not t:
+            yield tgetter0()
+        elif len(t) == 1:
+            yield tgetter1(*t)
+        else:
+            yield itemgetter(*t)
 
 
 def cntuples(m, n):
@@ -375,7 +396,9 @@ class Signature(object):
 
     @abstractmethod
     def create_hash_functions(self):
-        """Returns an array of length self.width consisting of different hash functions
+        """Create an array of different hash functions
+
+        :return: array of length ``self.width``
         :rtype : list
 
         """
@@ -538,9 +561,8 @@ class MinHashSignature(Signature):
             return sig_vector
 
     def get_threshold(self):
-        """
+        """Calculate similarity threshold being approximated
 
-        :return: similarity threshold used for building clusters
         :rtype: float
         """
         bandwidth = self.lsh_hasher.bandwidth
@@ -582,7 +604,8 @@ class SimHashSignature(Signature):
         raise NotImplementedError
 
     def get_signature(self, tokens, *features):
-        """Returns weighted SimHash signature of a word vector
+        """Weighted SimHash signature of a word vector
+
         and of (optional) feature vectors
 
         :param tokens: vector of length-weighted tokens
