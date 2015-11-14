@@ -8,6 +8,7 @@ Submodules
 
    lsh_hdc.monte_carlo.predictions
    lsh_hdc.monte_carlo.strings
+   lsh_hdc.monte_carlo.utils
 
 Module contents
 ---------------

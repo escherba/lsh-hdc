@@ -6,6 +6,7 @@ Subpackages
 
 .. toctree::
 
+    lsh_hdc.fent
     lsh_hdc.monte_carlo
 
 Submodules
