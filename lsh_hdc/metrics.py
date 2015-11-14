@@ -314,10 +314,8 @@ class ContingencyTable(CrossTab):
         rsquare = harmonic_mean(h, c)
         return h, c, rsquare
 
-    homogeneity_completeness_v_measure = entropy_metrics
-
-    def adjusted_mutual_info_score(self):
-        """Adjusted Mutual Information between two clusterings
+    def adjusted_mutual_info(self):
+        """Adjusted Mutual Information for two partitions
 
         For a mathematical definition, see [1]_ and [2]_.
 
@@ -677,13 +675,27 @@ class ClusteringMetrics(ContingencyTable):
             method = getattr(self.pairwise_, scoring_method)
         return method(*args, **kwargs)
 
-    def adjusted_rand_score(self):
+    def adjusted_rand_index(self):
         """Rand score (accuracy) corrected for chance
 
         This is a memory-efficient replacement for a similar Scikit-Learn
         function.
         """
         return self.pairwise_.kappa()
+
+    def rand_index(self):
+        """Pairwise accuracy (uncorrected for chance)
+
+        Don't use this metric; it is only added here as the "worst reference"
+        """
+        return self.pairwise_.accuracy()
+
+    def fowlkes_mallows(self):
+        """Fowlkes-Mallows index for partition comparison
+
+        Defined as the Ochiai coefficient on the pairwise matrix
+        """
+        return self.pairwise_.ochiai_coeff()
 
 
 confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
@@ -1427,11 +1439,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     # heidke_skill = kappa
     # true_skill = informedness
 
-    # cluster analysis
-    rand_index = ACC
-    adjusted_rand_score = kappa
-    fowlkes_mallows = ochiai_coeff
-
 
 def mutual_info_score(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Sklean function
@@ -1471,11 +1478,11 @@ def adjusted_rand_score(labels_true, labels_pred):
 
     """
     ct = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return ct.adjusted_rand_score()
+    return ct.adjusted_rand_index()
 
 
 def adjusted_mutual_info_score(labels_true, labels_pred):
-    """Adjusted Mutual Information between two clusterings
+    """Adjusted Mutual Information for two partitions
 
     This is a memory-efficient replacement for the equivalently named
     Scikit-Learn function.
@@ -1495,8 +1502,8 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
         0.0
 
     """
-    t = ClusteringMetrics.from_labels(labels_true, labels_pred)
-    return t.adjusted_mutual_info_score()
+    ct = ContingencyTable.from_labels(labels_true, labels_pred)
+    return ct.adjusted_mutual_info()
 
 
 def matthews_corr(*args, **kwargs):

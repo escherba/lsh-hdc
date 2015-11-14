@@ -41,8 +41,8 @@ endef
 
 # Study definition
 COMPUTE_METRICS := \
-	entropy_metrics adjusted_mutual_info_score \
-	adjusted_rand_score rand_index matthews_corr mi_corr \
+	entropy_metrics adjusted_mutual_info \
+	adjusted_rand_index rand_index matthews_corr mi_corr \
 	mi_corr1 mi_corr0 \
 	informedness markedness \
 	ochiai_coeff dice_coeff jaccard_coeff \

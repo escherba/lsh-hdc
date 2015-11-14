@@ -28,7 +28,7 @@ class TestAccuracy(unittest.TestCase):
         14 19 15 13 5 13 12 16 4 4 7 6 6 8 2 16 16 18 3 7 1 10".split()
 
         cm = ClusteringMetrics.from_labels(ltrue, lpred)
-        ami = cm.adjusted_mutual_info_score()
+        ami = cm.adjusted_mutual_info()
 
         self.assertAlmostEqual(0.0352424389209073, ami, 12)
 

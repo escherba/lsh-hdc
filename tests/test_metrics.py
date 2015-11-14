@@ -346,7 +346,7 @@ def test_IR_example():
     assert_almost_equal(conf.sokal_sneath_coeff(),  0.185185, 6)
 
     assert_almost_equal(conf.kappa(),               0.242915, 6)
-    assert_almost_equal(conf.rand_index(),          0.676471, 6)
+    assert_almost_equal(conf.accuracy(),            0.676471, 6)
     assert_almost_equal(conf.precision(),           0.500000, 6)
     assert_almost_equal(conf.recall(),              0.454545, 6)
 
