@@ -3,7 +3,7 @@
 PYMODULE := lsh_hdc
 PYPI_HOST := pypi
 DISTRIBUTE := sdist bdist_wheel
-SHELL_PRELOAD := $(PYMODULE)/workspace.py
+SHELL_PRELOAD := $(PYMODULE)/_workspace.py
 
 SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 SHELL_PRELOAD := $(SRC_ROOT)/$(SHELL_PRELOAD)

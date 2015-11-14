@@ -84,6 +84,7 @@ def randset(value_range=(0, 10), sample_range=(5, 20)):
 
 def random_string(length, alphabet=string.letters):
     """Generate a random string
+
     :param length: length of the string
     :type length: int
     :param alphabet: alphabet to draw letters from
@@ -96,6 +97,7 @@ def random_string(length, alphabet=string.letters):
 
 def sigsim(x, y, dim):
     """Return the similarity of the two signatures
+
     :param x: signature 1
     :type x: object
     :param y: signature 2

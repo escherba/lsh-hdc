@@ -52,7 +52,7 @@ def mshinglify(iterable, span, skip=0):
     :param span: shingle span
     :type span: int
     :returns: sequence of tuples (shingles)
-    :rtype : list
+    :rtype: list
 
     >>> list(mshinglify("abcd", 4, skip=0))
     [('a', 'c', 'd'), ('a', 'b', 'd'), ('a', 'b', 'c'), ('b', 'c', 'd')]
@@ -99,8 +99,8 @@ def create_hash_factory(hashfun, complex_types=False, universe_size=None):
 
     :param hashfun: hash function to use
     :type hashfun: callable
-    :param complex_types: whether hash function supports hashing of complex
-    types, either through native support or through repr
+    :param complex_types: whether hash function supports hashing of complex types,
+                          either through native support or through repr
     :type complex_types: bool
     :param universe_size: upper limit to hash value
     :type universe_size: int, long
@@ -166,7 +166,7 @@ def cntuples(m, n):
     :param n: tuple length
     :type n: int
     :returns: a sequence of n-tuples
-    :rtype : list
+    :rtype: list
 
     """
     vec = range(m)
@@ -184,7 +184,7 @@ def cntuplesx(m, n, kmin=1):
     :param kmin: k from k-min
     :type kmin: int
     :returns: a sequence of n-tuples
-    :rtype : list
+    :rtype: list
 
     """
     vec = range(m)
@@ -201,8 +201,8 @@ def lsh_combinations(width, bandwidth, ramp):
     :param bandwidth: band size
     :type bandwidth: int
     :param ramp: For each integer value between 1 and bandwidth, return
-    (preferably uniformly) sampled combinations such that their number
-    corresponds to (width choose ramp) combinations
+                 (preferably uniformly) sampled combinations such that their
+                 number corresponds to (width choose ramp) combinations
     :type ramp: int
     :return: a sequence of tuples with elements representing indices
     :rtype: list
@@ -399,16 +399,17 @@ class Signature(object):
         """Create an array of different hash functions
 
         :return: array of length ``self.width``
-        :rtype : list
+        :rtype: list
 
         """
 
     @abstractmethod
     def get_signature(self, vec, with_sketch=False):
         """Return the signature for vector
+
         :param vec: vector for which to return signature
         :type vec: collections.Iterable
-        :rtype : list
+        :rtype: list
 
         """
 
@@ -503,7 +504,7 @@ class MinHashSignature(Signature):
     def _get_minhashes_kmin1p(self, vec):
         """Returns minhash signature from a feature vector
         :returns: a signature vector
-        :rtype : list
+        :rtype: list
         """
         kmin = self.kmin
         # Choose k smallest hashes
@@ -519,7 +520,7 @@ class MinHashSignature(Signature):
     def _get_minhashes_kmin1(self, vec):
         """Returns minhash signature from a feature vector
         :returns: a signature vector
-        :rtype : list
+        :rtype: list
         """
         # Choose one minimal hash
         if len(vec) > 0:
@@ -539,7 +540,7 @@ class MinHashSignature(Signature):
         """Returns minhash signature from a feature vector (with optional LSH)
 
         :returns: a signature vector
-        :rtype : list
+        :rtype: list
         """
         minhashes = self._get_minhashes(vec)
         lsh = self.lsh_hasher
