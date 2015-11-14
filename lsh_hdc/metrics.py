@@ -606,10 +606,10 @@ class ContingencyTable(CrossTab):
         """
         precision = 0.0
         recall = 0.0
-        N = self.grand_total
         for rm, cm, observed in self.iter_vals_with_margins():
             precision += (observed ** 2) / float(cm)
             recall += (observed ** 2) / float(rm)
+        N = self.grand_total
         precision /= N
         recall /= N
         fscore = harmonic_mean(recall, precision)

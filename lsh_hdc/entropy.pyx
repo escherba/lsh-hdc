@@ -144,7 +144,7 @@ cpdef np.float64_t emi_from_margins(
 
     cdef Py_ssize_t R, C, i, j, nij
 
-    cdef np.int64_t N, N1, N3, max_ab, ai, bj, ai_1, bj_1, ai_bj, N3_ai_1, N3_ai_bj_1
+    cdef np.int64_t N, N1, N3, max_ab, ai_1, bj_1, N3_ai_1, N3_ai_bj_1
 
     cdef np.float64_t emi, log_ai, log_ab_outer_ij, outer_sum, gln_ai_Nai_Ni
 
