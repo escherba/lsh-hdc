@@ -87,8 +87,8 @@ class Cluster(object):
                     union_find.union(matched_label, label)
 
     def get_clusters(self):
-        """
-        :return: a list of sets representing clusters
+        """Returns a list of sets representing clusters
+
         :rtype: list
         """
         return self.union_find.sets()
@@ -227,10 +227,14 @@ class HDClustering(object):
     def reducer(self, key, tuple_gen):
         """Perform a reducer task in MR
 
-        If sketches enabled, data consists of:
+        If sketches enabled, data consists of::
+
             (key, [(lbl, sk), (lbl, sk), (lbl, sk)])
-        Otherwise:
+
+        Otherwise::
+
             (key, [lbl, lbl, lbl])
+
         """
 
         # If not using sketches, we are done

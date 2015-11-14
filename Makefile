@@ -38,7 +38,7 @@ doc_sources:
 
 docs: env build_ext
 	$(PYENV) cd docs; make html; cd ..
-	open docs/_build/html/index.html
+	@echo "The doc index is: docs/_build/html/index.html"
 
 package: env build_ext
 	$(PYTHON) setup.py $(DISTRIBUTE)

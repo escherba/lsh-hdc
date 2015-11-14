@@ -229,8 +229,8 @@ def create_lsh_bands(width, bandwidth):
     :type width: int
     :param bandwidth: band size
     :type bandwidth: int
-    :return: a sequence of tuples with elements representing indices in
-    signature vector
+    :return: a sequence of tuples with elements representing indices
+             in the signature vector
     :rtype: list
 
     >>> create_lsh_bands(6, 2)

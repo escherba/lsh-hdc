@@ -24,7 +24,6 @@ Submodules
    lsh_hdc.preprocess
    lsh_hdc.ranking
    lsh_hdc.utils
-   lsh_hdc.workspace
 
 Module contents
 ---------------
