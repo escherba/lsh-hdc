@@ -8,8 +8,9 @@ from lsh_hdc.metrics import adjusted_rand_score, \
     homogeneity_completeness_v_measure, centropy, \
     jaccard_similarity, ClusteringMetrics, \
     ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
-    matthews_corr, emi_from_margins, mutual_info_score, \
-    adjusted_mutual_info_score
+    matthews_corr, mutual_info_score, \
+    adjusted_mutual_info_score, emi_from_margins as emi_cython
+from lsh_hdc.fent import emi_from_margins as emi_fortran
 
 
 def check_with_nans(num1, num2, places=None, msg=None, delta=None, ensure_nans=True):
@@ -108,10 +109,14 @@ def test_adjusted_mutual_info_score():
     cm = ClusteringMetrics.from_labels(labels_a, labels_b)
     row_totals = np.fromiter(cm.iter_row_totals(), dtype=np.int64)
     col_totals = np.fromiter(cm.iter_col_totals(), dtype=np.int64)
-    emi_1 = emi_from_margins(row_totals, col_totals) / cm.grand_total
-    assert_almost_equal(emi_1, 0.15042, 5)
-    emi_2 = emi_from_margins(col_totals, row_totals) / cm.grand_total
-    assert_almost_equal(emi_2, 0.15042, 5)
+    emi_1a = emi_cython(row_totals, col_totals) / cm.grand_total
+    emi_1b = emi_fortran(row_totals, col_totals) / cm.grand_total
+    assert_almost_equal(emi_1a, 0.15042, 5)
+    assert_almost_equal(emi_1b, 0.15042, 5)
+    emi_2a = emi_cython(col_totals, row_totals) / cm.grand_total
+    emi_2b = emi_fortran(col_totals, row_totals) / cm.grand_total
+    assert_almost_equal(emi_2a, 0.15042, 5)
+    assert_almost_equal(emi_2b, 0.15042, 5)
 
     # Adjusted mutual information (1)
     ami_1 = adjusted_mutual_info_score(labels_a, labels_b)
@@ -260,6 +265,53 @@ def test_split_join():
     assert_equal(cm.mirkin_mismatch_coeff(normalize=False), 40)
     assert_almost_equal(cm.vi_distance(normalize=False), 0.520, 3)
     assert_equal(cm.split_join_distance(normalize=False), 4)
+
+
+def test_bc_metrics():
+    """Examples 1 and 2, listing in Figure 9, Bagga & Baldwin (1998)
+    """
+    p1 = ["1 2 3 4 5".split(), "6 7".split(), "8 9 A B C".split()]
+
+    p2 = ["1 2 3 4 5".split(), "6 7 8 9 A B C".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.bc_metrics()[:2], [1.0, 0.76], 2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.9], 4)
+
+    p2 = ["1 2 3 4 5 8 9 A B C".split(), "6 7".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.bc_metrics()[:2], [1.0, 0.58], 2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.9], 4)
+
+
+def test_mt_metrics():
+    """Table 1 in Vilain et al. (1995)
+    """
+
+    # row 1
+    p1 = ["A B C D".split()]
+    p2 = ["A B".split(), "C D".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [0.6667, 1.0], 4)
+
+    # row 2
+    p1 = ["A B".split(), "C D".split()]
+    p2 = ["A B C D".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.6667], 4)
+
+    # row 3
+    p1 = ["A B C D".split()]
+    p2 = ["A B C D".split()]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 1.0], 4)
+
+    # row 4 is exactly the same as row 1
+
+    # row 5
+    p1 = ["A B C".split()]
+    p2 = ["A C".split(), "B"]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_array_almost_equal(cm.mt_metrics()[:2], [0.5, 1.0], 4)
 
 
 def test_IR_example():

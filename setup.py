@@ -22,7 +22,6 @@ class BinaryDistribution(Distribution):
     See http://lucumr.pocoo.org/2014/1/27/python-on-wheels/
     """
     def is_pure(self):
-        # TODO: check if this is still necessary with Python v2.7
         return False
 
 
@@ -148,12 +147,12 @@ setup(
             "lsh_hdc.entropy",
             [
                 "lsh_hdc/entropy.pyx",
-                "lsh_hdc/gamma.cc"
+                "lsh_hdc/gamma.c"
             ],
             depends=[
                 "include/gamma.h",
             ],
-            language="c++",
+            language="c",
             extra_compile_args=CXXFLAGS,
             include_dirs=[
                 numpy.get_include(),

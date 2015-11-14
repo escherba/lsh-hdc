@@ -21,6 +21,6 @@ above and modify the PYF signature file adding ``intent(out)`` as
 needed.
 """
 
-from ._fent import minmaxr
+from ._fent import minmaxr, emi_from_margins
 
-__all__ = ["minmaxr"]
+__all__ = ["minmaxr", "emi_from_margins"]
