@@ -368,18 +368,62 @@ class ContingencyTable(CrossTab):
         ami = (mi - emi) / (mi_max - emi)
         return ami
 
-    def assignment_score(self):
-        """Similarity score by solving the Assignment Problem
+    def assignment_score(self, normalize=True):
+        """Similarity score by solving the Linear Sum Assignment Problem
 
-        Uses Hungarian method from SciPy to solve the Assignment Problem on the
-        negative of the frequency matrix, so as to maximize cost.  The
-        maximized cost of the assignment is then normalized by its maximum,
-        which is N.
+        This metric is uniformly more powerful than the similarly behaved
+        ``split_join_similarity`` which relies on an approximation to the
+        optimal solution evaluated here. The split-join approximation
+        asymptotically approaches the optimal solution as the clustering
+        quality improves.
+
+        Since the original implementation of the Hungarian algortithm is
+        designed to minimize cost, we produce a negative of the frequency
+        matrix in order to maximize it. The obtained cost assignment is then
+        normalized by its maximum, which is N.
+
+        Alternatively this problem can be recast as bipartite matching problem,
+        which is usually solved by transforming into a maximum flow problem on
+        a graph, for which a wide variety of solutions exist [1]_.
+
+        This measure family was first used for partition comparison in [2]_,
+        later elaborated by [3]_ and empirically compared with other measures
+        in [4]_.
+
+        See Also
+        --------
+        split_join_similarity
+
+        References
+        ----------
+
+        .. [1] `Wikipedia listing of solutions to the maximum flow problem
+               <https://en.wikipedia.org/wiki/Maximum_flow_problem#Solutions>`_
+
+        .. [2] `Almudevar, A., & Field, C. (1999). Estimation of
+               single-generation sibling relationships based on DNA markers.
+               Journal of agricultural, biological, and environmental
+               statistics, 136-165.
+               <http://www.jstor.org/stable/1400594>`_
+
+        .. [3] `Gusfield, D. (2002). Partition-distance: A problem and class of
+               perfect graphs arising in clustering. Information Processing
+               Letters, 82(3), 159-164.
+               <http://doi.org/10.1016/S0020-0190%2801%2900263-0>`_
+
+        .. [4] `Giurcaneanu, C. D., & Tabus, I. (2004). Cluster structure
+               inference based on clustering stability with applications to
+               microarray data analysis. EURASIP Journal on Applied Signal
+               Processing, 2004, 64-80.
+               <http://dl.acm.org/citation.cfm?id=1289345>`_
+
         """
         cost_matrix = -self.to_array()
         ris, cis = linear_sum_assignment(cost_matrix)
-        sim = -cost_matrix[ris, cis].sum()
-        return _div(sim, self.grand_total)
+        score = -cost_matrix[ris, cis].sum()
+        if normalize:
+            score = _div(score, self.grand_total)
+        return score
 
     def vi_distance(self, normalize=True):
         """Variation of Information distance
