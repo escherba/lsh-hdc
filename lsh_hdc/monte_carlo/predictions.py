@@ -487,7 +487,7 @@ class Grid(object):
             result_grid.append(result_row)
         return result_grid
 
-    def corrplot(self, compute_result, save_to):
+    def corrplot(self, compute_result, save_to, **kwargs):
         items = compute_result.items()
         if not os.path.exists(save_to):
             os.mkdir(save_to)
@@ -502,6 +502,7 @@ class Grid(object):
                 continue
             elif (lbl1, lbl2) in seen_pairs:
                 continue
+            figtitle = "%s vs. %s" % (lbl1, lbl2)
             filename = "%s_vs_%s.png" % (lbl1, lbl2)
             filepath = os.path.join(save_to, filename)
             if os.path.exists(filepath):
@@ -510,8 +511,8 @@ class Grid(object):
                 seen_pairs.add((lbl2, lbl1))
                 continue
 
-            self.plot([(arr1, arr2)], save_to=filepath, title=filename,
-                      xlabel=lbl1, ylabel=lbl2)
+            self.plot([(arr1, arr2)], save_to=filepath, title=figtitle,
+                      xlabel=lbl1, ylabel=lbl2, **kwargs)
             seen_pairs.add((lbl1, lbl2))
             seen_pairs.add((lbl2, lbl1))
 

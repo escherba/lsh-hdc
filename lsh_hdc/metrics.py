@@ -95,6 +95,7 @@ from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import ilen
 from lsh_hdc.entropy import centropy, nchoose2, emi_from_margins
+from lsh_hdc._hungarian import linear_sum_assignment
 
 
 def _div(numer, denom):
@@ -366,6 +367,19 @@ class ContingencyTable(CrossTab):
         # Calculate the adjusted MI score
         ami = (mi - emi) / (mi_max - emi)
         return ami
+
+    def assignment_score(self):
+        """Similarity score by solving the Assignment Problem
+
+        Uses Hungarian method from SciPy to solve the Assignment Problem on the
+        negative of the frequency matrix, so as to maximize cost.  The
+        maximized cost of the assignment is then normalized by its maximum,
+        which is N.
+        """
+        cost_matrix = -self.to_array()
+        ris, cis = linear_sum_assignment(cost_matrix)
+        sim = -cost_matrix[ris, cis].sum()
+        return _div(sim, self.grand_total)
 
     def vi_distance(self, normalize=True):
         """Variation of Information distance
