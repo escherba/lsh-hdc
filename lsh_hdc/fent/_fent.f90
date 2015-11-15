@@ -6,19 +6,18 @@ subroutine minmaxr(a,n,amin,amax)
     !f2py intent(hidden) :: n
     !f2py intent(out) :: amin,amax
     !f2py intent(in) :: a
-    integer n
+    integer n, i
     real a(n),amin,amax,acurr
-    integer i
     real :: x = 0
 
-    if(n > 0)then
+    if (n > 0) then
         amin = a(1)
         amax = a(1)
         do i=2, n
             acurr = a(i)
-            if(acurr > amax)then
+            if (acurr > amax) then
                 amax = acurr
-            elseif(acurr < amin) then
+            elseif (acurr < amin) then
                 amin = acurr
             endif
         enddo
@@ -72,7 +71,6 @@ subroutine emi_from_margins(a,R,b,C,emi)
     integer(kind=8) a(R), b(C), a1(R), b1(C)
 
     real(kind=8), dimension(:), allocatable :: nijs, gln_nij, log_Nnij
-    integer :: allocstatus, deallocstatus
     real(kind=8) :: x = -1.0
 
     log_a = dlog(dble(a))
@@ -92,9 +90,7 @@ subroutine emi_from_margins(a,R,b,C,emi)
     ! While nijs[0] will never be used, having it simplifies the indexing.
     max_ab = max(maxval(a), maxval(b))
 
-    allocate (nijs(max_ab + 1), stat = allocstatus)
-    if (allocstatus /= 0) stop "*** Not enough memory ***"
-
+    allocate(nijs(max_ab + 1))
     do nij=1, max_ab + 1
         nijs(nij) = nij - 1
     enddo
@@ -103,8 +99,7 @@ subroutine emi_from_margins(a,R,b,C,emi)
 
     ! term2 is log((N*nij) / (a a b)) == log(N * nij) - log(a * b)
     ! term2 uses log(N * nij)
-    allocate (log_Nnij(max_ab + 1), stat = allocstatus)
-    if (allocstatus /= 0) stop "*** Not enough memory ***"
+    allocate(log_Nnij(max_ab + 1))
     log_Nnij = dlog(dble(N)) + dlog(nijs)
 
     ! term3 is large, and involved many factorials. Calculate these in log
@@ -117,10 +112,8 @@ subroutine emi_from_margins(a,R,b,C,emi)
     gln_ai_Nai_N = dlgama(dble(a1)) + dlgama(dble(N1 - a)) - dlgama(dble(N1))
     gln_b_Nb = dlgama(dble(b1)) + dlgama(dble(N1 - b))
 
-    allocate (gln_nij(max_ab + 1), stat = allocstatus)
-    if (allocstatus /= 0) stop "*** Not enough memory ***"
+    allocate(gln_nij(max_ab + 1))
     gln_nij = dlgama(nijs + 1.0)
-    deallocate (nijs, stat = deallocstatus)
 
     ! emi itself is a summation over the various values.
     emi = 0.0
@@ -150,7 +143,7 @@ subroutine emi_from_margins(a,R,b,C,emi)
         enddo
     enddo
 
-    deallocate (log_Nnij, stat = deallocstatus)
-    deallocate (gln_nij, stat = deallocstatus)
-    return
+    deallocate(gln_nij)
+    deallocate(log_Nnij)
+    deallocate(nijs)
 end subroutine emi_from_margins

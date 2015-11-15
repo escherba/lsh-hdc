@@ -319,7 +319,7 @@ class ContingencyTable(CrossTab):
     def adjusted_mutual_info(self):
         """Adjusted Mutual Information for two partitions
 
-        For a mathematical definition, see [1]_ and [2]_.
+        For a mathematical definition, see [1]_, [2]_, and [2]_.
 
         References
         ----------
@@ -331,7 +331,14 @@ class ContingencyTable(CrossTab):
                ACM.
                <https://doi.org/10.1145/1553374.1553511>`_
 
-        .. [2] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
+        .. [2] `Vinh, N. X., & Epps, J. (2009, June). A novel approach for
+               automatic number of clusters detection in microarray data based
+               on consensus clustering. In Bioinformatics and BioEngineering,
+               2009.  BIBE'09. Ninth IEEE International Conference on (pp.
+               84-91). IEEE.
+               <http://dx.doi.org/10.1109/BIBE.2009.19>`_
+
+        .. [3] `Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic
                measures for clusterings comparison: Variants, properties,
                normalization and correction for chance. The Journal of Machine
                Learning Research, 11, 2837-2854.
