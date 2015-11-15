@@ -9,6 +9,7 @@ Useful links:
 * http://aero-comlab.stanford.edu/jmartins/doc/python9-slides.pdf
 * http://docs.scipy.org/doc/numpy/user/c-info.python-as-glue.html
 * http://docs.scipy.org/doc/numpy/f2py/
+* http://www.ucs.cam.ac.uk/docs/course-notes/unix-courses/archived/archived-python-courses/pythonfortran/files/f2py.pdf
 
 
 Steps to compile::

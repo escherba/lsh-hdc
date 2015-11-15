@@ -160,7 +160,7 @@ cpdef long2int(num):
     :param num: input long variable
     :type num: long
     :return: input mapped to int range
-    :rtype : int
+    :rtype: int
 
     """
 

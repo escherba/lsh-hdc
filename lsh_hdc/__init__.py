@@ -52,7 +52,7 @@ def mshinglify(iterable, span, skip=0):
     :param span: shingle span
     :type span: int
     :returns: sequence of tuples (shingles)
-    :rtype : list
+    :rtype: list
 
     >>> list(mshinglify("abcd", 4, skip=0))
     [('a', 'c', 'd'), ('a', 'b', 'd'), ('a', 'b', 'c'), ('b', 'c', 'd')]
@@ -99,8 +99,8 @@ def create_hash_factory(hashfun, complex_types=False, universe_size=None):
 
     :param hashfun: hash function to use
     :type hashfun: callable
-    :param complex_types: whether hash function supports hashing of complex
-    types, either through native support or through repr
+    :param complex_types: whether hash function supports hashing of complex types,
+                          either through native support or through repr
     :type complex_types: bool
     :param universe_size: upper limit to hash value
     :type universe_size: int, long
@@ -123,18 +123,39 @@ def create_hash_factory(hashfun, complex_types=False, universe_size=None):
     return hash_factory
 
 
-def create_getters(lot):
-    """A wrapper that fixes operator.itemgetter behavior
-    where it returns a scalar for tuple input of cardinality one
+def create_getters(tuples):
+    """Create a series of itemgetters that return tuples
 
-    :param lot: a list of tuples
-    :type lot: list
+    :param tuples: a list of tuples
+    :type tuples: collections.Iterable
     :returns: a generator of item getters
     :rtype: generator
 
+    ::
+
+        >>> gs = list(create_getters([(0, 2), (), (1,)]))
+        >>> d = ['a', 'b', 'c', 'd']
+        >>> gs[0](d)
+        ('a', 'c')
+        >>> gs[1](d)
+        ()
+        >>> gs[2](d)
+        ('b',)
     """
-    for tup in lot:
-        yield itemgetter(*tup) if tup else lambda x: ()
+    def tgetter0():
+        return lambda x: ()
+
+    def tgetter1(key):
+        it = itemgetter(key)
+        return lambda x: (it(x),)
+
+    for t in tuples:
+        if not t:
+            yield tgetter0()
+        elif len(t) == 1:
+            yield tgetter1(*t)
+        else:
+            yield itemgetter(*t)
 
 
 def cntuples(m, n):
@@ -145,7 +166,7 @@ def cntuples(m, n):
     :param n: tuple length
     :type n: int
     :returns: a sequence of n-tuples
-    :rtype : list
+    :rtype: list
 
     """
     vec = range(m)
@@ -163,7 +184,7 @@ def cntuplesx(m, n, kmin=1):
     :param kmin: k from k-min
     :type kmin: int
     :returns: a sequence of n-tuples
-    :rtype : list
+    :rtype: list
 
     """
     vec = range(m)
@@ -180,8 +201,8 @@ def lsh_combinations(width, bandwidth, ramp):
     :param bandwidth: band size
     :type bandwidth: int
     :param ramp: For each integer value between 1 and bandwidth, return
-    (preferably uniformly) sampled combinations such that their number
-    corresponds to (width choose ramp) combinations
+                 (preferably uniformly) sampled combinations such that their
+                 number corresponds to (width choose ramp) combinations
     :type ramp: int
     :return: a sequence of tuples with elements representing indices
     :rtype: list
@@ -208,8 +229,8 @@ def create_lsh_bands(width, bandwidth):
     :type width: int
     :param bandwidth: band size
     :type bandwidth: int
-    :return: a sequence of tuples with elements representing indices in
-    signature vector
+    :return: a sequence of tuples with elements representing indices
+             in the signature vector
     :rtype: list
 
     >>> create_lsh_bands(6, 2)
@@ -375,17 +396,20 @@ class Signature(object):
 
     @abstractmethod
     def create_hash_functions(self):
-        """Returns an array of length self.width consisting of different hash functions
-        :rtype : list
+        """Create an array of different hash functions
+
+        :return: array of length ``self.width``
+        :rtype: list
 
         """
 
     @abstractmethod
     def get_signature(self, vec, with_sketch=False):
         """Return the signature for vector
+
         :param vec: vector for which to return signature
         :type vec: collections.Iterable
-        :rtype : list
+        :rtype: list
 
         """
 
@@ -480,7 +504,7 @@ class MinHashSignature(Signature):
     def _get_minhashes_kmin1p(self, vec):
         """Returns minhash signature from a feature vector
         :returns: a signature vector
-        :rtype : list
+        :rtype: list
         """
         kmin = self.kmin
         # Choose k smallest hashes
@@ -496,7 +520,7 @@ class MinHashSignature(Signature):
     def _get_minhashes_kmin1(self, vec):
         """Returns minhash signature from a feature vector
         :returns: a signature vector
-        :rtype : list
+        :rtype: list
         """
         # Choose one minimal hash
         if len(vec) > 0:
@@ -516,7 +540,7 @@ class MinHashSignature(Signature):
         """Returns minhash signature from a feature vector (with optional LSH)
 
         :returns: a signature vector
-        :rtype : list
+        :rtype: list
         """
         minhashes = self._get_minhashes(vec)
         lsh = self.lsh_hasher
@@ -538,9 +562,8 @@ class MinHashSignature(Signature):
             return sig_vector
 
     def get_threshold(self):
-        """
+        """Calculate similarity threshold being approximated
 
-        :return: similarity threshold used for building clusters
         :rtype: float
         """
         bandwidth = self.lsh_hasher.bandwidth
@@ -582,7 +605,8 @@ class SimHashSignature(Signature):
         raise NotImplementedError
 
     def get_signature(self, tokens, *features):
-        """Returns weighted SimHash signature of a word vector
+        """Weighted SimHash signature of a word vector
+
         and of (optional) feature vectors
 
         :param tokens: vector of length-weighted tokens

@@ -3,7 +3,7 @@
 PYMODULE := lsh_hdc
 PYPI_HOST := pypi
 DISTRIBUTE := sdist bdist_wheel
-SHELL_PRELOAD := $(PYMODULE)/workspace.py
+SHELL_PRELOAD := $(PYMODULE)/_workspace.py
 
 SRC_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 SHELL_PRELOAD := $(SRC_ROOT)/$(SHELL_PRELOAD)
@@ -25,7 +25,7 @@ PYTHON := $(PYENV) python
 PIP := $(PYENV) pip
 
 
-include study-preds/build.mk
+include study-predictions/build.mk
 
 doc_sources:
 	sphinx-apidoc \
@@ -38,7 +38,7 @@ doc_sources:
 
 docs: env build_ext
 	$(PYENV) cd docs; make html; cd ..
-	open docs/_build/html/index.html
+	@echo "The doc index is: docs/_build/html/index.html"
 
 package: env build_ext
 	$(PYTHON) setup.py $(DISTRIBUTE)

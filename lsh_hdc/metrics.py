@@ -462,6 +462,11 @@ class ContingencyTable(CrossTab):
     def mirkin_match_coeff(self, normalize=True):
         """Equivalence match (similarity) coefficient
 
+        Derivation of distance variant described in [1]_. This measure is
+        nearly identical to pairwise unadjusted Rand index, as can be seen from
+        the definition (Mirkin match formula uses square while pairwise
+        accuracy uses n choose 2).
+
         ::
 
             >>> C3 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
@@ -469,6 +474,14 @@ class ContingencyTable(CrossTab):
             >>> t = ClusteringMetrics.from_partitions(C3, C4)
             >>> t.mirkin_match_coeff(normalize=False)
             216
+
+        References
+        ----------
+
+        .. [1] `Mirkin, B (1996). Mathematical Classification and Clustering.
+               Kluwer Academic Press: Boston-Dordrecht.
+               <http://www.amazon.com/dp/0792341597>`_
+
         """
         max_score = self.grand_total ** 2
         score = max_score - self.mirkin_mismatch_coeff(normalize=False)
@@ -479,8 +492,6 @@ class ContingencyTable(CrossTab):
     def mirkin_mismatch_coeff(self, normalize=True):
         """Equivalence mismatch (distance) coefficient
 
-        Described in [1]_.
-
         ::
 
             >>> C1 = [{1, 2, 3, 4, 5, 6, 7, 8}, {9, 10, 11, 12, 13, 14, 15, 16}]
@@ -488,13 +499,6 @@ class ContingencyTable(CrossTab):
             >>> t = ClusteringMetrics.from_partitions(C1, C2)
             >>> t.mirkin_mismatch_coeff(normalize=False)
             56
-
-        References
-        ----------
-
-        .. [1] `Mirkin, B (1996). Mathematical Classification and Clustering.
-               Kluwer Academic Press: Boston-Dordrecht.
-               <http://www.amazon.com/dp/0792341597>`_
 
         """
         score = (

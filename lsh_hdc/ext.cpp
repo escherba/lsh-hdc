@@ -3882,7 +3882,7 @@ static PyObject *__pyx_f_7lsh_hdc_3ext_long2int(PyObject *__pyx_v_num, CYTHON_UN
 
 /* Python wrapper */
 static PyObject *__pyx_pw_7lsh_hdc_3ext_19long2int(PyObject *__pyx_self, PyObject *__pyx_v_num); /*proto*/
-static char __pyx_doc_7lsh_hdc_3ext_18long2int[] = "Lossily map a long type to the range of int\n\n    :param num: input long variable\n    :type num: long\n    :return: input mapped to int range\n    :rtype : int\n\n    ";
+static char __pyx_doc_7lsh_hdc_3ext_18long2int[] = "Lossily map a long type to the range of int\n\n    :param num: input long variable\n    :type num: long\n    :return: input mapped to int range\n    :rtype: int\n\n    ";
 static PyObject *__pyx_pw_7lsh_hdc_3ext_19long2int(PyObject *__pyx_self, PyObject *__pyx_v_num) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
