@@ -40,7 +40,7 @@ endef
 
 
 # Study definition
-COMPUTE_METRICS := \
+COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
 	entropy_metrics adjusted_mutual_info \
 	adjusted_rand_index rand_index matthews_corr mic_scores \
 	informedness markedness \
@@ -48,7 +48,7 @@ COMPUTE_METRICS := \
 	split_join_similarity talburt_wang_index vi_similarity mirkin_match_coeff \
 	mt_metrics bc_metrics
 
-PLOT_METRICS := $(COMPUTE_METRICS) \
+PLOT_METRICS := $(EXP_PLOT_METRICS) $(COMPUTE_METRICS) \
 	entropy_metrics-0 entropy_metrics-1 entropy_metrics-2 \
 	mt_metrics-0 mt_metrics-1 mt_metrics-2 \
 	bc_metrics-0 bc_metrics-1 bc_metrics-2 \

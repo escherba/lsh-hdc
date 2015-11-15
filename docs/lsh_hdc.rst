@@ -20,6 +20,7 @@ Submodules
    lsh_hdc.ext
    lsh_hdc.fixes
    lsh_hdc.hashes
+   lsh_hdc.hungarian
    lsh_hdc.metrics
    lsh_hdc.preprocess
    lsh_hdc.ranking

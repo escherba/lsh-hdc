@@ -95,7 +95,7 @@ from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import ilen
 from lsh_hdc.entropy import centropy, nchoose2, emi_from_margins
-from lsh_hdc._hungarian import linear_sum_assignment
+from lsh_hdc.hungarian import linear_sum_assignment
 
 
 def _div(numer, denom):
