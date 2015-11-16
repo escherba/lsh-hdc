@@ -4,6 +4,8 @@
 import numpy as np
 from numpy.testing import assert_array_equal, assert_raises
 from lsh_hdc.hungarian import linear_sum_assignment
+from lsh_hdc.entropy import assignment_score
+from nose.tools import assert_equal
 
 
 def test_linear_sum_assignment():
@@ -46,6 +48,48 @@ def test_linear_sum_assignment():
         assert_array_equal(row_ind, np.sort(row_ind))
         assert_array_equal(np.sort(expected_cost),
                            np.sort(cost_matrix[row_ind, col_ind]))
+
+
+def test_assignment_score():
+    for cost_matrix, expected_cost in [
+        # Square
+        ([[400, 150, 400],
+          [400, 450, 600],
+          [300, 225, 300]],
+         [150, 400, 300]),
+
+        # Rectangular variant
+        ([[400, 150, 400, 1],
+          [400, 450, 600, 2],
+          [300, 225, 300, 3]],
+         [150, 2, 300]),
+
+        # Square
+        ([[10, 10, 8],
+          [9, 8, 1],
+          [9, 7, 4]],
+         [10, 1, 7]),
+
+        # Rectangular variant
+        ([[10, 10, 8, 11],
+          [9, 8, 1, 1],
+          [9, 7, 4, 10]],
+         [10, 1, 4]),
+
+        # n == 2, m == 0 matrix
+        ([[], []],
+         []),
+    ]:
+        cost_matrix = np.array(cost_matrix)
+        cost_matrix_T = cost_matrix.T
+
+        expected_sum = np.sum(expected_cost)
+
+        score = assignment_score(cost_matrix)
+        score_T = assignment_score(cost_matrix_T)
+
+        assert_equal(score, expected_sum)
+        assert_equal(score_T, expected_sum)
 
 
 def test_linear_sum_assignment_input_validation():

@@ -9,11 +9,52 @@ import numpy as np
 cimport numpy as np
 cimport cython
 
+from libc.stdlib cimport malloc, free
+
 np.import_array()
 
 
 cdef extern from "gamma.h":
     cdef np.float64_t sklearn_lgamma(np.float64_t x)
+
+
+cdef extern from "hungarian.h":
+    np.int64_t** kuhn_match(np.int64_t **table, Py_ssize_t n, Py_ssize_t m)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef np.int64_t assignment_score(arr):
+    cdef Py_ssize_t i, j
+
+    cdef Py_ssize_t n, m
+    cdef np.ndarray[np.int64_t, ndim=2] a = np.asarray(arr, dtype=np.int64)
+    n = a.shape[0]
+    m = a.shape[1]
+
+    if n > m:
+        a = a.T
+        n = a.shape[0]
+        m = a.shape[1]
+
+    tmp = <np.int64_t **> malloc(n*sizeof(np.int64_t*))
+
+    for i in range(n):
+        tmp[i] = <np.int64_t*> malloc(m*sizeof(np.int64_t))
+        for j in range(m):
+            tmp[i][j] = a[i, j]
+
+    cdef np.int64_t** assignment = kuhn_match(tmp, n, m)
+    #cdef np.int64_t** table = &a[0, 0]
+    cdef np.int64_t score = 0
+
+    for i in range(n):
+        score += a[assignment[i][0], assignment[i][1]]
+        #score += *(*(table + *(*(assignment + i) + 0)) + *(*(assignment + i) + 1));
+        free(tmp[i])
+    free(tmp)
+
+    return score
 
 
 cpdef np.float64_t lgamma(np.float64_t x):

@@ -147,10 +147,12 @@ setup(
             "lsh_hdc.entropy",
             [
                 "lsh_hdc/entropy.pyx",
-                "lsh_hdc/gamma.c"
+                "lsh_hdc/gamma.c",
+                "lsh_hdc/hungarian.c"
             ],
             depends=[
                 "include/gamma.h",
+                "include/hungarian.h"
             ],
             language="c",
             extra_compile_args=CXXFLAGS,
