@@ -24,7 +24,7 @@ cdef extern from "hungarian.h":
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.int64_t assignment_score(arr):
+cpdef np.int64_t assignment_cost(arr):
     cdef Py_ssize_t i, j
 
     cdef Py_ssize_t n, m
@@ -37,20 +37,21 @@ cpdef np.int64_t assignment_score(arr):
         n = a.shape[0]
         m = a.shape[1]
 
-    tmp = <np.int64_t **> malloc(n*sizeof(np.int64_t*))
+    cdef np.int64_t** tmp = <np.int64_t **> malloc(n*sizeof(np.int64_t*))
+    cdef np.int64_t* tmp_i
 
     for i in range(n):
-        tmp[i] = <np.int64_t*> malloc(m*sizeof(np.int64_t))
+        tmp[i] = tmp_i = <np.int64_t*> malloc(m*sizeof(np.int64_t))
         for j in range(m):
-            tmp[i][j] = a[i, j]
+            tmp_i[j] = a[i, j]
 
     cdef np.int64_t** assignment = kuhn_match(tmp, n, m)
-    #cdef np.int64_t** table = &a[0, 0]
+    cdef np.int64_t* assignment_i
     cdef np.int64_t score = 0
 
     for i in range(n):
-        score += a[assignment[i][0], assignment[i][1]]
-        #score += *(*(table + *(*(assignment + i) + 0)) + *(*(assignment + i) + 1));
+        assignment_i = assignment[i]
+        score += a[assignment_i[0], assignment_i[1]]
         free(tmp[i])
     free(tmp)
 
