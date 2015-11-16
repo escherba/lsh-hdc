@@ -83,6 +83,43 @@ function drawPlot(dataFile, xField, title, containerId) {
         var colorScale = new Plottable.Scales.Color();
         colorScale.domain(sorted(data.seriesNames));
 
+        // this 30-color palette generated with the help of
+        // http://tools.medialab.sciences-po.fr/iwanthue/
+        // using settings: H: 0-360, C: 1.2-3, L: 0.25-1.5
+        //
+        colorScale.range(
+            ["#D6E730",
+            "#EA34DC",
+            "#DC4020",
+            "#3B5781",
+            "#356121",
+            "#D15591",
+            "#45D078",
+            "#CD9022",
+            "#6C79E0",
+            "#7E4715",
+            "#5FE244",
+            "#C784D5",
+            "#5A94D5",
+            "#79811A",
+            "#499E33",
+            "#8A2F53",
+            "#DB4466",
+            "#93302D",
+            "#8E3585",
+            "#D34BB9",
+            "#D26C26",
+            "#504F9C",
+            "#E3BE27",
+            "#9FB52D",
+            "#9A61D7",
+            "#6F4779",
+            "#DC4C47",
+            "#95DA42",
+            "#E7308E",
+            "#C952DE"]
+        );
+
         var order = indexMap(data.seriesNames);
 
         var legend = new Plottable.Components.Legend(colorScale);
