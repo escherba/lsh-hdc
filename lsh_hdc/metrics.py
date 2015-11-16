@@ -377,18 +377,18 @@ class ContingencyTable(CrossTab):
         asymptotically approaches the optimal solution as the clustering
         quality improves.
 
-        Since the original implementation of the Hungarian algortithm is
+        Since the original implementation of the Hungarian algorithm is
         designed to minimize cost, we produce a negative of the frequency
         matrix in order to maximize it. The obtained cost assignment is then
         normalized by its maximum, which is N.
 
         Alternatively this problem can be recast as bipartite matching problem,
         which is usually solved by transforming into a maximum flow problem on
-        a graph, for which a wide variety of solutions exist [1]_.
+        a graph, for solving which a variety of methods is available [1]_.
 
-        This measure family was first used for partition comparison in [2]_,
-        later elaborated by [3]_ and empirically compared with other measures
-        in [4]_.
+        This method of partition comparison was first mentioned in [2]_, given
+        an approximation in [3]_, formally elaborated in [4]_ and empirically
+        compared with other measures in [5]_.
 
         See Also
         --------
@@ -397,7 +397,7 @@ class ContingencyTable(CrossTab):
         References
         ----------
 
-        .. [1] `Wikipedia listing of solutions to the maximum flow problem
+        .. [1] `Wikipedia listing of methods for solving the maximum flow problem
                <https://en.wikipedia.org/wiki/Maximum_flow_problem#Solutions>`_
 
         .. [2] `Almudevar, A., & Field, C. (1999). Estimation of
@@ -406,12 +406,17 @@ class ContingencyTable(CrossTab):
                statistics, 136-165.
                <http://www.jstor.org/stable/1400594>`_
 
-        .. [3] `Gusfield, D. (2002). Partition-distance: A problem and class of
+        .. [3] `Ben-Hur, A., & Guyon, I. (2003). Detecting stable clusters
+               using principal component analysis. In Functional Genomics (pp.
+               159-182). Humana press.
+               <http://doi.org/10.1385/1-59259-364-X:159>`_
+
+        .. [4] `Gusfield, D. (2002). Partition-distance: A problem and class of
                perfect graphs arising in clustering. Information Processing
                Letters, 82(3), 159-164.
                <http://doi.org/10.1016/S0020-0190%2801%2900263-0>`_
 
-        .. [4] `Giurcaneanu, C. D., & Tabus, I. (2004). Cluster structure
+        .. [5] `Giurcaneanu, C. D., & Tabus, I. (2004). Cluster structure
                inference based on clustering stability with applications to
                microarray data analysis. EURASIP Journal on Applied Signal
                Processing, 2004, 64-80.
@@ -507,6 +512,10 @@ class ContingencyTable(CrossTab):
             >>> t = ContingencyTable.from_clusters(clusters)
             >>> t.split_join_similarity()
             0.74
+
+        See Also
+        --------
+        assignment_score
 
         References
         ----------
@@ -1367,7 +1376,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         Another covariance-based association index corrected for chance. Like
         MCC, based on a mean of informedness and markedness, except uses a
-        harmonic mean instea of geometric. Like Kappa, turns into Dice
+        harmonic mean instead of geometric. Like Kappa, turns into Dice
         coefficient (F-score) as 'd' approaches infinity.
         """
         (a, b), (c, d) = self.rows
