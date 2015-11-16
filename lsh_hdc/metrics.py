@@ -382,9 +382,8 @@ class ContingencyTable(CrossTab):
         matrix in order to maximize it. The obtained cost assignment is then
         normalized by its maximum, which is N.
 
-        Alternatively this problem can be recast as bipartite matching problem,
-        which is usually solved by transforming into a maximum flow problem on
-        a graph, for solving which a variety of methods is available [1]_.
+        Alternatively this problem can be recast as that of finding a *maximum
+        weighted bipartite match* [1]_.
 
         This method of partition comparison was first mentioned in [2]_, given
         an approximation in [3]_, formally elaborated in [4]_ and empirically
@@ -397,8 +396,8 @@ class ContingencyTable(CrossTab):
         References
         ----------
 
-        .. [1] `Wikipedia listing of methods for solving the maximum flow problem
-               <https://en.wikipedia.org/wiki/Maximum_flow_problem#Solutions>`_
+        .. [1] `Wikipedia entry on weighted bipartite graph matching
+               <https://en.wikipedia.org/wiki/Matching_%28graph_theory%28#In_weighted_bipartite_graphs>`_
 
         .. [2] `Almudevar, A., & Field, C. (1999). Estimation of
                single-generation sibling relationships based on DNA markers.
@@ -460,7 +459,7 @@ class ContingencyTable(CrossTab):
         VI_CK = (H_C + H_K) - (I_CK + I_CK)
         score = _div(VI_CK, self.grand_total)
         if normalize:
-            score /= log(self.grand_total)
+            score = _div(score, log(self.grand_total))
         return score
 
     def vi_similarity(self, normalize=True):
@@ -470,7 +469,7 @@ class ContingencyTable(CrossTab):
         max_dist = log(self.grand_total)
         score = max_dist - dist
         if normalize:
-            score /= max_dist
+            score = _div(score, max_dist)
         return score
 
     def split_join_distance(self, normalize=True):
@@ -480,7 +479,7 @@ class ContingencyTable(CrossTab):
         max_sim = 2 * self.grand_total
         score = max_sim - sim
         if normalize:
-            score /= max_sim
+            score = _div(score, max_sim)
         return score
 
     def split_join_similarity(self, normalize=True):
@@ -530,7 +529,7 @@ class ContingencyTable(CrossTab):
         pb_A = sum(max(col) for col in self.iter_cols())
         score = pa_B + pb_A
         if normalize:
-            score /= float(2 * self.grand_total)
+            score = _div(score, 2 * self.grand_total)
         return score
 
     def mirkin_match_coeff(self, normalize=True):
@@ -560,7 +559,7 @@ class ContingencyTable(CrossTab):
         max_score = self.grand_total ** 2
         score = max_score - self.mirkin_mismatch_coeff(normalize=False)
         if normalize:
-            score /= float(max_score)
+            score = _div(score, max_score)
         return score
 
     def mirkin_mismatch_coeff(self, normalize=True):
@@ -581,7 +580,7 @@ class ContingencyTable(CrossTab):
             2 * sum(x ** 2 for x in self.itervalues())
         )
         if normalize:
-            score /= float(self.grand_total ** 2)
+            score = _div(score, self.grand_total ** 2)
         return score
 
     def talburt_wang_index(self):
@@ -690,8 +689,8 @@ class ContingencyTable(CrossTab):
             precision += (observed ** 2) / float(cm)
             recall += (observed ** 2) / float(rm)
         N = self.grand_total
-        precision /= N
-        recall /= N
+        precision = _div(precision, N)
+        recall = _div(recall, N)
         fscore = harmonic_mean(recall, precision)
         return precision, recall, fscore
 
