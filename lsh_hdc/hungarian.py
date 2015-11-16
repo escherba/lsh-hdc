@@ -68,18 +68,25 @@ def linear_sum_assignment(cost_matrix):
 
     References
     ----------
-    1. http://www.public.iastate.edu/~ddoty/HungarianAlgorithm.html
 
-    2. Harold W. Kuhn. The Hungarian Method for the assignment problem.
-       *Naval Research Logistics Quarterly*, 2:83-97, 1955.
+    .. [991] `R.A. Pilgrim's page on Munkres' Assignemnt Algorithm
+             <http://csclab.murraystate.edu/bob.pilgrim/445/munkres.html>`_
 
-    3. Harold W. Kuhn. Variants of the Hungarian method for assignment
-       problems. *Naval Research Logistics Quarterly*, 3: 253-258, 1956.
+    .. [992] `Harold W. Kuhn. The Hungarian Method for the assignment problem.
+             Naval Research Logistics Quarterly, 2:83-97, 1955.
+             <http://doi.org/10.1002/nav.3800020109>`_
 
-    4. Munkres, J. Algorithms for the Assignment and Transportation Problems.
-       *J. SIAM*, 5(1):32-38, March, 1957.
+    .. [993] `Harold W. Kuhn. Variants of the Hungarian method for assignment
+             problems. Naval Research Logistics Quarterly, 3: 253-258, 1956.
+             <http://doi.org/10.1002/nav.3800030404>`_
 
-    5. https://en.wikipedia.org/wiki/Hungarian_algorithm
+    .. [994] `Munkres, J. Algorithms for the Assignment and Transportation Problems.
+             J. SIAM, 5(1):32-38, March, 1957.
+             <http://doi.org/10.1137/0105003>`_
+
+    .. [995] `Wikipedia entry for the Hungarian algorithm
+             <https://en.wikipedia.org/wiki/Hungarian_algorithm>`_
+
     """
     cost_matrix = np.asarray(cost_matrix)
     if len(cost_matrix.shape) != 2:
