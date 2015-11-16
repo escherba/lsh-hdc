@@ -517,19 +517,19 @@ class Grid(object):
             seen_pairs.add((lbl2, lbl1))
 
     def plot(self, pairs, xlim=None, ylim=None, title=None,
-             jitter=0.001, marker='.', s=0.01, color='black', alpha=1.0,
+             dither=0.001, marker='.', s=0.01, color='black', alpha=1.0,
              save_to=None, label=None, xlabel=None, ylabel=None, **kwargs):
         from matplotlib import pyplot as plt
         fig, ax = plt.subplots()
-        for (xs, ys), jitter_, marker_, s_, color_, label_, alpha_ in \
-                izip_with_cycles(pairs, jitter, marker, s, color, label, alpha):
+        for (xs, ys), dither_, marker_, s_, color_, label_, alpha_ in \
+                izip_with_cycles(pairs, dither, marker, s, color, label, alpha):
 
             corr_coeff = scipy.stats.pearsonr(xs, ys)
             ax.annotate('r = %.3f' % corr_coeff[0], (0.05, 0.9), xycoords='axes fraction')
 
-            if jitter_ is not None:
-                xs = np.random.normal(xs, jitter_)
-                ys = np.random.normal(ys, jitter_)
+            if dither_ is not None:
+                xs = np.random.normal(xs, dither_)
+                ys = np.random.normal(ys, dither_)
             ax.scatter(xs, ys, marker=marker_, s=s_, color=color_,
                        alpha=alpha_, label=label_, **kwargs)
 

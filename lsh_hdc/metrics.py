@@ -94,7 +94,7 @@ from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import ilen
-from lsh_hdc.entropy import centropy, nchoose2, emi_from_margins
+from lsh_hdc.entropy import centropy, nchoose2, emi_from_margins, assignment_cost
 from lsh_hdc.hungarian import linear_sum_assignment
 
 
@@ -368,6 +368,16 @@ class ContingencyTable(CrossTab):
         ami = (mi - emi) / (mi_max - emi)
         return ami
 
+    def assignment_score_slow(self, normalize=True):
+        """Uses Python/Numpy implementation of the Hungarian method
+        """
+        cost_matrix = -self.to_array()
+        ris, cis = linear_sum_assignment(cost_matrix)
+        score = -cost_matrix[ris, cis].sum()
+        if normalize:
+            score = _div(score, self.grand_total)
+        return score
+
     def assignment_score(self, normalize=True):
         """Similarity score by solving the Linear Sum Assignment Problem
 
@@ -423,8 +433,7 @@ class ContingencyTable(CrossTab):
 
         """
         cost_matrix = -self.to_array()
-        ris, cis = linear_sum_assignment(cost_matrix)
-        score = -cost_matrix[ris, cis].sum()
+        score = -assignment_cost(cost_matrix)
         if normalize:
             score = _div(score, self.grand_total)
         return score
