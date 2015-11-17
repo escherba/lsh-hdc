@@ -18,18 +18,18 @@ cdef extern from "gamma.h":
     cdef np.float64_t sklearn_lgamma(np.float64_t x)
 
 
-cdef extern from "hungarian.h":
-    np.int64_t** kuhn_match(np.int64_t **table, Py_ssize_t n, Py_ssize_t m)
+cdef extern from "assignmentoptimal_dbl.h":
+    void assignmentoptimal_dbl(np.float64_t *assignment, np.float64_t *cost, np.float64_t *distMatrixIn, Py_ssize_t nOfRows, Py_ssize_t nOfColumns)
 
 
-cdef extern from "assignmentoptimal.h":
-    void assignmentoptimal(np.float64_t *assignment, np.float64_t *cost, np.float64_t *distMatrixIn, Py_ssize_t nOfRows, Py_ssize_t nOfColumns)
+cdef extern from "assignmentoptimal_lng.h":
+    void assignmentoptimal_lng(np.int64_t *assignment, np.int64_t *cost, np.int64_t *distMatrixIn, Py_ssize_t nOfRows, Py_ssize_t nOfColumns)
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef np.int64_t assignment_cost_lng(arr):
-    """Assignment cost of a weighted bipartite matching (long int version)
+    """Assignment cost of a weighted bipartite matching (int64 version)
 
     Uses Kuhn-Munkres (Hungarian) algorithm to find an optimal matching between
     two partitions and returns the cost of the matching in approx. O(n^3) time.
@@ -41,28 +41,18 @@ cpdef np.int64_t assignment_cost_lng(arr):
     n = a.shape[0]
     m = a.shape[1]
 
-    if n > m:
-        a = a.T
-        n = a.shape[0]
-        m = a.shape[1]
+    cdef np.int64_t* tmp = <np.int64_t *> malloc(m*n*sizeof(np.int64_t))
+    cdef np.int64_t* assignment = <np.int64_t*> malloc(n*sizeof(np.int64_t))
 
-    cdef np.int64_t** tmp = <np.int64_t **> malloc(n*sizeof(np.int64_t*))
-    cdef np.int64_t* tmp_i
+    for row in range(n):
+        for col in range(m):
+            tmp[row + n * col] = a[row, col]
 
-    for i in range(n):
-        tmp[i] = tmp_i = <np.int64_t*> malloc(m*sizeof(np.int64_t))
-        for j in range(m):
-            tmp_i[j] = a[i, j]
-
-    cdef np.int64_t** assignment = kuhn_match(tmp, n, m)
-    cdef np.int64_t* assignment_i
     cdef np.int64_t score = 0
+    assignmentoptimal_lng(assignment, &score, tmp, n, m)
 
-    for i in range(n):
-        assignment_i = assignment[i]
-        score += a[assignment_i[0], assignment_i[1]]
-        free(tmp[i])
     free(tmp)
+    free(assignment)
 
     return score
 
@@ -90,7 +80,7 @@ cpdef np.float64_t assignment_cost_dbl(arr):
             tmp[row + n * col] = a[row, col]
 
     cdef np.float64_t score = 0
-    assignmentoptimal(assignment, &score, tmp, n, m)
+    assignmentoptimal_dbl(assignment, &score, tmp, n, m)
 
     free(tmp)
     free(assignment)
