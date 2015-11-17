@@ -5,6 +5,16 @@ import string
 from itertools import imap
 from operator import itemgetter
 from pymaptools.iter import isiterable
+from pymaptools.sample import discrete_sample
+
+
+def randround(num):
+    """Round a number by drawing from a continuous distribution
+    """
+    whole = int(num)
+    p_whole1 = num - float(whole)
+    whole += discrete_sample({0: 1.0 - p_whole1, 1: p_whole1})
+    return whole
 
 
 def get_df_subset(df, fields):

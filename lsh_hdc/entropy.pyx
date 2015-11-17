@@ -112,36 +112,38 @@ cpdef np.int64_t nchoose2(np.int64_t n) nogil:
     return (n * (n - 1LL)) >> 1LL
 
 
-cpdef np.float64_t centropy(counts):
-    """Entropy of an iterable of counts
+cpdef np.float64_t fentropy(freqs):
+    """Entropy of an iterable of frequencies
 
     Assumes every entry in the list belongs to a different class. The resulting
     value is *not* normalized by N. Also note that the entropy value is
     calculated using natural base, which may not be what you want, so you may
     need to normalized it with log(base).
 
-    The 'counts' parameter is expected to be an list or tuple-like iterable.
+    The 'freqs' parameter is expected to be an list or tuple-like iterable.
     For convenience, it can also be a dict/mapping type, in which case its
     values will be used to calculate entropy.
 
     """
-    # The Cython version of this method is 50x faster on large arrays than pure
-    # CPython implementation. The speed-up is primarily due to the ``cdef
-    # np.int64_t c`` definition.
 
-    cdef np.int64_t c, n
-    cdef np.float64_t sum_c_logn_c
+    # The Cython version of this method is upt to 50x faster on large arrays
+    # than pure Python implementation. The speed-up is almost solely due to
+    # cdef-ing ``f`` variable.
 
-    if isinstance(counts, Mapping):
-        counts = counts.itervalues()
+    cdef np.float64_t f, s, sum_f_logn_f
 
-    n = 0LL
-    sum_c_logn_c = 0.0
-    for c in counts:
-        if c != 0LL:
-            n += c
-            sum_c_logn_c += c * log(c)
-    return 0.0 if n == 0LL else n * log(n) - sum_c_logn_c
+    if isinstance(freqs, Mapping):
+        freqs = freqs.itervalues()
+
+    s = 0.0
+    sum_f_logn_f = 0.0
+    for f in freqs:
+        if f != 0.0:
+            s += f
+            sum_f_logn_f += f * log(f)
+
+    # ensure non-negative
+    return max(0.0, s * log(s) - sum_f_logn_f)
 
 
 @cython.boundscheck(False)

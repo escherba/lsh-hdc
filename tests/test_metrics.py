@@ -5,7 +5,7 @@ from math import sqrt
 from itertools import izip
 from nose.tools import assert_almost_equal, assert_true, assert_equal
 from lsh_hdc.metrics import adjusted_rand_score, \
-    homogeneity_completeness_v_measure, centropy, \
+    homogeneity_completeness_v_measure, fentropy, \
     jaccard_similarity, ClusteringMetrics, \
     ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
     matthews_corr, mutual_info_score, \
@@ -55,10 +55,10 @@ def _entropy_metrics(cm):
 
     (Alternative implementation for testing)
     """
-    H_C = centropy(cm.row_totals)
-    H_K = centropy(cm.col_totals)
-    H_CK = sum(centropy(col) for col in cm.iter_cols())
-    H_KC = sum(centropy(row) for row in cm.iter_rows())
+    H_C = fentropy(cm.row_totals)
+    H_K = fentropy(cm.col_totals)
+    H_CK = sum(fentropy(col) for col in cm.iter_cols())
+    H_KC = sum(fentropy(row) for row in cm.iter_rows())
     # The '<=' comparisons below both prevent division by zero errors
     # and ensure that the scores are non-negative.
     homogeneity = 0.0 if H_C <= H_CK else (H_C - H_CK) / H_C
@@ -147,7 +147,7 @@ def test_jaccard_nan():
 def test_entropy_of_counts_zero():
     """Returns zero for empty set
     """
-    val = centropy([])
+    val = fentropy([])
     assert_almost_equal(val, 0.0000, 4)
 
 
@@ -324,14 +324,14 @@ def test_IR_example():
     lpred = (0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 2, 2, 1, 2, 2, 2)
     cm = ClusteringMetrics.from_labels(ltrue, lpred)
 
-    # test centropy metrics
+    # test entropy metrics
     h, c, v = cm.entropy_metrics()
     assert_almost_equal(h, 0.371468, 6)
     assert_almost_equal(c, 0.357908, 6)
     assert_almost_equal(v, 0.364562, 6)
 
     assert_almost_equal(cm.vi_distance(normalize=False),     1.366,    3)
-    assert_almost_equal(cm.chisq_score(),     9.017647, 6)
+    assert_almost_equal(cm.chisq_score(),         11.9, 6)
     assert_almost_equal(cm.g_score(),        13.325845, 6)
 
     # test metrics that are based on pairwise co-association matrix

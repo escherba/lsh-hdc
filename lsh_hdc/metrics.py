@@ -90,11 +90,13 @@ References
 """
 
 import numpy as np
+from itertools import izip
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import ilen
-from lsh_hdc.entropy import centropy, nchoose2, emi_from_margins, assignment_cost
+from lsh_hdc.utils import randround
+from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, assignment_cost
 from lsh_hdc.hungarian import linear_sum_assignment
 
 
@@ -209,12 +211,39 @@ class ContingencyTable(CrossTab):
         """
         return np.array(self.to_rows())
 
+    def expected(self, discrete=False):
+        """Factory method that returns expectation given the same table margins
+        """
+        rows = self._row_type_2d()
+        N = float(self.grand_total)
+        row_margin = self.row_totals
+        col_margin = self.col_totals
+        for (ri, ci), _ in self.iter_all():
+            rm = row_margin[ri]
+            cm = col_margin[ci]
+            numer = rm * cm
+            if numer != 0:
+                expected = numer / N
+                if discrete:
+                    expected = randround(expected)
+                    if expected != 0:
+                        rows[ri][ci] = expected
+                else:
+                    rows[ri][ci] = expected
+        return self.__class__(rows=rows)
+
     def chisq_score(self):
         """Pearson's chi-square statistic
+
+        >>> r = {1: {1: 16, 3: 2}, 2: {1: 1, 2: 3}, 3: {1: 4, 2: 5, 3: 5}}
+        >>> cm = ContingencyTable(rows=r)
+        >>> round(cm.chisq_score(), 3)
+        19.256
+
         """
         N = float(self.grand_total)
         score = 0.0
-        for rm, cm, observed in self.iter_vals_with_margins():
+        for rm, cm, observed in self.iter_all_with_margins():
             numer = rm * cm
             if numer != 0:
                 expected = numer / N
@@ -253,9 +282,9 @@ class ContingencyTable(CrossTab):
 
         Not normalized by N
         """
-        H_C = centropy(self.row_totals)
-        H_K = centropy(self.col_totals)
-        H_actual = centropy(self.itervalues())
+        H_C = fentropy(self.row_totals)
+        H_K = fentropy(self.col_totals)
+        H_actual = fentropy(self.itervalues())
         H_expected = H_C + H_K
         I_CK = H_expected - H_actual
         return H_C, H_K, I_CK
