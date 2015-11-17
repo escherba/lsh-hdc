@@ -25,11 +25,7 @@
  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE.
 
-function [assignment, cost] = assignmentoptimal(distMatrix)
 */
-
-//#include <mex.h>
-//#include <matrix.h>
 
 #include <stdlib.h>
 #include <math.h>
@@ -37,6 +33,15 @@ function [assignment, cost] = assignmentoptimal(distMatrix)
 
 #define CHECK_FOR_INF
 #define ONE_INDEXING
+
+void buildassignmentvector(double *, bool *, long , long );
+void computeassignmentcost(double *, double *, double *, long );
+void step2a(double *, double *, bool *, bool *, bool *, bool *, bool *, long , long , long);
+void step2b(double *, double *, bool *, bool *, bool *, bool *, bool *, long , long , long );
+void step3 (double *, double *, bool *, bool *, bool *, bool *, bool *, long , long , long );
+void step4 (double *, double *, bool *, bool *, bool *, bool *, bool *, long , long , long , long , long );
+void step5 (double *, double *, bool *, bool *, bool *, bool *, bool *, long , long , long );
+
 
 void assignmentoptimal(double *assignment, double *cost, double *distMatrixIn, long nOfRows, long nOfColumns)
 {
