@@ -324,15 +324,30 @@ def test_IR_example():
     lpred = (0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 2, 2, 1, 2, 2, 2)
     cm = ClusteringMetrics.from_labels(ltrue, lpred)
 
+    # test perfect variants
+    rd = cm.row_diag()
+    cd = cm.col_diag()
+    assert_almost_equal(rd.assignment_score_nadj(),      1.0, 6)
+    assert_almost_equal(rd.split_join_similarity_nadj(), 1.0, 6)
+    assert_almost_equal(cd.assignment_score_nadj(),      1.0, 6)
+    assert_almost_equal(cd.split_join_similarity_nadj(), 1.0, 6)
+
     # test entropy metrics
     h, c, v = cm.entropy_metrics()
     assert_almost_equal(h, 0.371468, 6)
     assert_almost_equal(c, 0.357908, 6)
     assert_almost_equal(v, 0.364562, 6)
 
-    assert_almost_equal(cm.vi_distance(normalize=False),     1.366,    3)
-    assert_almost_equal(cm.chisq_score(),         11.9, 6)
-    assert_almost_equal(cm.g_score(),        13.325845, 6)
+    assert_almost_equal(cm.vi_similarity(),         0.517754, 6)
+    assert_almost_equal(cm.mirkin_match_coeff(),    0.695502, 6)
+    assert_almost_equal(cm.rand_index(),            0.676471, 6)
+    assert_almost_equal(cm.fowlkes_mallows(),       0.476731, 6)
+    assert_almost_equal(cm.assignment_score(),      0.705882, 6)
+    assert_almost_equal(cm.assignment_score_slow(), 0.705882, 6)
+    assert_almost_equal(cm.assignment_score_nadj(), 0.554974, 6)
+
+    assert_almost_equal(cm.chisq_score(),          11.900000, 6)
+    assert_almost_equal(cm.g_score(),              13.325845, 6)
 
     # test metrics that are based on pairwise co-association matrix
     conf = cm.pairwise_
