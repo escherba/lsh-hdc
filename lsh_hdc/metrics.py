@@ -90,14 +90,13 @@ References
 """
 
 import numpy as np
-from numbers import Integral, Real
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import ilen, iter_items
 from lsh_hdc.utils import randround
 from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, \
-    assignment_cost_lng, assignment_cost_dbl
+    assignment_cost
 from lsh_hdc.hungarian import linear_sum_assignment
 
 
@@ -541,15 +540,7 @@ class ContingencyTable(CrossTab):
 
         if cost is None:
             # guess matrix dtype
-            cost_matrix = self.to_rows()
-            fst = cost_matrix[0][0]
-
-            if isinstance(fst, Integral):
-                cost = assignment_cost_lng(cost_matrix, maximize=True)
-            elif isinstance(fst, Real):
-                cost = assignment_cost_dbl(cost_matrix, maximize=True)
-            else:
-                raise ValueError("Unknown numeric type")
+            cost = assignment_cost(self.to_rows(), maximize=True)
             self._assignment_cost = cost
 
         if subtract_null:
