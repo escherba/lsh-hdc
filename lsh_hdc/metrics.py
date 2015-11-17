@@ -90,6 +90,7 @@ References
 """
 
 import numpy as np
+from numbers import Integral, Real
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
@@ -208,6 +209,7 @@ class ContingencyTable(CrossTab):
         CrossTab.__init__(self, *args, **kwargs)
         self._assignment_cost = None
         self._expected_freqs_ = None
+        self._expected_freqs_discrete_ = None
 
     def to_array(self):
         """Convert to NumPy array
@@ -236,25 +238,33 @@ class ContingencyTable(CrossTab):
             self._expected_freqs_ = table = self.__class__(rows=rows)
         return table
 
-    def expected(self, discrete=False):
+    def expected(self, discrete=False, redraw=False):
         """Factory creating expected table given current margins
         """
+        if discrete:
+            table = self._expected_freqs_discrete_
+        else:
+            table = self.expected_freqs_
 
-        # get precomputed table
-        table = self.expected_freqs_
-
+        # continous
         if not discrete:
+            if table is None:
+                raise RuntimeError("should never happen")
             return table
 
-        rows = self._row_type_2d()
+        # discrete
+        if table is None or redraw:
+            continuous = self.expected_freqs_
+            rows = self._row_type_2d()
 
-        # create a sparse instance
-        for (ri, ci), expected in table.iteritems():
-            expected = randround(expected)
-            if expected != 0:
-                rows[ri][ci] = expected
+            # create a sparse instance
+            for (ri, ci), expected in continuous.iteritems():
+                expected = randround(expected)
+                if expected != 0:
+                    rows[ri][ci] = expected
 
-        return self.__class__(rows=rows)
+            self._expected_freqs_discrete_ = table = self.__class__(rows=rows)
+        return table
 
     def row_diag(self):
         """Factory creating diagonal table given current row margin
@@ -453,12 +463,21 @@ class ContingencyTable(CrossTab):
             score = _div(score, self.grand_total)
         return score
 
-    def assignment_score_nadj(self, discrete=True, normalize=True):
-        """Eq. to ``assignment_score(subtract_null=True)``
+    def assignment_score_nadjd(self, normalize=True, redraw=False):
+        """Eq. to ``assignment_score(subtract_null=True, discrete_null=True)``
         """
-        return self.assignment_score(normalize=normalize, discrete=discrete, subtract_null=True)
+        return self.assignment_score(
+            normalize=normalize, subtract_null=True, discrete_null=True,
+            redraw=redraw)
 
-    def assignment_score(self, normalize=True, discrete=True, subtract_null=False):
+    def assignment_score_nadj(self, normalize=True):
+        """Eq. to ``assignment_score(subtract_null=True, discrete_null=False)``
+        """
+        return self.assignment_score(
+            normalize=normalize, subtract_null=True, discrete_null=False)
+
+    def assignment_score(self, normalize=True, subtract_null=False,
+                         discrete_null=True, redraw=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
         This metric is uniformly more powerful than the similarly behaved
@@ -519,17 +538,24 @@ class ContingencyTable(CrossTab):
 
         # computing assignment cost is expensive so we cache it
         cost = self._assignment_cost
+
         if cost is None:
+            # guess matrix dtype
             cost_matrix = self.to_rows()
-            if discrete:
+            fst = cost_matrix[0][0]
+
+            if isinstance(fst, Integral):
                 cost = assignment_cost_lng(cost_matrix, maximize=True)
-            else:
+            elif isinstance(fst, Real):
                 cost = assignment_cost_dbl(cost_matrix, maximize=True)
+            else:
+                raise ValueError("Unknown numeric type")
             self._assignment_cost = cost
 
         if subtract_null:
-            null_cost = self.expected(discrete=False).assignment_score(
-                discrete=False, subtract_null=False, normalize=False)
+            expected = self.expected(discrete=discrete_null, redraw=redraw)
+            null_cost = expected.assignment_score(
+                subtract_null=False, normalize=False)
             cost -= null_cost
 
         if normalize:
@@ -923,7 +949,10 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     a particular feature), a confusion matrix where the ground truth levels are
     rows looks like this::
 
-        >>> ConfusionMatrix2(TP=20, FN=31, FP=14, TN=156).to_array()
+        >>> cm = ConfusionMatrix2(TP=20, FN=31, FP=14, TN=156)
+        >>> cm
+        ConfusionMatrix2(rows=[[20, 31], [14, 156]])
+        >>> cm.to_array()
         array([[ 20,  31],
                [ 14, 156]])
 
