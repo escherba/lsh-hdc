@@ -148,11 +148,13 @@ setup(
             [
                 "lsh_hdc/entropy.pyx",
                 "lsh_hdc/gamma.c",
-                "lsh_hdc/hungarian.c"
+                "lsh_hdc/hungarian.c",
+                "lsh_hdc/assignmentoptimal.c"
             ],
             depends=[
                 "include/gamma.h",
-                "include/hungarian.h"
+                "include/hungarian.h",
+                "include/assignmentoptimal.h"
             ],
             language="c",
             extra_compile_args=CXXFLAGS,

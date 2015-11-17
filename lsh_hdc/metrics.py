@@ -95,7 +95,8 @@ from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import ilen, iter_items
 from lsh_hdc.utils import randround
-from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, assignment_cost
+from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, \
+    assignment_cost_lng, assignment_cost_dbl
 from lsh_hdc.hungarian import linear_sum_assignment
 
 
@@ -452,7 +453,7 @@ class ContingencyTable(CrossTab):
         """
         return self.assignment_score(normalize=normalize, subtract_null=True)
 
-    def assignment_score(self, normalize=True, subtract_null=False):
+    def assignment_score(self, normalize=True, discrete=True, subtract_null=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
         This metric is uniformly more powerful than the similarly behaved
@@ -520,10 +521,15 @@ class ContingencyTable(CrossTab):
         cost = self._assignment_cost
         if cost is None:
             cost_matrix = -self.to_array()
-            self._assignment_cost = cost = -assignment_cost(cost_matrix)
+            if discrete:
+                cost = -assignment_cost_lng(cost_matrix)
+            else:
+                cost = -assignment_cost_dbl(cost_matrix)
+            self._assignment_cost = cost
 
         if subtract_null:
-            null_cost = self.expected(discrete=True).assignment_score(normalize=False)
+            null_cost = self.expected().assignment_score(
+                discrete=False, subtract_null=False, normalize=False)
             cost -= null_cost
 
         if normalize:
