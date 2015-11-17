@@ -28,63 +28,51 @@ cdef extern from "assignmentoptimal_lng.h":
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.int64_t assignment_cost_lng(arr):
+cpdef np.int64_t assignment_cost_lng(array2d):
     """Assignment cost of a weighted bipartite matching (int64 version)
 
     Uses Kuhn-Munkres (Hungarian) algorithm to find an optimal matching between
     two partitions and returns the cost of the matching in approx. O(n^3) time.
     """
-    cdef Py_ssize_t i, j
-
     cdef Py_ssize_t n, m
-    cdef np.ndarray[np.int64_t, ndim=2] a = np.asarray(arr, dtype=np.int64)
-    n = a.shape[0]
-    m = a.shape[1]
 
-    cdef np.int64_t* tmp = <np.int64_t *> malloc(m*n*sizeof(np.int64_t))
+    cdef np.ndarray[np.int64_t, ndim=2, mode='fortran'] contig = \
+        np.asfortranarray(array2d, dtype=np.int64)
+
+    n = contig.shape[0]
+    m = contig.shape[1]
+
     cdef np.int64_t* assignment = <np.int64_t*> malloc(n*sizeof(np.int64_t))
-
-    for row in range(n):
-        for col in range(m):
-            tmp[row + n * col] = a[row, col]
-
     cdef np.int64_t score = 0
-    assignmentoptimal_lng(assignment, &score, tmp, n, m)
 
-    free(tmp)
+    assignmentoptimal_lng(assignment, &score, &contig[0, 0], n, m)
+
     free(assignment)
-
     return score
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.float64_t assignment_cost_dbl(arr):
+cpdef np.float64_t assignment_cost_dbl(array2d):
     """Assignment cost of a weighted bipartite matching (float64 version)
 
     Uses Kuhn-Munkres (Hungarian) algorithm to find an optimal matching between
     two partitions and returns the cost of the matching in approx. O(n^3) time.
     """
-    cdef Py_ssize_t i, j
-
     cdef Py_ssize_t n, m
-    cdef np.ndarray[np.float64_t, ndim=2] a = np.asarray(arr, dtype=np.float64)
-    n = a.shape[0]
-    m = a.shape[1]
 
-    cdef np.float64_t* tmp = <np.float64_t *> malloc(m*n*sizeof(np.float64_t))
+    cdef np.ndarray[np.float64_t, ndim=2, mode='fortran'] contig = \
+        np.asfortranarray(array2d, dtype=np.float64)
+
+    n = contig.shape[0]
+    m = contig.shape[1]
+
     cdef np.float64_t* assignment = <np.float64_t*> malloc(n*sizeof(np.float64_t))
-
-    for row in range(n):
-        for col in range(m):
-            tmp[row + n * col] = a[row, col]
-
     cdef np.float64_t score = 0
-    assignmentoptimal_dbl(assignment, &score, tmp, n, m)
 
-    free(tmp)
+    assignmentoptimal_dbl(assignment, &score, &contig[0, 0], n, m)
+
     free(assignment)
-
     return score
 
 
