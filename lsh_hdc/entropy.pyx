@@ -42,7 +42,7 @@ cpdef assignment_cost(array2d, maximize=False):
     elif isinstance(fst, numbers.Real):
         return _assignment_cost_dbl(array2d, maximize=maximize)
     else:
-        raise ValueError("Unknown numeric type")
+        raise TypeError(type(fst))
 
 
 @cython.boundscheck(False)
