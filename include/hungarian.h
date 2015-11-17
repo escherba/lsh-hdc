@@ -60,6 +60,5 @@ void BitSet_unset(BitSet, size_t);
 ssize_t BitSet_any(BitSet) __attribute__((pure));
 
 size_t lb(llong x) __attribute__((const));
-void print(cell**, size_t, size_t, ssize_t**);
 
 #endif  /*  HUNGARIAN_H */
