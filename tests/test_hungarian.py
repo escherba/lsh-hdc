@@ -4,8 +4,8 @@
 import numpy as np
 from numpy.testing import assert_array_equal, assert_raises
 from lsh_hdc.hungarian import linear_sum_assignment
-from lsh_hdc.entropy import assignment_cost
-from nose.tools import assert_equal
+from lsh_hdc.entropy import assignment_cost_lng, assignment_cost_dbl
+from nose.tools import assert_equal, assert_almost_equal
 
 
 def test_linear_sum_assignment():
@@ -37,7 +37,7 @@ def test_linear_sum_assignment():
         # n == 2, m == 0 matrix
         ([[], []],
          []),
-    ]:
+        ]:
         cost_matrix = np.array(cost_matrix)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
         assert_array_equal(row_ind, np.sort(row_ind))
@@ -79,17 +79,23 @@ def test_assignment_score():
         # n == 2, m == 0 matrix
         ([[], []],
          []),
-    ]:
+        ]:
         cost_matrix = np.array(cost_matrix)
         cost_matrix_T = cost_matrix.T
 
         expected_sum = np.sum(expected_cost)
 
-        score = assignment_cost(cost_matrix)
-        score_T = assignment_cost(cost_matrix_T)
+        score = assignment_cost_lng(cost_matrix)
+        score_T = assignment_cost_lng(cost_matrix_T)
 
         assert_equal(score, expected_sum)
         assert_equal(score_T, expected_sum)
+
+        score_dbl = assignment_cost_dbl(cost_matrix)
+        score_T_dbl = assignment_cost_dbl(cost_matrix_T)
+
+        assert_almost_equal(score_dbl, float(expected_sum))
+        assert_almost_equal(score_T_dbl, float(expected_sum))
 
 
 def test_linear_sum_assignment_input_validation():

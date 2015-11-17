@@ -90,13 +90,13 @@ References
 """
 
 import numpy as np
-from itertools import izip
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
-from pymaptools.iter import ilen
+from pymaptools.iter import ilen, iter_items
 from lsh_hdc.utils import randround
-from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, assignment_cost
+from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, \
+    assignment_cost_lng, assignment_cost_dbl
 from lsh_hdc.hungarian import linear_sum_assignment
 
 
@@ -204,34 +204,75 @@ class ContingencyTable(CrossTab):
     # As of today, Pandas 'crosstab' implementation of frequency tables forces
     # one to iterate on all the zeros, which is horrible...
 
-    __init__ = CrossTab.__init__
+    def __init__(self, *args, **kwargs):
+        CrossTab.__init__(self, *args, **kwargs)
+        self._assignment_cost = None
+        self._expected_freqs_ = None
 
     def to_array(self):
         """Convert to NumPy array
         """
         return np.array(self.to_rows())
 
-    def expected(self, discrete=False):
-        """Factory method that returns expectation given the same table margins
-        """
-        rows = self._row_type_2d()
-        N = float(self.grand_total)
-        row_margin = self.row_totals
-        col_margin = self.col_totals
-        for (ri, ci), _ in self.iter_all():
-            rm = row_margin[ri]
-            cm = col_margin[ci]
-            numer = rm * cm
-            if numer != 0:
-                expected = numer / N
-                if discrete:
-                    expected = randround(expected)
-                    if expected != 0:
-                        rows[ri][ci] = expected
-                else:
+    # Factory methods
+
+    @property
+    def expected_freqs_(self):
+        table = self._expected_freqs_
+        if table is None:
+            rows = self._row_type_2d()
+            N = float(self.grand_total)
+            row_margin = self.row_totals
+            col_margin = self.col_totals
+
+            # create a dense instance
+            for (ri, ci), _ in self.iter_all():
+                rm = row_margin[ri]
+                cm = col_margin[ci]
+                numer = rm * cm
+                if numer != 0:
+                    expected = numer / N
                     rows[ri][ci] = expected
+            self._expected_freqs_ = table = self.__class__(rows=rows)
+        return table
+
+    def expected(self, discrete=False):
+        """Factory creating expected table given current margins
+        """
+
+        # get precomputed table
+        table = self.expected_freqs_
+
+        if not discrete:
+            return table
+
+        rows = self._row_type_2d()
+
+        # create a sparse innstance
+        for (ri, ci), expected in table.iteritems():
+            expected = randround(expected)
+            if expected != 0:
+                rows[ri][ci] = expected
+
         return self.__class__(rows=rows)
 
+    def row_diag(self):
+        """Factory creating diagonal table given current row margin
+        """
+        rows = self._row_type_2d()
+        for i, m in iter_items(self.row_totals):
+            rows[i][i] = m
+        return self.__class__(rows=rows)
+
+    def col_diag(self):
+        """Factory creating diagonal table given current column margin
+        """
+        rows = self._row_type_2d()
+        for i, m in iter_items(self.col_totals):
+            rows[i][i] = m
+        return self.__class__(rows=rows)
+
+    # Misc metrics
     def chisq_score(self):
         """Pearson's chi-square statistic
 
@@ -407,7 +448,12 @@ class ContingencyTable(CrossTab):
             score = _div(score, self.grand_total)
         return score
 
-    def assignment_score(self, normalize=True):
+    def assignment_score_nadj(self, discrete=True, normalize=True):
+        """Eq. to ``assignment_score(subtract_null=True)``
+        """
+        return self.assignment_score(normalize=normalize, discrete=discrete, subtract_null=True)
+
+    def assignment_score(self, normalize=True, discrete=True, subtract_null=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
         This metric is uniformly more powerful than the similarly behaved
@@ -415,6 +461,15 @@ class ContingencyTable(CrossTab):
         optimal solution evaluated here. The split-join approximation
         asymptotically approaches the optimal solution as the clustering
         quality improves.
+
+        On the ``subtract_null`` parameter: adjusting assignment cost for
+        chance by relying on the hypergeometric distribution is extremely
+        computationally expensive, but one way to get a better behaved metric
+        is to just subtract the cost of a null model from the obtained score
+        (in case of normalization, the null cost also has to be subtracted from
+        the maximum cost). Note that on large tables even finding the null cost
+        is too expensive, since expected tables have a lot less sparsity. Hence
+        the parameter is off by default.
 
         Since the original implementation of the Hungarian algorithm is
         designed to minimize cost, we produce a negative of the frequency
@@ -461,11 +516,29 @@ class ContingencyTable(CrossTab):
                <http://dl.acm.org/citation.cfm?id=1289345>`_
 
         """
-        cost_matrix = -self.to_array()
-        score = -assignment_cost(cost_matrix)
+
+        # computing assignment cost is expensive so we cache it
+        cost = self._assignment_cost
+        if cost is None:
+            cost_matrix = -self.to_array()
+            if discrete:
+                cost = -assignment_cost_lng(cost_matrix)
+            else:
+                cost = -assignment_cost_dbl(cost_matrix)
+            self._assignment_cost = cost
+
+        if subtract_null:
+            null_cost = self.expected(discrete=False).assignment_score(
+                discrete=False, subtract_null=False, normalize=False)
+            cost -= null_cost
+
         if normalize:
-            score = _div(score, self.grand_total)
-        return score
+            max_cost = self.grand_total
+            if subtract_null:
+                max_cost -= null_cost
+            cost = _div(cost, max_cost)
+
+        return cost
 
     def vi_distance(self, normalize=True):
         """Variation of Information distance
@@ -513,14 +586,19 @@ class ContingencyTable(CrossTab):
     def split_join_distance(self, normalize=True):
         """Distance metric based on ``split_join_similarity``
         """
-        sim = self.split_join_similarity(normalize=False)
+        sim = self.split_join_similarity(normalize=False, subtract_null=False)
         max_sim = 2 * self.grand_total
         score = max_sim - sim
         if normalize:
             score = _div(score, max_sim)
         return score
 
-    def split_join_similarity(self, normalize=True):
+    def split_join_similarity_nadj(self, normalize=True):
+        """Eq. to ``split_join_similarity(subtract_null=True)``
+        """
+        return self.split_join_similarity(normalize=normalize, subtract_null=True)
+
+    def split_join_similarity(self, normalize=True, subtract_null=False):
         """Split-join similarity score
 
         Split-join similarity is a two-way assignment-based score first
@@ -533,6 +611,11 @@ class ContingencyTable(CrossTab):
         frequency, then the procedure is inversed to assign a class to each
         cluster. The final unnormalized distance score comprises of a simple
         sum of the two one-way assignment scores.
+
+        On the ``subtract_null`` parameter: one way to get a better behaved
+        metric is to just subtract the cost of a null model from the obtained
+        score (this is similar to but not technically the same as correcting
+        for chance).
 
         A relatively decent clustering::
 
@@ -566,8 +649,21 @@ class ContingencyTable(CrossTab):
         pa_B = sum(max(row) for row in self.iter_rows())
         pb_A = sum(max(col) for col in self.iter_cols())
         score = pa_B + pb_A
+
+        if subtract_null:
+            # split-join metric for a null model is simply the average values
+            # of row and column margins added together.
+            m = ilen(self.row_totals)
+            n = ilen(self.col_totals)
+            null_score = self.grand_total * (m + n) / float(m * n)
+            score -= null_score
+
         if normalize:
-            score = _div(score, 2 * self.grand_total)
+            max_score = 2 * self.grand_total
+            if subtract_null:
+                max_score -= null_score
+            score = _div(score, max_score)
+
         return score
 
     def mirkin_match_coeff(self, normalize=True):
