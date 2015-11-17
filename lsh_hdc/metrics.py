@@ -90,7 +90,6 @@ References
 """
 
 import numpy as np
-from itertools import izip
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
@@ -448,7 +447,10 @@ class ContingencyTable(CrossTab):
             score = _div(score, self.grand_total)
         return score
 
-    def assignment_score(self, normalize=True):
+    def assignment_score_nadj(self, normalize=True):
+        return self.assignment_score(normalize=normalize, subtract_null=True)
+
+    def assignment_score(self, normalize=True, subtract_null=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
         This metric is uniformly more powerful than the similarly behaved
@@ -456,6 +458,15 @@ class ContingencyTable(CrossTab):
         optimal solution evaluated here. The split-join approximation
         asymptotically approaches the optimal solution as the clustering
         quality improves.
+
+        On the ``subtract_null`` parameter: adjusting assignment cost for
+        chance by relying on the hypergeometric distribution is extremely
+        computationally expensive, but one way to get a more powerful metric is
+        to just subtract the cost of a null model from the obtained score (in
+        case of normalization, the null cost also has to be subtracted from the
+        maximum cost). Note that on large tables even finding the null cost is
+        too expensive, since expected tables have a lot less sparsity. Hence
+        the parameter is off by default.
 
         Since the original implementation of the Hungarian algorithm is
         designed to minimize cost, we produce a negative of the frequency
@@ -508,75 +519,18 @@ class ContingencyTable(CrossTab):
         if cost is None:
             cost_matrix = -self.to_array()
             self._assignment_cost = cost = -assignment_cost(cost_matrix)
+
+        if subtract_null:
+            null_cost = self.expected(discrete=True).assignment_score(normalize=False)
+            cost -= null_cost
+
         if normalize:
-            cost = _div(cost, self.grand_total)
+            max_cost = self.grand_total
+            if subtract_null:
+                max_cost -= null_cost
+            cost = _div(cost, max_cost)
+
         return cost
-
-    def _expected_assignment_sj(self):
-        """Finds naive expected assignment score (times 2)
-        """
-        ncols = ilen(self.col_totals)
-        nrows = ilen(self.row_totals)
-        pa_B_sum = (sum(row) for row in self.iter_rows())
-        pb_A_sum = (sum(col) for col in self.iter_cols())
-        pa_B_len = (ncols for row in self.iter_rows())
-        pb_A_len = (nrows for col in self.iter_cols())
-        pa_B = sum(s / float(l) for s, l in izip(pa_B_sum, pa_B_len))
-        pb_A = sum(s / float(l) for s, l in izip(pb_A_sum, pb_A_len))
-        naive_exp2 = pa_B + pb_A
-        return naive_exp2
-
-    def assignment_score_nadj(self):
-        """Naively adjusted version of assigment score
-
-        Adjustment for chance using hypergeometric distribution is too
-        computationally expensive so we just scale this score to its (naively
-        obtained) minimum value.
-
-        Note: on large tables even this "faster" method is too expensive.
-        """
-
-        score = self.assignment_score(normalize=False)
-        max_score = self.grand_total
-        expected = self.expected(discrete=True).assignment_score(normalize=False)
-        return _div(score - expected, max_score - expected)
-
-    def assignment_score_nadj_sj(self):
-        """Naively adjusted version of assigment score
-
-        Adjustment for chance using hypergeometric distribution is too
-        computationally expensive so we just scale this score to its (naively
-        obtained) minimum value.
-        """
-
-        score = 2 * self.assignment_score(normalize=False)
-        max_score = 2 * self.grand_total
-        expected = self._expected_assignment_sj()
-        return _div(score - expected, max_score - expected)
-
-    def split_join_similarity_nadj(self):
-        """Naively adjusted version of split-join similarity
-
-        Adjustment for chance using hypergeometric distribution is too
-        computationally expensive so we just scale this score to its (naively
-        obtained) minimum value.
-        """
-        score = self.split_join_similarity(normalize=False)
-        max_score = 2 * self.grand_total
-        expected = self.expected().split_join_similarity(normalize=False)
-        return _div(score - expected, max_score - expected)
-
-    def split_join_similarity_nadj_sj(self):
-        """Naively adjusted version of split-join similarity
-
-        Adjustment for chance using hypergeometric distribution is too
-        computationally expensive so we just scale this score to its (naively
-        obtained) minimum value.
-        """
-        score = self.split_join_similarity(normalize=False)
-        max_score = 2 * self.grand_total
-        expected = self._expected_assignment_sj()
-        return _div(score - expected, max_score - expected)
 
     def vi_distance(self, normalize=True):
         """Variation of Information distance
@@ -624,14 +578,17 @@ class ContingencyTable(CrossTab):
     def split_join_distance(self, normalize=True):
         """Distance metric based on ``split_join_similarity``
         """
-        sim = self.split_join_similarity(normalize=False)
+        sim = self.split_join_similarity(normalize=False, subtract_null=False)
         max_sim = 2 * self.grand_total
         score = max_sim - sim
         if normalize:
             score = _div(score, max_sim)
         return score
 
-    def split_join_similarity(self, normalize=True):
+    def split_join_similarity_nadj(self, normalize=True):
+        return self.split_join_similarity(normalize=normalize, subtract_null=True)
+
+    def split_join_similarity(self, normalize=True, subtract_null=False):
         """Split-join similarity score
 
         Split-join similarity is a two-way assignment-based score first
@@ -644,6 +601,11 @@ class ContingencyTable(CrossTab):
         frequency, then the procedure is inversed to assign a class to each
         cluster. The final unnormalized distance score comprises of a simple
         sum of the two one-way assignment scores.
+
+        On the ``subtract_null`` parameter: one way to get a more powerful
+        metric is to just subtract the cost of a null model from the obtained
+        score (this is similar to but not technically the same as correcting
+        for chance).
 
         A relatively decent clustering::
 
@@ -677,8 +639,21 @@ class ContingencyTable(CrossTab):
         pa_B = sum(max(row) for row in self.iter_rows())
         pb_A = sum(max(col) for col in self.iter_cols())
         score = pa_B + pb_A
+
+        if subtract_null:
+            # split-join metric for a null model is simply the average values
+            # of row and column margins added together.
+            m = ilen(self.row_totals)
+            n = ilen(self.col_totals)
+            null_score = self.grand_total * (m + n) / float(m * n)
+            score -= null_score
+
         if normalize:
-            score = _div(score, 2 * self.grand_total)
+            max_score = 2 * self.grand_total
+            if subtract_null:
+                max_score -= null_score
+            score = _div(score, max_score)
+
         return score
 
     def mirkin_match_coeff(self, normalize=True):
