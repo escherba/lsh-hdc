@@ -204,7 +204,10 @@ class ContingencyTable(CrossTab):
     # As of today, Pandas 'crosstab' implementation of frequency tables forces
     # one to iterate on all the zeros, which is horrible...
 
-    __init__ = CrossTab.__init__
+    def __init__(self, *args, **kwargs):
+        CrossTab.__init__(self, *args, **kwargs)
+        self._assignment_cost = None
+        self._expected_freqs_ = None
 
     def to_array(self):
         """Convert to NumPy array
@@ -212,25 +215,45 @@ class ContingencyTable(CrossTab):
         return np.array(self.to_rows())
 
     # Factory methods
+
+    @property
+    def expected_freqs_(self):
+        table = self._expected_freqs_
+        if table is None:
+            rows = self._row_type_2d()
+            N = float(self.grand_total)
+            row_margin = self.row_totals
+            col_margin = self.col_totals
+
+            # create a dense instance
+            for (ri, ci), _ in self.iter_all():
+                rm = row_margin[ri]
+                cm = col_margin[ci]
+                numer = rm * cm
+                if numer != 0:
+                    expected = numer / N
+                    rows[ri][ci] = expected
+            self._expected_freqs_ = table = self.__class__(rows=rows)
+        return table
+
     def expected(self, discrete=False):
         """Factory creating expected table given current margins
         """
+
+        # get precomputed table
+        table = self.expected_freqs_
+
+        if not discrete:
+            return table
+
         rows = self._row_type_2d()
-        N = float(self.grand_total)
-        row_margin = self.row_totals
-        col_margin = self.col_totals
-        for (ri, ci), _ in self.iter_all():
-            rm = row_margin[ri]
-            cm = col_margin[ci]
-            numer = rm * cm
-            if numer != 0:
-                expected = numer / N
-                if discrete:
-                    expected = randround(expected)
-                    if expected != 0:
-                        rows[ri][ci] = expected
-                else:
-                    rows[ri][ci] = expected
+
+        # create a sparse innstance
+        for (ri, ci), expected in table.iteritems():
+            expected = randround(expected)
+            if expected != 0:
+                rows[ri][ci] = expected
+
         return self.__class__(rows=rows)
 
     def row_diag(self):
@@ -479,11 +502,15 @@ class ContingencyTable(CrossTab):
                <http://dl.acm.org/citation.cfm?id=1289345>`_
 
         """
-        cost_matrix = -self.to_array()
-        score = -assignment_cost(cost_matrix)
+
+        # computing assignment cost is expensive so we cache it
+        cost = self._assignment_cost
+        if cost is None:
+            cost_matrix = -self.to_array()
+            self._assignment_cost = cost = -assignment_cost(cost_matrix)
         if normalize:
-            score = _div(score, self.grand_total)
-        return score
+            cost = _div(cost, self.grand_total)
+        return cost
 
     def _expected_assignment_sj(self):
         """Finds naive expected assignment score (times 2)
@@ -505,6 +532,8 @@ class ContingencyTable(CrossTab):
         Adjustment for chance using hypergeometric distribution is too
         computationally expensive so we just scale this score to its (naively
         obtained) minimum value.
+
+        Note: on large tables even this "faster" method is too expensive.
         """
 
         score = self.assignment_score(normalize=False)
