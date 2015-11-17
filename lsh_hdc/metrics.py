@@ -448,10 +448,10 @@ class ContingencyTable(CrossTab):
             score = _div(score, self.grand_total)
         return score
 
-    def assignment_score_nadj(self, normalize=True):
+    def assignment_score_nadj(self, discrete=True, normalize=True):
         """Eq. to ``assignment_score(subtract_null=True)``
         """
-        return self.assignment_score(normalize=normalize, subtract_null=True)
+        return self.assignment_score(normalize=normalize, discrete=discrete, subtract_null=True)
 
     def assignment_score(self, normalize=True, discrete=True, subtract_null=False):
         """Similarity score by solving the Linear Sum Assignment Problem
@@ -528,7 +528,7 @@ class ContingencyTable(CrossTab):
             self._assignment_cost = cost
 
         if subtract_null:
-            null_cost = self.expected().assignment_score(
+            null_cost = self.expected(discrete=False).assignment_score(
                 discrete=False, subtract_null=False, normalize=False)
             cost -= null_cost
 
