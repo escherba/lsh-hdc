@@ -448,6 +448,8 @@ class ContingencyTable(CrossTab):
         return score
 
     def assignment_score_nadj(self, normalize=True):
+        """Eq. to ``assignment_score(subtract_null=True)``
+        """
         return self.assignment_score(normalize=normalize, subtract_null=True)
 
     def assignment_score(self, normalize=True, subtract_null=False):
@@ -461,11 +463,11 @@ class ContingencyTable(CrossTab):
 
         On the ``subtract_null`` parameter: adjusting assignment cost for
         chance by relying on the hypergeometric distribution is extremely
-        computationally expensive, but one way to get a more powerful metric is
-        to just subtract the cost of a null model from the obtained score (in
-        case of normalization, the null cost also has to be subtracted from the
-        maximum cost). Note that on large tables even finding the null cost is
-        too expensive, since expected tables have a lot less sparsity. Hence
+        computationally expensive, but one way to get a better behaved metric
+        is to just subtract the cost of a null model from the obtained score
+        (in case of normalization, the null cost also has to be subtracted from
+        the maximum cost). Note that on large tables even finding the null cost
+        is too expensive, since expected tables have a lot less sparsity. Hence
         the parameter is off by default.
 
         Since the original implementation of the Hungarian algorithm is
@@ -586,6 +588,8 @@ class ContingencyTable(CrossTab):
         return score
 
     def split_join_similarity_nadj(self, normalize=True):
+        """Eq. to ``split_join_similarity(subtract_null=True)``
+        """
         return self.split_join_similarity(normalize=normalize, subtract_null=True)
 
     def split_join_similarity(self, normalize=True, subtract_null=False):
@@ -602,7 +606,7 @@ class ContingencyTable(CrossTab):
         cluster. The final unnormalized distance score comprises of a simple
         sum of the two one-way assignment scores.
 
-        On the ``subtract_null`` parameter: one way to get a more powerful
+        On the ``subtract_null`` parameter: one way to get a better behaved
         metric is to just subtract the cost of a null model from the obtained
         score (this is similar to but not technically the same as correcting
         for chance).

@@ -25,6 +25,11 @@ cdef extern from "hungarian.h":
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef np.int64_t assignment_cost(arr):
+    """Assignment cost of a weighted bipartite matching
+
+    Uses Kuhn-Munkres (Hungarian) algorithm to find an optimal matching between
+    two partitions and returns the cost of the matching in approx. O(n^3) time.
+    """
     cdef Py_ssize_t i, j
 
     cdef Py_ssize_t n, m
