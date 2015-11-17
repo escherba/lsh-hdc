@@ -94,7 +94,7 @@ from itertools import izip
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
-from pymaptools.iter import ilen
+from pymaptools.iter import ilen, iter_items
 from lsh_hdc.utils import randround
 from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, assignment_cost
 from lsh_hdc.hungarian import linear_sum_assignment
@@ -211,8 +211,9 @@ class ContingencyTable(CrossTab):
         """
         return np.array(self.to_rows())
 
+    # Factory methods
     def expected(self, discrete=False):
-        """Factory method that returns expectation given the same table margins
+        """Factory creating expected table given current margins
         """
         rows = self._row_type_2d()
         N = float(self.grand_total)
@@ -232,6 +233,23 @@ class ContingencyTable(CrossTab):
                     rows[ri][ci] = expected
         return self.__class__(rows=rows)
 
+    def row_diag(self):
+        """Factory creating diagonal table given current row margin
+        """
+        rows = self._row_type_2d()
+        for i, m in iter_items(self.row_totals):
+            rows[i][i] = m
+        return self.__class__(rows=rows)
+
+    def col_diag(self):
+        """Factory creating diagonal table given current column margin
+        """
+        rows = self._row_type_2d()
+        for i, m in iter_items(self.col_totals):
+            rows[i][i] = m
+        return self.__class__(rows=rows)
+
+    # Misc metrics
     def chisq_score(self):
         """Pearson's chi-square statistic
 
@@ -466,6 +484,70 @@ class ContingencyTable(CrossTab):
         if normalize:
             score = _div(score, self.grand_total)
         return score
+
+    def _expected_assignment_sj(self):
+        """Finds naive expected assignment score (times 2)
+        """
+        ncols = ilen(self.col_totals)
+        nrows = ilen(self.row_totals)
+        pa_B_sum = (sum(row) for row in self.iter_rows())
+        pb_A_sum = (sum(col) for col in self.iter_cols())
+        pa_B_len = (ncols for row in self.iter_rows())
+        pb_A_len = (nrows for col in self.iter_cols())
+        pa_B = sum(s / float(l) for s, l in izip(pa_B_sum, pa_B_len))
+        pb_A = sum(s / float(l) for s, l in izip(pb_A_sum, pb_A_len))
+        naive_exp2 = pa_B + pb_A
+        return naive_exp2
+
+    def assignment_score_nadj(self):
+        """Naively adjusted version of assigment score
+
+        Adjustment for chance using hypergeometric distribution is too
+        computationally expensive so we just scale this score to its (naively
+        obtained) minimum value.
+        """
+
+        score = self.assignment_score(normalize=False)
+        max_score = self.grand_total
+        expected = self.expected(discrete=True).assignment_score(normalize=False)
+        return _div(score - expected, max_score - expected)
+
+    def assignment_score_nadj_sj(self):
+        """Naively adjusted version of assigment score
+
+        Adjustment for chance using hypergeometric distribution is too
+        computationally expensive so we just scale this score to its (naively
+        obtained) minimum value.
+        """
+
+        score = 2 * self.assignment_score(normalize=False)
+        max_score = 2 * self.grand_total
+        expected = self._expected_assignment_sj()
+        return _div(score - expected, max_score - expected)
+
+    def split_join_similarity_nadj(self):
+        """Naively adjusted version of split-join similarity
+
+        Adjustment for chance using hypergeometric distribution is too
+        computationally expensive so we just scale this score to its (naively
+        obtained) minimum value.
+        """
+        score = self.split_join_similarity(normalize=False)
+        max_score = 2 * self.grand_total
+        expected = self.expected().split_join_similarity(normalize=False)
+        return _div(score - expected, max_score - expected)
+
+    def split_join_similarity_nadj_sj(self):
+        """Naively adjusted version of split-join similarity
+
+        Adjustment for chance using hypergeometric distribution is too
+        computationally expensive so we just scale this score to its (naively
+        obtained) minimum value.
+        """
+        score = self.split_join_similarity(normalize=False)
+        max_score = 2 * self.grand_total
+        expected = self._expected_assignment_sj()
+        return _div(score - expected, max_score - expected)
 
     def vi_distance(self, normalize=True):
         """Variation of Information distance
