@@ -529,7 +529,7 @@ class ContingencyTable(CrossTab):
 
         if subtract_null:
             null_cost = self.expected(discrete=False).assignment_score(
-                discrete=True, subtract_null=False, normalize=False)
+                discrete=False, subtract_null=False, normalize=False)
             cost -= null_cost
 
         if normalize:
