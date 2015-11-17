@@ -3,7 +3,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal
 from math import sqrt
 from itertools import izip
-from nose.tools import assert_almost_equal, assert_true, assert_equal
+from nose.tools import assert_almost_equal, assert_true, assert_equal, assert_greater
 from lsh_hdc.metrics import adjusted_rand_score, \
     homogeneity_completeness_v_measure, fentropy, \
     jaccard_similarity, ClusteringMetrics, \
@@ -329,8 +329,25 @@ def test_IR_example():
     cd = cm.col_diag()
     assert_almost_equal(rd.assignment_score_nadj(),      1.0, 6)
     assert_almost_equal(rd.split_join_similarity_nadj(), 1.0, 6)
-    assert_almost_equal(cd.assignment_score_nadj(),      1.0, 6)
     assert_almost_equal(cd.split_join_similarity_nadj(), 1.0, 6)
+
+    assert_almost_equal(cd.assignment_score_nadj(),   1.0, 6)
+    assert_almost_equal(cd.assignment_score_nadjd(),  1.0, 6)
+    assert_almost_equal(rd.assignment_score_nadj(),   1.0, 6)
+    assert_almost_equal(rd.assignment_score_nadjd(),  1.0, 6)
+
+    # test that no redraws happen by default
+    assert_almost_equal(cm.assignment_score_nadj(),
+                        cm.assignment_score_nadj(), 6)
+
+    ex = cm.expected(discrete=False)
+    assert_almost_equal(ex.assignment_score_nadj(), 0.0, 6)
+
+    # test that H1 results in greater score than H0
+    ex = cm.expected(discrete=True)
+    assert_greater(
+        cm.assignment_score_nadj(),
+        ex.assignment_score_nadj())
 
     # test entropy metrics
     h, c, v = cm.entropy_metrics()

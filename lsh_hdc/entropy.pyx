@@ -5,6 +5,7 @@
 from libc.math cimport exp, log
 from scipy.special import gammaln
 from collections import Mapping, Iterator
+import numbers
 import numpy as np
 cimport numpy as np
 cimport cython
@@ -28,7 +29,25 @@ cdef extern from "assignmentoptimal_lng.h":
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.int64_t assignment_cost_lng(array2d, maximize=False):
+cpdef assignment_cost(array2d, maximize=False):
+
+    if len(array2d) == 0:
+        return 0
+    cols = array2d[0]
+    if len(cols) == 0:
+        return 0
+    fst = cols[0]
+    if isinstance(fst, numbers.Integral):
+        return _assignment_cost_lng(array2d, maximize=maximize)
+    elif isinstance(fst, numbers.Real):
+        return _assignment_cost_dbl(array2d, maximize=maximize)
+    else:
+        raise ValueError("Unknown numeric type")
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef np.int64_t _assignment_cost_lng(array2d, maximize=False):
     """Assignment cost of a weighted bipartite matching (int64 version)
 
     Uses Kuhn-Munkres (Hungarian) algorithm to find an optimal matching between
@@ -60,7 +79,7 @@ cpdef np.int64_t assignment_cost_lng(array2d, maximize=False):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.float64_t assignment_cost_dbl(array2d, maximize=False):
+cdef np.float64_t _assignment_cost_dbl(array2d, maximize=False):
     """Assignment cost of a weighted bipartite matching (float64 version)
 
     Uses Kuhn-Munkres (Hungarian) algorithm to find an optimal matching between
