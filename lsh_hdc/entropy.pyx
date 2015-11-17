@@ -28,7 +28,7 @@ cdef extern from "assignmentoptimal_lng.h":
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.int64_t assignment_cost_lng(array2d):
+cpdef np.int64_t assignment_cost_lng(array2d, maximize=False):
     """Assignment cost of a weighted bipartite matching (int64 version)
 
     Uses Kuhn-Munkres (Hungarian) algorithm to find an optimal matching between
@@ -39,6 +39,9 @@ cpdef np.int64_t assignment_cost_lng(array2d):
     cdef np.ndarray[np.int64_t, ndim=2, mode='fortran'] contig = \
         np.asfortranarray(array2d, dtype=np.int64)
 
+    if maximize:
+        contig = -contig
+
     n = contig.shape[0]
     m = contig.shape[1]
 
@@ -48,12 +51,16 @@ cpdef np.int64_t assignment_cost_lng(array2d):
     assignmentoptimal_lng(assignment, &score, &contig[0, 0], n, m)
 
     free(assignment)
+
+    if maximize:
+        score = -score
+
     return score
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.float64_t assignment_cost_dbl(array2d):
+cpdef np.float64_t assignment_cost_dbl(array2d, maximize=False):
     """Assignment cost of a weighted bipartite matching (float64 version)
 
     Uses Kuhn-Munkres (Hungarian) algorithm to find an optimal matching between
@@ -64,6 +71,9 @@ cpdef np.float64_t assignment_cost_dbl(array2d):
     cdef np.ndarray[np.float64_t, ndim=2, mode='fortran'] contig = \
         np.asfortranarray(array2d, dtype=np.float64)
 
+    if maximize:
+        contig = -contig
+
     n = contig.shape[0]
     m = contig.shape[1]
 
@@ -73,6 +83,10 @@ cpdef np.float64_t assignment_cost_dbl(array2d):
     assignmentoptimal_dbl(assignment, &score, &contig[0, 0], n, m)
 
     free(assignment)
+
+    if maximize:
+        score = -score
+
     return score
 
 

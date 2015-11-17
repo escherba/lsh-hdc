@@ -439,7 +439,12 @@ class ContingencyTable(CrossTab):
         return ami
 
     def assignment_score_slow(self, normalize=True):
-        """Uses Python/Numpy implementation of the Hungarian method
+        """Calls Python/Numpy implementation of the Hungarian method
+
+        Since the original implementation of the Hungarian algorithm is
+        designed to minimize cost, we produce a negative of the frequency
+        matrix in order to maximize it. The obtained cost assignment is then
+        normalized by its maximum, which is N.
         """
         cost_matrix = -self.to_array()
         ris, cis = linear_sum_assignment(cost_matrix)
@@ -470,11 +475,6 @@ class ContingencyTable(CrossTab):
         the maximum cost). Note that on large tables even finding the null cost
         is too expensive, since expected tables have a lot less sparsity. Hence
         the parameter is off by default.
-
-        Since the original implementation of the Hungarian algorithm is
-        designed to minimize cost, we produce a negative of the frequency
-        matrix in order to maximize it. The obtained cost assignment is then
-        normalized by its maximum, which is N.
 
         Alternatively this problem can be recast as that of finding a *maximum
         weighted bipartite match* [1]_.
@@ -520,11 +520,11 @@ class ContingencyTable(CrossTab):
         # computing assignment cost is expensive so we cache it
         cost = self._assignment_cost
         if cost is None:
-            cost_matrix = -self.to_array()
+            cost_matrix = self.to_rows()
             if discrete:
-                cost = -assignment_cost_lng(cost_matrix)
+                cost = assignment_cost_lng(cost_matrix, maximize=True)
             else:
-                cost = -assignment_cost_dbl(cost_matrix)
+                cost = assignment_cost_dbl(cost_matrix, maximize=True)
             self._assignment_cost = cost
 
         if subtract_null:
