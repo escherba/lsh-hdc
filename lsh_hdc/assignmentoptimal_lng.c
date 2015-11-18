@@ -31,23 +31,23 @@
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
-#include "assignmentoptimal_lng.h"
+#include "assignmentoptimal.h"
 
+#define cell long
 #define ONE_INDEXING
 
-
 void buildassignmentvector_lng(long*, bool*, long , long );
-void computeassignmentcost_lng(long*, cell_lng*, cell_lng*, long );
-void step2a_lng(long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step2b_lng(long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step3_lng (long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step4_lng (long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long, long, long);
-void step5_lng (long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void computeassignmentcost_lng(long*, cell*, cell*, long );
+void step2a_lng(long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step2b_lng(long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step3_lng (long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step4_lng (long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long, long, long);
+void step5_lng (long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long);
 
 
-void assignmentoptimal_lng(long *assignment, cell_lng *cost, cell_lng *distMatrixIn, long nOfRows, long nOfColumns)
+void assignmentoptimal_lng(long *assignment, cell *cost, cell *distMatrixIn, long nOfRows, long nOfColumns)
 {
-	cell_lng *distMatrix, *distMatrixTemp, *distMatrixEnd, *columnEnd, value, minValue;
+	cell *distMatrix, *distMatrixTemp, *distMatrixEnd, *columnEnd, value, minValue;
 	bool *coveredColumns, *coveredRows, *starMatrix, *newStarMatrix, *primeMatrix;
 	long nOfElements, minDim, row, col;
 
@@ -63,9 +63,9 @@ void assignmentoptimal_lng(long *assignment, cell_lng *cost, cell_lng *distMatri
 	/* generate working copy of distance Matrix */
 	/* check if all matrix elements are positive */
 	nOfElements   = nOfRows * nOfColumns;
-	distMatrix    = (cell_lng *)malloc(nOfElements * sizeof(cell_lng));
+	distMatrix    = (cell *)malloc(nOfElements * sizeof(cell));
 	distMatrixEnd = distMatrix + nOfElements;
-    memcpy(distMatrix, distMatrixIn, nOfElements * sizeof(cell_lng));
+    memcpy(distMatrix, distMatrixIn, nOfElements * sizeof(cell));
 
 	/* memory allocation */
 	coveredColumns = (bool *)calloc(nOfColumns,  sizeof(bool));
@@ -190,7 +190,7 @@ void buildassignmentvector_lng(long *assignment, bool *starMatrix, long nOfRows,
 }
 
 /********************************************************/
-void computeassignmentcost_lng(long *assignment, cell_lng *cost, cell_lng *distMatrix, long nOfRows)
+void computeassignmentcost_lng(long *assignment, cell *cost, cell *distMatrix, long nOfRows)
 {
 	long row, col;
 
@@ -210,7 +210,7 @@ void computeassignmentcost_lng(long *assignment, cell_lng *cost, cell_lng *distM
 }
 
 /********************************************************/
-void step2a_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step2a_lng(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	bool *starMatrixTemp, *columnEnd;
 	long col;
@@ -234,7 +234,7 @@ void step2a_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *
 }
 
 /********************************************************/
-void step2b_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step2b_lng(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	long col, nOfCoveredColumns;
 
@@ -258,7 +258,7 @@ void step2b_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *
 }
 
 /********************************************************/
-void step3_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step3_lng(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	bool zerosFound;
 	long row, col, starCol;
@@ -301,14 +301,13 @@ void step3_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *n
 }
 
 /********************************************************/
-void step4_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim, long row, long col)
+void step4_lng(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim, long row, long col)
 {
 	long n, starRow, starCol, primeRow, primeCol;
 	long nOfElements = nOfRows*nOfColumns;
 
-	/* generate temporary copy of starMatrix */
-	for(n=0; n<nOfElements; n++)
-		newStarMatrix[n] = starMatrix[n];
+	/* create a temporary copy of starMatrix */
+    memcpy(newStarMatrix, starMatrix, nOfElements * sizeof(bool));
 
 	/* star current zero */
 	newStarMatrix[row + nOfRows*col] = true;
@@ -355,9 +354,9 @@ void step4_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *n
 }
 
 /********************************************************/
-void step5_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step5_lng(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
-	cell_lng h, value;
+	cell h, value;
 	long row, col;
 
 	/* find smallest uncovered element h */

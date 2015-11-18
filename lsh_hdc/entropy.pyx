@@ -19,11 +19,8 @@ cdef extern from "gamma.h":
     cdef np.float64_t sklearn_lgamma(np.float64_t x)
 
 
-cdef extern from "assignmentoptimal_dbl.h":
+cdef extern from "assignmentoptimal.h":
     void assignmentoptimal_dbl(np.int64_t *assignment, np.float64_t *cost, np.float64_t *distMatrixIn, Py_ssize_t nOfRows, Py_ssize_t nOfColumns)
-
-
-cdef extern from "assignmentoptimal_lng.h":
     void assignmentoptimal_lng(np.int64_t *assignment, np.int64_t *cost, np.int64_t *distMatrixIn, Py_ssize_t nOfRows, Py_ssize_t nOfColumns)
 
 
