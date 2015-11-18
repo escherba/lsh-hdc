@@ -1652,6 +1652,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     # clinical diagnostics
     sensitivity = TPR
     specificity = TNR
+    odds_ratio = DOR
     # youden_j = informedness
 
     # sales/marketing
