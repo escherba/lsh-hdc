@@ -153,8 +153,7 @@ setup(
             ],
             depends=[
                 "include/gamma.h",
-                "include/assignmentoptimal_dbl.h",
-                "include/assignmentoptimal_lng.h"
+                "include/assignmentoptimal.h",
             ],
             language="c",
             extra_compile_args=CXXFLAGS,

@@ -34,7 +34,6 @@
 #include "assignmentoptimal.h"
 
 #define cell double
-#define ONE_INDEXING
 
 void buildassignmentvector_dbl(long*, bool*, long , long );
 void computeassignmentcost_dbl(long*, cell*, cell*, long );
@@ -54,11 +53,7 @@ void assignmentoptimal_dbl(long *assignment, cell *cost, cell *distMatrixIn, lon
 	/* initialization */
 	*cost = 0;
 	for(row=0; row<nOfRows; row++)
-#ifdef ONE_INDEXING
-		assignment[row] =  0;
-#else
 		assignment[row] = -1;
-#endif
 
 	/* create working copy of distance Matrix */
 	nOfElements   = nOfRows * nOfColumns;
@@ -179,11 +174,7 @@ void buildassignmentvector_dbl(long *assignment, bool *starMatrix, long nOfRows,
 		for(col=0; col<nOfColumns; col++)
 			if(starMatrix[row + nOfRows*col])
 			{
-#ifdef ONE_INDEXING
-				assignment[row] = col + 1; /* MATLAB-Indexing */
-#else
 				assignment[row] = col;
-#endif
 				break;
 			}
 }
@@ -195,12 +186,7 @@ void computeassignmentcost_dbl(long *assignment, cell *cost, cell *distMatrix, l
 
 	for(row=0; row<nOfRows; row++)
 	{
-#ifdef ONE_INDEXING
-		col = assignment[row]-1; /* MATLAB-Indexing */
-#else
 		col = assignment[row];
-#endif
-
 		if(col >= 0)
 		{
 			*cost += distMatrix[row + nOfRows*col];

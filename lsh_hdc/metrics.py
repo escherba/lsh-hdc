@@ -1145,13 +1145,26 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
             DOR = \\frac{PLL}{NLL}.
 
+        Also known as: crude odds ratio, Mantel-Haenszel estimate.
+
         See Also
         --------
-
-        PLL, NLL
+        DRR
 
         """
-        return _div(self.TP * self.TN, self.FP * self.FN)
+        (a, b), (c, d) = self.rows
+        return _div(a * d, b * c)
+
+    def risk_ratios(self):
+        """Risk ratios
+
+        Also known as: relative risk
+
+        """
+        (a, b), (c, d) = self.rows
+        r0 = _div(a * (c + d), c * (a + b))
+        r1 = _div(a * (b + d), b * (a + c))
+        return r0, r1, geometric_mean(r0, r1), harmonic_mean(r0, r1)
 
     def fscore(self, beta=1.0):
         """F-score
