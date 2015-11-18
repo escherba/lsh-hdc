@@ -1,5 +1,5 @@
 EXP_MAPPER_ARGS := --pos_ratio 0.2
-EXP_COMPUTE_METRICS := assignment_score_nadjd assignment_score_nadj split_join_similarity_nadj
+EXP_COMPUTE_METRICS := assignment_score_nadjd
 
 GROUP_FIELD := population_size
 GROUPS := 2000 8000
