@@ -31,22 +31,23 @@
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
-#include "assignmentoptimal_dbl.h"
+#include "assignmentoptimal.h"
 
+#define cell double
 #define ONE_INDEXING
 
 void buildassignmentvector_dbl(long*, bool*, long , long );
-void computeassignmentcost_dbl(long*, cell_dbl*, cell_dbl*, long );
-void step2a_dbl(long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step2b_dbl(long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step3_dbl (long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step4_dbl (long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long, long, long);
-void step5_dbl (long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void computeassignmentcost_dbl(long*, cell*, cell*, long );
+void step2a_dbl(long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step2b_dbl(long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step3_dbl (long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step4_dbl (long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long, long, long);
+void step5_dbl (long*, cell*, bool*, bool*, bool*, bool*, bool*, long, long, long);
 
 
-void assignmentoptimal_dbl(long *assignment, cell_dbl *cost, cell_dbl *distMatrixIn, long nOfRows, long nOfColumns)
+void assignmentoptimal_dbl(long *assignment, cell *cost, cell *distMatrixIn, long nOfRows, long nOfColumns)
 {
-	cell_dbl *distMatrix, *distMatrixTemp, *distMatrixEnd, *columnEnd, value, minValue;
+	cell *distMatrix, *distMatrixTemp, *distMatrixEnd, *columnEnd, value, minValue;
 	bool *coveredColumns, *coveredRows, *starMatrix, *newStarMatrix, *primeMatrix;
 	long nOfElements, minDim, row, col;
 
@@ -61,9 +62,9 @@ void assignmentoptimal_dbl(long *assignment, cell_dbl *cost, cell_dbl *distMatri
 
 	/* create working copy of distance Matrix */
 	nOfElements   = nOfRows * nOfColumns;
-	distMatrix    = (cell_dbl *)malloc(nOfElements * sizeof(cell_dbl));
+	distMatrix    = (cell *)malloc(nOfElements * sizeof(cell));
 	distMatrixEnd = distMatrix + nOfElements;
-    memcpy(distMatrix, distMatrixIn, nOfElements * sizeof(cell_dbl));
+    memcpy(distMatrix, distMatrixIn, nOfElements * sizeof(cell));
 
 	/* memory allocation */
 	coveredColumns = (bool *)calloc(nOfColumns,  sizeof(bool));
@@ -188,7 +189,7 @@ void buildassignmentvector_dbl(long *assignment, bool *starMatrix, long nOfRows,
 }
 
 /********************************************************/
-void computeassignmentcost_dbl(long *assignment, cell_dbl *cost, cell_dbl *distMatrix, long nOfRows)
+void computeassignmentcost_dbl(long *assignment, cell *cost, cell *distMatrix, long nOfRows)
 {
 	long row, col;
 
@@ -208,7 +209,7 @@ void computeassignmentcost_dbl(long *assignment, cell_dbl *cost, cell_dbl *distM
 }
 
 /********************************************************/
-void step2a_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step2a_dbl(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	bool *starMatrixTemp, *columnEnd;
 	long col;
@@ -232,7 +233,7 @@ void step2a_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *
 }
 
 /********************************************************/
-void step2b_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step2b_dbl(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	long col, nOfCoveredColumns;
 
@@ -256,7 +257,7 @@ void step2b_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *
 }
 
 /********************************************************/
-void step3_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step3_dbl(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	bool zerosFound;
 	long row, col, starCol;
@@ -299,7 +300,7 @@ void step3_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *n
 }
 
 /********************************************************/
-void step4_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim, long row, long col)
+void step4_dbl(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim, long row, long col)
 {
 	long n, starRow, starCol, primeRow, primeCol;
 	long nOfElements = nOfRows*nOfColumns;
@@ -353,9 +354,9 @@ void step4_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *n
 }
 
 /********************************************************/
-void step5_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step5_dbl(long *assignment, cell *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
-	cell_dbl h, value;
+	cell h, value;
 	long row, col;
 
 	/* find smallest uncovered element h */
