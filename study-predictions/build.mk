@@ -47,11 +47,11 @@ COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
 	ochiai_coeff dice_coeff \
 	assignment_score split_join_similarity talburt_wang_index \
 	vi_similarity \
-	mt_metrics bc_metrics
+	muc_scores bc_metrics
 
 PLOT_METRICS := $(EXP_PLOT_METRICS) $(COMPUTE_METRICS) \
 	entropy_metrics-2 \
-	mt_metrics-2 \
+	muc_scores-2 \
 	bc_metrics-2 \
 	mic_scores-2
 

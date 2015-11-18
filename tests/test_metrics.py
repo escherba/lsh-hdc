@@ -275,12 +275,12 @@ def test_bc_metrics():
     p2 = ["1 2 3 4 5".split(), "6 7 8 9 A B C".split()]
     cm = ClusteringMetrics.from_partitions(p1, p2)
     assert_array_almost_equal(cm.bc_metrics()[:2], [0.76, 1.0], 2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [0.9, 1.0], 4)
+    assert_array_almost_equal(cm.muc_scores()[:2], [0.9, 1.0], 4)
 
     p2 = ["1 2 3 4 5 8 9 A B C".split(), "6 7".split()]
     cm = ClusteringMetrics.from_partitions(p1, p2)
     assert_array_almost_equal(cm.bc_metrics()[:2], [0.58, 1.0], 2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [0.9, 1.0], 4)
+    assert_array_almost_equal(cm.muc_scores()[:2], [0.9, 1.0], 4)
 
 
 def test_mt_metrics():
@@ -291,19 +291,19 @@ def test_mt_metrics():
     p1 = ["A B C D".split()]
     p2 = ["A B".split(), "C D".split()]
     cm = ClusteringMetrics.from_partitions(p1, p2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.6667], 4)
+    assert_array_almost_equal(cm.muc_scores()[:2], [1.0, 0.6667], 4)
 
     # row 2
     p1 = ["A B".split(), "C D".split()]
     p2 = ["A B C D".split()]
     cm = ClusteringMetrics.from_partitions(p1, p2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [0.6667, 1.0], 4)
+    assert_array_almost_equal(cm.muc_scores()[:2], [0.6667, 1.0], 4)
 
     # row 3
     p1 = ["A B C D".split()]
     p2 = ["A B C D".split()]
     cm = ClusteringMetrics.from_partitions(p1, p2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 1.0], 4)
+    assert_array_almost_equal(cm.muc_scores()[:2], [1.0, 1.0], 4)
 
     # row 4 is exactly the same as row 1
 
@@ -311,7 +311,7 @@ def test_mt_metrics():
     p1 = ["A B C".split()]
     p2 = ["A C".split(), "B"]
     cm = ClusteringMetrics.from_partitions(p1, p2)
-    assert_array_almost_equal(cm.mt_metrics()[:2], [1.0, 0.5], 4)
+    assert_array_almost_equal(cm.muc_scores()[:2], [1.0, 0.5], 4)
 
 
 def test_IR_example():

@@ -175,6 +175,22 @@ def geometric_mean_weighted(x, y, ratio=1.0):
     return lsign * (abs(x) ** rweight) * (abs(y) ** lweight)
 
 
+def unitsq_sigmoid(x, s=0.5):
+    """Unit square sigmoid (for transforming P-like scales)
+
+    ::
+
+        >>> round(unitsq_sigmoid(0.1), 4)
+        0.25
+        >>> round(unitsq_sigmoid(0.9), 4)
+        0.75
+
+    """
+    a = x ** s
+    b = (1 - x) ** s
+    return a / (a + b)
+
+
 def harmonic_mean(x, y):
     """Harmonic mean of two numbers. Always returns a float
     """
@@ -767,8 +783,8 @@ class ContingencyTable(CrossTab):
         V_card = sum(ilen(row) for row in self.iter_rows())
         return _div(sqrt(A_card * B_card), V_card)
 
-    def mt_metrics(self):
-        """'model-theoretic' metrics for coreference scoring
+    def muc_scores(self):
+        """MUC similarity indices for coreference scoring
 
         As described in [1]_. The compound fscore-like metric performs
         similarly to Ochiai association coefficient.
@@ -778,7 +794,7 @@ class ContingencyTable(CrossTab):
             >>> p1 = [x.split() for x in ["A B C", "D E F G"]]
             >>> p2 = [x.split() for x in ["A B", "C", "D", "E", "F G"]]
             >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-            >>> cm.mt_metrics()[:2]
+            >>> cm.muc_scores()[:2]
             (1.0, 0.4)
 
         Elements that are part of neither partition (in this case, E) are
@@ -787,7 +803,7 @@ class ContingencyTable(CrossTab):
             >>> p1 = [x.split() for x in ["A B", "C", "D", "F G", "H"]]
             >>> p2 = [x.split() for x in ["A B", "C D", "F G H"]]
             >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-            >>> cm.mt_metrics()[:2]
+            >>> cm.muc_scores()[:2]
             (0.5, 1.0)
 
         References
@@ -1595,10 +1611,10 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         roughly corresponds to recall (completeness).
         """
         h, c, rsquare = self.entropy_metrics()
-        cov = copysign(1, self.covar())
-        mic0 = cov * sqrt(c)
-        mic1 = cov * sqrt(h)
-        mic2 = cov * sqrt(rsquare)
+        covsign = copysign(1, self.covar())
+        mic0 = covsign * sqrt(c)
+        mic1 = covsign * sqrt(h)
+        mic2 = covsign * sqrt(rsquare)
         return mic0, mic1, mic2
 
     def yule_q(self):
