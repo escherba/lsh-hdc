@@ -306,9 +306,8 @@ void step4_lng(long *assignment, cell *distMatrix, bool *starMatrix, bool *newSt
 	long n, starRow, starCol, primeRow, primeCol;
 	long nOfElements = nOfRows*nOfColumns;
 
-	/* generate temporary copy of starMatrix */
-	for(n=0; n<nOfElements; n++)
-		newStarMatrix[n] = starMatrix[n];
+	/* create a temporary copy of starMatrix */
+    memcpy(newStarMatrix, starMatrix, nOfElements * sizeof(bool));
 
 	/* star current zero */
 	newStarMatrix[row + nOfRows*col] = true;
