@@ -30,9 +30,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 #include "assignmentoptimal_dbl.h"
 
-#define CHECK_FOR_INF
 #define ONE_INDEXING
 
 void buildassignmentvector_dbl(cell_dbl*, bool*, long , long );
@@ -49,10 +49,6 @@ void assignmentoptimal_dbl(cell_dbl *assignment, cell_dbl *cost, cell_dbl *distM
 	cell_dbl *distMatrix, *distMatrixTemp, *distMatrixEnd, *columnEnd, value, minValue;
 	bool *coveredColumns, *coveredRows, *starMatrix, *newStarMatrix, *primeMatrix;
 	long nOfElements, minDim, row, col;
-#ifdef CHECK_FOR_INF
-	bool infiniteValueFound;
-	cell_dbl maxFiniteValue, infValue;
-#endif
 
 	/* initialization */
 	*cost = 0;
@@ -63,50 +59,11 @@ void assignmentoptimal_dbl(cell_dbl *assignment, cell_dbl *cost, cell_dbl *distM
 		assignment[row] = -1.0;
 #endif
 
-	/* generate working copy of distance Matrix */
-	/* check if all matrix elements are positive */
+	/* create working copy of distance Matrix */
 	nOfElements   = nOfRows * nOfColumns;
 	distMatrix    = (cell_dbl *)malloc(nOfElements * sizeof(cell_dbl));
 	distMatrixEnd = distMatrix + nOfElements;
-	for(row=0; row<nOfElements; row++)
-	{
-		value = distMatrixIn[row];
-		distMatrix[row] = value;
-	}
-
-#ifdef CHECK_FOR_INF
-	/* check for infinite values */
-	maxFiniteValue     = -1;
-	infiniteValueFound = false;
-
-	distMatrixTemp = distMatrix;
-	while(distMatrixTemp < distMatrixEnd)
-	{
-		value = *distMatrixTemp++;
-		if(isfinite(value))
-		{
-			if(value > maxFiniteValue)
-				maxFiniteValue = value;
-		}
-		else
-			infiniteValueFound = true;
-	}
-	if(infiniteValueFound)
-	{
-		if(maxFiniteValue == -1) /* all elements are infinite */
-			return;
-
-		/* set all infinite elements to big finite value */
-		if(maxFiniteValue > 0)
-			infValue = 10 * maxFiniteValue * nOfElements;
-		else
-			infValue = 10;
-		distMatrixTemp = distMatrix;
-		while(distMatrixTemp < distMatrixEnd)
-			if(isinf(*distMatrixTemp++))
-				*(distMatrixTemp-1) = infValue;
-	}
-#endif
+    memcpy(distMatrix, distMatrixIn, nOfElements * sizeof(cell_dbl));
 
 	/* memory allocation */
 	coveredColumns = (bool *)calloc(nOfColumns,  sizeof(bool));
@@ -234,9 +191,6 @@ void buildassignmentvector_dbl(cell_dbl *assignment, bool *starMatrix, long nOfR
 void computeassignmentcost_dbl(cell_dbl *assignment, cell_dbl *cost, cell_dbl *distMatrix, long nOfRows)
 {
 	long row, col;
-#ifdef CHECK_FOR_INF
-	cell_dbl value;
-#endif
 
 	for(row=0; row<nOfRows; row++)
 	{
@@ -248,20 +202,7 @@ void computeassignmentcost_dbl(cell_dbl *assignment, cell_dbl *cost, cell_dbl *d
 
 		if(col >= 0)
 		{
-#ifdef CHECK_FOR_INF
-			value = distMatrix[row + nOfRows*col];
-			if(isfinite(value))
-				*cost += value;
-			else
-#ifdef ONE_INDEXING
-				assignment[row] =  0.0;
-#else
-				assignment[row] = -1.0;
-#endif
-
-#else
 			*cost += distMatrix[row + nOfRows*col];
-#endif
 		}
 	}
 }

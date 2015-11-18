@@ -30,9 +30,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 #include "assignmentoptimal_lng.h"
 
-#define CHECK_FOR_INF
 #define ONE_INDEXING
 
 
@@ -50,10 +50,6 @@ void assignmentoptimal_lng(cell_lng *assignment, cell_lng *cost, cell_lng *distM
 	cell_lng *distMatrix, *distMatrixTemp, *distMatrixEnd, *columnEnd, value, minValue;
 	bool *coveredColumns, *coveredRows, *starMatrix, *newStarMatrix, *primeMatrix;
 	long nOfElements, minDim, row, col;
-#ifdef CHECK_FOR_INF
-	bool infiniteValueFound;
-	cell_lng maxFiniteValue, infValue;
-#endif
 
 	/* initialization */
 	*cost = 0;
@@ -69,45 +65,7 @@ void assignmentoptimal_lng(cell_lng *assignment, cell_lng *cost, cell_lng *distM
 	nOfElements   = nOfRows * nOfColumns;
 	distMatrix    = (cell_lng *)malloc(nOfElements * sizeof(cell_lng));
 	distMatrixEnd = distMatrix + nOfElements;
-	for(row=0; row<nOfElements; row++)
-	{
-		value = distMatrixIn[row];
-		distMatrix[row] = value;
-	}
-
-#ifdef CHECK_FOR_INF
-	/* check for infinite values */
-	maxFiniteValue     = -1;
-	infiniteValueFound = false;
-
-	distMatrixTemp = distMatrix;
-	while(distMatrixTemp < distMatrixEnd)
-	{
-		value = *distMatrixTemp++;
-		if(isfinite(value))
-		{
-			if(value > maxFiniteValue)
-				maxFiniteValue = value;
-		}
-		else
-			infiniteValueFound = true;
-	}
-	if(infiniteValueFound)
-	{
-		if(maxFiniteValue == -1) /* all elements are infinite */
-			return;
-
-		/* set all infinite elements to big finite value */
-		if(maxFiniteValue > 0)
-			infValue = 10 * maxFiniteValue * nOfElements;
-		else
-			infValue = 10;
-		distMatrixTemp = distMatrix;
-		while(distMatrixTemp < distMatrixEnd)
-			if(isinf(*distMatrixTemp++))
-				*(distMatrixTemp-1) = infValue;
-	}
-#endif
+    memcpy(distMatrix, distMatrixIn, nOfElements * sizeof(cell_lng));
 
 	/* memory allocation */
 	coveredColumns = (bool *)calloc(nOfColumns,  sizeof(bool));
@@ -235,9 +193,6 @@ void buildassignmentvector_lng(cell_lng *assignment, bool *starMatrix, long nOfR
 void computeassignmentcost_lng(cell_lng *assignment, cell_lng *cost, cell_lng *distMatrix, long nOfRows)
 {
 	long row, col;
-#ifdef CHECK_FOR_INF
-	cell_lng value;
-#endif
 
 	for(row=0; row<nOfRows; row++)
 	{
@@ -249,20 +204,7 @@ void computeassignmentcost_lng(cell_lng *assignment, cell_lng *cost, cell_lng *d
 
 		if(col >= 0)
 		{
-#ifdef CHECK_FOR_INF
-			value = distMatrix[row + nOfRows*col];
-			if(isfinite(value))
-				*cost += value;
-			else
-#ifdef ONE_INDEXING
-				assignment[row] =  0.0;
-#else
-				assignment[row] = -1.0;
-#endif
-
-#else
 			*cost += distMatrix[row + nOfRows*col];
-#endif
 		}
 	}
 }
