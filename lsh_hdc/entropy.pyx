@@ -20,7 +20,7 @@ cdef extern from "gamma.h":
 
 
 cdef extern from "assignmentoptimal_dbl.h":
-    void assignmentoptimal_dbl(np.float64_t *assignment, np.float64_t *cost, np.float64_t *distMatrixIn, Py_ssize_t nOfRows, Py_ssize_t nOfColumns)
+    void assignmentoptimal_dbl(np.int64_t *assignment, np.float64_t *cost, np.float64_t *distMatrixIn, Py_ssize_t nOfRows, Py_ssize_t nOfColumns)
 
 
 cdef extern from "assignmentoptimal_lng.h":
@@ -96,7 +96,7 @@ cdef np.float64_t _assignment_cost_dbl(array2d, maximize=False):
     n = contig.shape[0]
     m = contig.shape[1]
 
-    cdef np.float64_t* assignment = <np.float64_t*> malloc(n*sizeof(np.float64_t))
+    cdef np.int64_t* assignment = <np.int64_t*> malloc(n*sizeof(np.int64_t))
     cdef np.float64_t score = 0
 
     assignmentoptimal_dbl(assignment, &score, &contig[0, 0], n, m)

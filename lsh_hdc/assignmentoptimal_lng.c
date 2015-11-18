@@ -36,16 +36,16 @@
 #define ONE_INDEXING
 
 
-void buildassignmentvector_lng(cell_lng*, bool*, long , long );
-void computeassignmentcost_lng(cell_lng*, cell_lng*, cell_lng*, long );
-void step2a_lng(cell_lng*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step2b_lng(cell_lng*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step3_lng (cell_lng*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step4_lng (cell_lng*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long, long, long);
-void step5_lng (cell_lng*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void buildassignmentvector_lng(long*, bool*, long , long );
+void computeassignmentcost_lng(long*, cell_lng*, cell_lng*, long );
+void step2a_lng(long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step2b_lng(long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step3_lng (long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step4_lng (long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long, long, long);
+void step5_lng (long*, cell_lng*, bool*, bool*, bool*, bool*, bool*, long, long, long);
 
 
-void assignmentoptimal_lng(cell_lng *assignment, cell_lng *cost, cell_lng *distMatrixIn, long nOfRows, long nOfColumns)
+void assignmentoptimal_lng(long *assignment, cell_lng *cost, cell_lng *distMatrixIn, long nOfRows, long nOfColumns)
 {
 	cell_lng *distMatrix, *distMatrixTemp, *distMatrixEnd, *columnEnd, value, minValue;
 	bool *coveredColumns, *coveredRows, *starMatrix, *newStarMatrix, *primeMatrix;
@@ -55,9 +55,9 @@ void assignmentoptimal_lng(cell_lng *assignment, cell_lng *cost, cell_lng *distM
 	*cost = 0;
 	for(row=0; row<nOfRows; row++)
 #ifdef ONE_INDEXING
-		assignment[row] =  0.0;
+		assignment[row] =  0;
 #else
-		assignment[row] = -1.0;
+		assignment[row] = -1;
 #endif
 
 	/* generate working copy of distance Matrix */
@@ -172,7 +172,7 @@ void assignmentoptimal_lng(cell_lng *assignment, cell_lng *cost, cell_lng *distM
 }
 
 /********************************************************/
-void buildassignmentvector_lng(cell_lng *assignment, bool *starMatrix, long nOfRows, long nOfColumns)
+void buildassignmentvector_lng(long *assignment, bool *starMatrix, long nOfRows, long nOfColumns)
 {
 	long row, col;
 
@@ -190,7 +190,7 @@ void buildassignmentvector_lng(cell_lng *assignment, bool *starMatrix, long nOfR
 }
 
 /********************************************************/
-void computeassignmentcost_lng(cell_lng *assignment, cell_lng *cost, cell_lng *distMatrix, long nOfRows)
+void computeassignmentcost_lng(long *assignment, cell_lng *cost, cell_lng *distMatrix, long nOfRows)
 {
 	long row, col;
 
@@ -210,7 +210,7 @@ void computeassignmentcost_lng(cell_lng *assignment, cell_lng *cost, cell_lng *d
 }
 
 /********************************************************/
-void step2a_lng(cell_lng *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step2a_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	bool *starMatrixTemp, *columnEnd;
 	long col;
@@ -234,7 +234,7 @@ void step2a_lng(cell_lng *assignment, cell_lng *distMatrix, bool *starMatrix, bo
 }
 
 /********************************************************/
-void step2b_lng(cell_lng *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step2b_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	long col, nOfCoveredColumns;
 
@@ -258,7 +258,7 @@ void step2b_lng(cell_lng *assignment, cell_lng *distMatrix, bool *starMatrix, bo
 }
 
 /********************************************************/
-void step3_lng(cell_lng *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step3_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	bool zerosFound;
 	long row, col, starCol;
@@ -301,7 +301,7 @@ void step3_lng(cell_lng *assignment, cell_lng *distMatrix, bool *starMatrix, boo
 }
 
 /********************************************************/
-void step4_lng(cell_lng *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim, long row, long col)
+void step4_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim, long row, long col)
 {
 	long n, starRow, starCol, primeRow, primeCol;
 	long nOfElements = nOfRows*nOfColumns;
@@ -355,7 +355,7 @@ void step4_lng(cell_lng *assignment, cell_lng *distMatrix, bool *starMatrix, boo
 }
 
 /********************************************************/
-void step5_lng(cell_lng *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step5_lng(long *assignment, cell_lng *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	cell_lng h, value;
 	long row, col;

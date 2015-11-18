@@ -35,16 +35,16 @@
 
 #define ONE_INDEXING
 
-void buildassignmentvector_dbl(cell_dbl*, bool*, long , long );
-void computeassignmentcost_dbl(cell_dbl*, cell_dbl*, cell_dbl*, long );
-void step2a_dbl(cell_dbl*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step2b_dbl(cell_dbl*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step3_dbl (cell_dbl*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
-void step4_dbl (cell_dbl*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long, long, long);
-void step5_dbl (cell_dbl*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void buildassignmentvector_dbl(long*, bool*, long , long );
+void computeassignmentcost_dbl(long*, cell_dbl*, cell_dbl*, long );
+void step2a_dbl(long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step2b_dbl(long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step3_dbl (long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
+void step4_dbl (long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long, long, long);
+void step5_dbl (long*, cell_dbl*, bool*, bool*, bool*, bool*, bool*, long, long, long);
 
 
-void assignmentoptimal_dbl(cell_dbl *assignment, cell_dbl *cost, cell_dbl *distMatrixIn, long nOfRows, long nOfColumns)
+void assignmentoptimal_dbl(long *assignment, cell_dbl *cost, cell_dbl *distMatrixIn, long nOfRows, long nOfColumns)
 {
 	cell_dbl *distMatrix, *distMatrixTemp, *distMatrixEnd, *columnEnd, value, minValue;
 	bool *coveredColumns, *coveredRows, *starMatrix, *newStarMatrix, *primeMatrix;
@@ -54,9 +54,9 @@ void assignmentoptimal_dbl(cell_dbl *assignment, cell_dbl *cost, cell_dbl *distM
 	*cost = 0;
 	for(row=0; row<nOfRows; row++)
 #ifdef ONE_INDEXING
-		assignment[row] =  0.0;
+		assignment[row] =  0;
 #else
-		assignment[row] = -1.0;
+		assignment[row] = -1;
 #endif
 
 	/* create working copy of distance Matrix */
@@ -170,7 +170,7 @@ void assignmentoptimal_dbl(cell_dbl *assignment, cell_dbl *cost, cell_dbl *distM
 }
 
 /********************************************************/
-void buildassignmentvector_dbl(cell_dbl *assignment, bool *starMatrix, long nOfRows, long nOfColumns)
+void buildassignmentvector_dbl(long *assignment, bool *starMatrix, long nOfRows, long nOfColumns)
 {
 	long row, col;
 
@@ -188,7 +188,7 @@ void buildassignmentvector_dbl(cell_dbl *assignment, bool *starMatrix, long nOfR
 }
 
 /********************************************************/
-void computeassignmentcost_dbl(cell_dbl *assignment, cell_dbl *cost, cell_dbl *distMatrix, long nOfRows)
+void computeassignmentcost_dbl(long *assignment, cell_dbl *cost, cell_dbl *distMatrix, long nOfRows)
 {
 	long row, col;
 
@@ -208,7 +208,7 @@ void computeassignmentcost_dbl(cell_dbl *assignment, cell_dbl *cost, cell_dbl *d
 }
 
 /********************************************************/
-void step2a_dbl(cell_dbl *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step2a_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	bool *starMatrixTemp, *columnEnd;
 	long col;
@@ -232,7 +232,7 @@ void step2a_dbl(cell_dbl *assignment, cell_dbl *distMatrix, bool *starMatrix, bo
 }
 
 /********************************************************/
-void step2b_dbl(cell_dbl *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step2b_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	long col, nOfCoveredColumns;
 
@@ -256,7 +256,7 @@ void step2b_dbl(cell_dbl *assignment, cell_dbl *distMatrix, bool *starMatrix, bo
 }
 
 /********************************************************/
-void step3_dbl(cell_dbl *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step3_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	bool zerosFound;
 	long row, col, starCol;
@@ -299,7 +299,7 @@ void step3_dbl(cell_dbl *assignment, cell_dbl *distMatrix, bool *starMatrix, boo
 }
 
 /********************************************************/
-void step4_dbl(cell_dbl *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim, long row, long col)
+void step4_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim, long row, long col)
 {
 	long n, starRow, starCol, primeRow, primeCol;
 	long nOfElements = nOfRows*nOfColumns;
@@ -353,7 +353,7 @@ void step4_dbl(cell_dbl *assignment, cell_dbl *distMatrix, bool *starMatrix, boo
 }
 
 /********************************************************/
-void step5_dbl(cell_dbl *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
+void step5_dbl(long *assignment, cell_dbl *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, long nOfRows, long nOfColumns, long minDim)
 {
 	cell_dbl h, value;
 	long row, col;

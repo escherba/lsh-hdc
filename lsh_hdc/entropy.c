@@ -1966,7 +1966,7 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy__assignment_cost_dbl(P
   Py_ssize_t __pyx_v_n;
   Py_ssize_t __pyx_v_m;
   PyArrayObject *__pyx_v_contig = 0;
-  __pyx_t_5numpy_float64_t *__pyx_v_assignment;
+  __pyx_t_5numpy_int64_t *__pyx_v_assignment;
   __pyx_t_5numpy_float64_t __pyx_v_score;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_contig;
   __Pyx_Buffer __pyx_pybuffer_contig;
@@ -2108,22 +2108,22 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy__assignment_cost_dbl(P
  *     n = contig.shape[0]
  *     m = contig.shape[1]             # <<<<<<<<<<<<<<
  * 
- *     cdef np.float64_t* assignment = <np.float64_t*> malloc(n*sizeof(np.float64_t))
+ *     cdef np.int64_t* assignment = <np.int64_t*> malloc(n*sizeof(np.int64_t))
  */
   __pyx_v_m = (__pyx_v_contig->dimensions[1]);
 
   /* "lsh_hdc/entropy.pyx":99
  *     m = contig.shape[1]
  * 
- *     cdef np.float64_t* assignment = <np.float64_t*> malloc(n*sizeof(np.float64_t))             # <<<<<<<<<<<<<<
+ *     cdef np.int64_t* assignment = <np.int64_t*> malloc(n*sizeof(np.int64_t))             # <<<<<<<<<<<<<<
  *     cdef np.float64_t score = 0
  * 
  */
-  __pyx_v_assignment = ((__pyx_t_5numpy_float64_t *)malloc((__pyx_v_n * (sizeof(__pyx_t_5numpy_float64_t)))));
+  __pyx_v_assignment = ((__pyx_t_5numpy_int64_t *)malloc((__pyx_v_n * (sizeof(__pyx_t_5numpy_int64_t)))));
 
   /* "lsh_hdc/entropy.pyx":100
  * 
- *     cdef np.float64_t* assignment = <np.float64_t*> malloc(n*sizeof(np.float64_t))
+ *     cdef np.int64_t* assignment = <np.int64_t*> malloc(n*sizeof(np.int64_t))
  *     cdef np.float64_t score = 0             # <<<<<<<<<<<<<<
  * 
  *     assignmentoptimal_dbl(assignment, &score, &contig[0, 0], n, m)
