@@ -294,7 +294,7 @@ class ContingencyTable(CrossTab):
             maximum = np.asarray(maximum)
         return np.divide(value - center, maximum - center)
 
-    def _adjust_to_null(self, measure):
+    def adjust_to_null(self, measure, with_warnings=False):
         """Adjust a measure to null model
 
         Tbe general formula for chance correction of an association measure
@@ -320,14 +320,14 @@ class ContingencyTable(CrossTab):
             measure = measure.__name__
         actual = getattr(self, measure)()
         null_model = getattr(self.expected(), measure)()
-        if np.isclose(np.sum(null_model), 0.0):
-            warnings.warn("Measure is already centered")
+        if with_warnings and np.isclose(np.sum(null_model), 0.0):
+            warnings.warn("'%s' is already centered" % measure)
         max_row = getattr(self.row_diag(), measure)()
-        if np.isclose(np.average(max_row), 1.0):
-            warnings.warn("Measure is already row-normalized")
+        if with_warnings and np.isclose(np.average(max_row), 1.0):
+            warnings.warn("'%s' is already row-normalized" % measure)
         max_col = getattr(self.col_diag(), measure)()
-        if np.isclose(np.average(max_col), 1.0):
-            warnings.warn("Measure is already column-normalized")
+        if with_warnings and np.isclose(np.average(max_col), 1.0):
+            warnings.warn("'%s' is already column-normalized" % measure)
         row_adjusted = self._normalize_measure(actual, max_row, null_model)
         col_adjusted = self._normalize_measure(actual, max_col, null_model)
         return row_adjusted, col_adjusted
@@ -677,12 +677,17 @@ class ContingencyTable(CrossTab):
             score = _div(score, max_sim)
         return score
 
+    def split_join_similarity_fadj(self, normalize=True):
+        """Eq. to ``split_join_similarity(subtract_flat=True)``
+        """
+        return self.split_join_similarity(normalize=normalize, subtract_flat=True)
+
     def split_join_similarity_nadj(self, normalize=True):
         """Eq. to ``split_join_similarity(subtract_null=True)``
         """
         return self.split_join_similarity(normalize=normalize, subtract_null=True)
 
-    def split_join_similarity(self, normalize=True, subtract_null=False):
+    def split_join_similarity(self, normalize=True, subtract_null=False, subtract_flat=False):
         """Split-join similarity score
 
         Split-join similarity is a two-way assignment-based score first
@@ -735,8 +740,12 @@ class ContingencyTable(CrossTab):
         score = pa_B + pb_A
 
         if subtract_null:
-            # split-join metric for a null model is simply the average values
-            # of row and column margins added together.
+            null_score = \
+                max(self.col_totals.itervalues()) + \
+                max(self.row_totals.itervalues())
+            score -= null_score
+
+        if subtract_flat:
             m = ilen(self.row_totals)
             n = ilen(self.col_totals)
             null_score = self.grand_total * (m + n) / float(m * n)
