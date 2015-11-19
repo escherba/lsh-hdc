@@ -89,11 +89,12 @@ References
 
 """
 
+import warnings
 import numpy as np
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
-from pymaptools.iter import ilen, iter_items
+from pymaptools.iter import ilen, iter_items, isiterable
 from lsh_hdc.utils import randround
 from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, \
     assignment_cost
@@ -280,6 +281,56 @@ class ContingencyTable(CrossTab):
 
             self._expected_freqs_discrete_ = table = self.__class__(rows=rows)
         return table
+
+    @staticmethod
+    def _normalize_measure(value, maximum, center=0.0):
+        """Normalize to maximum with optional centering
+        """
+        if isiterable(value):
+            value = np.asarray(value)
+        if isiterable(center):
+            center = np.asarray(center)
+        if isiterable(maximum):
+            maximum = np.asarray(maximum)
+        return np.divide(value - center, maximum - center)
+
+    def _adjust_to_null(self, measure):
+        """Adjust a measure to null model
+
+        Tbe general formula for chance correction of an association measure
+        :math:`M` is:
+
+        .. math::
+
+            M_{adj} = \\frac{M - E(M)}{M_{max} - E(M)},
+
+        where :math:`M_{max}` is the maximum value a measure :math:`M` can
+        achieve, and :math:`E(M)` is the expected value of :math:`M` under
+        statistical independence given fixed table margins. In simple cases,
+        the expected value of a measure is the same as the value of the measure
+        given a null model. This is not always the case, however, and, to
+        properly adjust for chance, sometimes one has average over all possible
+        contingency tables using hypergeometric distribution for example.
+
+        The method returns a tuple for two different measure ceilings: row-
+        diagonal and column-diagonal. For symmetric measures, the two values
+        will be the same.
+        """
+        if callable(measure):
+            measure = measure.__name__
+        actual = getattr(self, measure)()
+        null_model = getattr(self.expected(), measure)()
+        if np.isclose(np.sum(null_model), 0.0):
+            warnings.warn("Measure is already centered")
+        max_row = getattr(self.row_diag(), measure)()
+        if np.isclose(np.average(max_row), 1.0):
+            warnings.warn("Measure is already row-normalized")
+        max_col = getattr(self.col_diag(), measure)()
+        if np.isclose(np.average(max_col), 1.0):
+            warnings.warn("Measure is already column-normalized")
+        row_adjusted = self._normalize_measure(actual, max_row, null_model)
+        col_adjusted = self._normalize_measure(actual, max_col, null_model)
+        return row_adjusted, col_adjusted
 
     def row_diag(self):
         """Factory creating diagonal table given current row margin
@@ -1152,25 +1203,32 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             DOR = \\frac{PLL}{NLL}.
 
         Also known as: crude odds ratio, Mantel-Haenszel estimate.
-
-        See Also
-        --------
-        DRR
-
         """
-        (a, b), (c, d) = self.rows
-        return _div(a * d, b * c)
+        a, c, d, b = self.to_ccw()
+        ad, bc = a * d, b * c
+        return _div(ad, bc)
 
-    def risk_ratios(self):
-        """Risk ratios
+    def norm_odds(self):
+        """An asymmetric rescaling of the odds ratio
 
-        Also known as: relative risk
+        Alternatively, odds ratio can be transformed into into an
+        association-like measure (weighted kappa) with range [-1, 1] using
+        Kraemer rescaling [1]_ or by using one of Yule's formulas.
 
+        References
+        ----------
+
+        .. [1] `Warrens, M. J. (2010). A Kraemer-type rescaling that transforms
+               the odds ratio into the weighted kappa coefficient.
+               Psychometrika, 75(2), 328-330.
+               <http://doi.org/10.1007/s11336-010-9155-7>`_
         """
-        (a, b), (c, d) = self.rows
-        r0 = _div(a * (c + d), c * (a + b))
-        r1 = _div(a * (b + d), b * (a + c))
-        return r0, r1, geometric_mean(r0, r1), harmonic_mean(r0, r1)
+        a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
+        r0 = _div(a * d, p2 * q2)
+        r1 = _div(a * d, p1 * q1)
+        return r0, r1, harmonic_mean(r0, r1)
 
     def fscore(self, beta=1.0):
         """F-score
@@ -1196,7 +1254,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         --------
         fscore, jaccard_coeff, ochiai_coeff
         """
-        (a, b), (c, _) = self.rows
+        a, c, _, b = self.to_ccw()
         return _div(2 * a, 2 * a + b + c)
 
     def jaccard_coeff(self):
@@ -1212,7 +1270,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         --------
         dice_coeff, ochiai_coeff
         """
-        (a, b), (c, _) = self.rows
+        a, c, _, b = self.to_ccw()
         return _div(a, a + b + c)
 
     def ochiai_coeff(self):
@@ -1237,7 +1295,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                Topic model validation. Neurocomputing, 76(1), 125-133.
                <http://dx.doi.org/10.1016/j.neucom.2011.04.032>`_
         """
-        (a, b), (c, _) = self.rows
+        a, c, _, b = self.to_ccw()
         return _div(a, sqrt((a + b) * (a + c)))
 
     def sokal_sneath_coeff(self):
@@ -1257,7 +1315,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         --------
         dice_coeff, jaccard_coeff
         """
-        (a, b), (c, _) = self.rows
+        a, c, _, b = self.to_ccw()
         return _div(a, a + 2 * (b + c))
 
     def prevalence_index(self):
@@ -1405,7 +1463,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         ``kappa0`` roughly corresponds to precision while ``kappa1``
         roughly corresponds to recall.
         """
-        (a, b), (c, d) = self.rows
+        a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
         p2_q1 = p2 * q1
@@ -1466,20 +1524,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         first derivation of this measure is in [7]_.
 
         Kappa can be derived by correcting Accuracy (Simple Matching
-        Coefficient, Rand Index) for chance. Tbe general formula for chance
-        correction of an association measure :math:`M` is:
-
-        .. math::
-
-            M_{adj} = \\frac{M - E(M)}{M_{max} - E(M)},
-
-        where :math:`M_{max}` is the maximum value a measure :math:`M` can
-        achieve, and :math:`E(M)` is the expected value of :math:`M` under
-        statistical independence given fixed table margins.
-
-        Kappa can be decomposed into a pair of components (regression
-        coefficients), :math:`k_1` (recall-like) and :math:`k_0`
-        (precision-like), of which it is a harmonic mean:
+        Coefficient, Rand Index) for chance. Kappa can be decomposed into a
+        pair of components (regression coefficients), :math:`k_1` (recall-like)
+        and :math:`k_0` (precision-like), of which it is a harmonic mean:
 
         .. math::
 
@@ -1541,7 +1588,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                <http://www.jstor.org/stable/519729>`_
 
         """
-        (a, b), (c, d) = self.rows
+        a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
         n = p1 + q1
@@ -1563,7 +1610,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         harmonic mean instead of geometric. Like Kappa, turns into Dice
         coefficient (F-score) as 'd' approaches infinity.
         """
-        (a, b), (c, d) = self.rows
+        a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
         n = p1 + q1
@@ -1593,7 +1640,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         Other names for MCC are Phi Coefficient and Yule's Q with correction for
         chance.
         """
-        (a, b), (c, d) = self.rows
+        a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
         n = p1 + q1
@@ -1638,7 +1685,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             Q = \\frac{DOR - 1}{DOR + 1}.
 
         """
-        (a, b), (c, d) = self.rows
+        a, c, d, b = self.to_ccw()
         return _div(self.covar(), a * d + b * c)
 
     def yule_y(self):
@@ -1656,7 +1703,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                 <http://arxiv.org/pdf/1302.6161v1.pdf>`_
 
         """
-        (a, b), (c, d) = self.rows
+        a, c, d, b = self.to_ccw()
         ad = a * d
         bc = b * c
         return _div(sqrt(ad) - sqrt(bc),
@@ -1665,7 +1712,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def covar(self):
         """Covariance (determinant of a 2x2 matrix)
         """
-        (a, b), (c, d) = self.rows
+        a, c, d, b = self.to_ccw()
         return a * d - b * c
 
     # various silly terminologies follow
