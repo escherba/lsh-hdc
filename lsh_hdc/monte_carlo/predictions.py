@@ -524,8 +524,9 @@ class Grid(object):
         for (xs, ys), dither_, marker_, s_, color_, label_, alpha_ in \
                 izip_with_cycles(pairs, dither, marker, s, color, label, alpha):
 
-            corr_coeff = scipy.stats.pearsonr(xs, ys)
-            ax.annotate('r = %.3f' % corr_coeff[0], (0.05, 0.9), xycoords='axes fraction')
+            #corr_coeff = scipy.stats.pearsonr(xs, ys)[0]
+            corr_coeff = scipy.stats.spearmanr(xs, ys)[0]
+            ax.annotate('r = %.3f' % corr_coeff, (0.05, 0.9), xycoords='axes fraction')
 
             if dither_ is not None:
                 xs = np.random.normal(xs, dither_)

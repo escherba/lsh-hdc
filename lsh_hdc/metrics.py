@@ -175,6 +175,22 @@ def geometric_mean_weighted(x, y, ratio=1.0):
     return lsign * (abs(x) ** rweight) * (abs(y) ** lweight)
 
 
+def unitsq_sigmoid(x, s=0.5):
+    """Unit square sigmoid (for transforming P-like scales)
+
+    ::
+
+        >>> round(unitsq_sigmoid(0.1), 4)
+        0.25
+        >>> round(unitsq_sigmoid(0.9), 4)
+        0.75
+
+    """
+    a = x ** s
+    b = (1 - x) ** s
+    return a / (a + b)
+
+
 def harmonic_mean(x, y):
     """Harmonic mean of two numbers. Always returns a float
     """
@@ -767,8 +783,8 @@ class ContingencyTable(CrossTab):
         V_card = sum(ilen(row) for row in self.iter_rows())
         return _div(sqrt(A_card * B_card), V_card)
 
-    def mt_metrics(self):
-        """'model-theoretic' metrics for coreference scoring
+    def muc_scores(self):
+        """MUC similarity indices for coreference scoring
 
         As described in [1]_. The compound fscore-like metric performs
         similarly to Ochiai association coefficient.
@@ -778,7 +794,7 @@ class ContingencyTable(CrossTab):
             >>> p1 = [x.split() for x in ["A B C", "D E F G"]]
             >>> p2 = [x.split() for x in ["A B", "C", "D", "E", "F G"]]
             >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-            >>> cm.mt_metrics()[:2]
+            >>> cm.muc_scores()[:2]
             (1.0, 0.4)
 
         Elements that are part of neither partition (in this case, E) are
@@ -787,7 +803,7 @@ class ContingencyTable(CrossTab):
             >>> p1 = [x.split() for x in ["A B", "C", "D", "F G", "H"]]
             >>> p2 = [x.split() for x in ["A B", "C D", "F G H"]]
             >>> cm = ClusteringMetrics.from_partitions(p1, p2)
-            >>> cm.mt_metrics()[:2]
+            >>> cm.muc_scores()[:2]
             (0.5, 1.0)
 
         References
@@ -814,8 +830,9 @@ class ContingencyTable(CrossTab):
     def bc_metrics(self):
         """'B-cubed' precision, recall, and fscore
 
-        As described in [1]_ and [2]_. These metrics perform very similarly to
-        normalized entropy metrics (homogeneity, completeness, V-measure).
+        As described in [1]_ and [2]_. Was extended to overlapping clusters in
+        [3]_.  These metrics perform very similarly to normalized entropy
+        metrics (homogeneity, completeness, V-measure).
 
         References
         ----------
@@ -833,6 +850,11 @@ class ContingencyTable(CrossTab):
                language resources and evaluation workshop on linguistics
                coreference (Vol. 1, pp. 563-566).
                <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.47.5848>`_
+
+        .. [3] `Amigó, E., Gonzalo, J., Artiles, J., & Verdejo, F. (2009). A
+               comparison of extrinsic clustering evaluation metrics based on
+               formal constraints. Information retrieval, 12(4), 461-486.
+               <http://doi.org/10.1007/s10791-008-9066-8>`
         """
         precision = 0.0
         recall = 0.0
@@ -1129,13 +1151,26 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
             DOR = \\frac{PLL}{NLL}.
 
+        Also known as: crude odds ratio, Mantel-Haenszel estimate.
+
         See Also
         --------
-
-        PLL, NLL
+        DRR
 
         """
-        return _div(self.TP * self.TN, self.FP * self.FN)
+        (a, b), (c, d) = self.rows
+        return _div(a * d, b * c)
+
+    def risk_ratios(self):
+        """Risk ratios
+
+        Also known as: relative risk
+
+        """
+        (a, b), (c, d) = self.rows
+        r0 = _div(a * (c + d), c * (a + b))
+        r1 = _div(a * (b + d), b * (a + c))
+        return r0, r1, geometric_mean(r0, r1), harmonic_mean(r0, r1)
 
     def fscore(self, beta=1.0):
         """F-score
@@ -1371,10 +1406,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         roughly corresponds to recall.
         """
         (a, b), (c, d) = self.rows
-        p1 = a + b
-        q1 = c + d
-        p2 = a + c
-        q2 = b + d
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
         p2_q1 = p2 * q1
         p1_q2 = p1 * q2
         cov = self.covar()
@@ -1509,10 +1542,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         """
         (a, b), (c, d) = self.rows
-        p1 = a + b
-        q1 = c + d
-        p2 = a + c
-        q2 = b + d
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
         n = p1 + q1
         if a == n or b == n or c == n or d == n:
             # only one cell is non-zero
@@ -1533,10 +1564,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         coefficient (F-score) as 'd' approaches infinity.
         """
         (a, b), (c, d) = self.rows
-        p1 = a + b
-        q1 = c + d
-        p2 = a + c
-        q2 = b + d
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
         n = p1 + q1
         if a == n or b == n or c == n or d == n:
             # only one cell is non-zero
@@ -1565,10 +1594,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         chance.
         """
         (a, b), (c, d) = self.rows
-        p1 = a + b
-        q1 = c + d
-        p2 = a + c
-        q2 = b + d
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
         n = p1 + q1
         if a == n or b == n or c == n or d == n:
             # only one cell is non-zero
@@ -1595,10 +1622,10 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         roughly corresponds to recall (completeness).
         """
         h, c, rsquare = self.entropy_metrics()
-        cov = copysign(1, self.covar())
-        mic0 = cov * sqrt(c)
-        mic1 = cov * sqrt(h)
-        mic2 = cov * sqrt(rsquare)
+        covsign = copysign(1, self.covar())
+        mic0 = covsign * sqrt(c)
+        mic1 = covsign * sqrt(h)
+        mic2 = covsign * sqrt(rsquare)
         return mic0, mic1, mic2
 
     def yule_q(self):
@@ -1652,6 +1679,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     # clinical diagnostics
     sensitivity = TPR
     specificity = TNR
+    odds_ratio = DOR
     # youden_j = informedness
 
     # sales/marketing

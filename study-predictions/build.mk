@@ -42,16 +42,16 @@ endef
 # Study definition
 COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
 	entropy_metrics mic_scores \
-	adjusted_rand_index matthews_corr \
-	informedness markedness \
+	adjusted_mutual_info adjusted_rand_index matthews_corr \
+	informedness markedness odds_ratio \
 	ochiai_coeff dice_coeff \
 	assignment_score split_join_similarity talburt_wang_index \
 	vi_similarity \
-	mt_metrics bc_metrics
+	muc_scores bc_metrics odds_ratio
 
 PLOT_METRICS := $(EXP_PLOT_METRICS) $(COMPUTE_METRICS) \
 	entropy_metrics-2 \
-	mt_metrics-2 \
+	muc_scores-2 \
 	bc_metrics-2 \
 	mic_scores-2
 
