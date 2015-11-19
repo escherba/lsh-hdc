@@ -34,6 +34,7 @@
 #include "assignmentoptimal.h"
 
 #define cell double
+#define cell_max INFINITY
 
 void buildassignmentvector_dbl(long*, bool*, long , long );
 void computeassignmentcost_dbl(long*, cell*, cell*, long );
@@ -345,7 +346,7 @@ void step5_dbl(long *assignment, cell *distMatrix, bool *starMatrix, bool *newSt
 	long row, col;
 
 	/* find smallest uncovered element h */
-	h = INFINITY;
+	h = cell_max;
 	for(row=0; row<nOfRows; row++)
 		if(!coveredRows[row])
 			for(col=0; col<nOfColumns; col++)
