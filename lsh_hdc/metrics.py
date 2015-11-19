@@ -830,8 +830,9 @@ class ContingencyTable(CrossTab):
     def bc_metrics(self):
         """'B-cubed' precision, recall, and fscore
 
-        As described in [1]_ and [2]_. These metrics perform very similarly to
-        normalized entropy metrics (homogeneity, completeness, V-measure).
+        As described in [1]_ and [2]_. Was extended to overlapping clusters in
+        [3]_.  These metrics perform very similarly to normalized entropy
+        metrics (homogeneity, completeness, V-measure).
 
         References
         ----------
@@ -849,6 +850,11 @@ class ContingencyTable(CrossTab):
                language resources and evaluation workshop on linguistics
                coreference (Vol. 1, pp. 563-566).
                <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.47.5848>`_
+
+        .. [3] `Amigó, E., Gonzalo, J., Artiles, J., & Verdejo, F. (2009). A
+               comparison of extrinsic clustering evaluation metrics based on
+               formal constraints. Information retrieval, 12(4), 461-486.
+               <http://doi.org/10.1007/s10791-008-9066-8>`
         """
         precision = 0.0
         recall = 0.0
@@ -1400,10 +1406,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         roughly corresponds to recall.
         """
         (a, b), (c, d) = self.rows
-        p1 = a + b
-        q1 = c + d
-        p2 = a + c
-        q2 = b + d
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
         p2_q1 = p2 * q1
         p1_q2 = p1 * q2
         cov = self.covar()
@@ -1538,10 +1542,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         """
         (a, b), (c, d) = self.rows
-        p1 = a + b
-        q1 = c + d
-        p2 = a + c
-        q2 = b + d
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
         n = p1 + q1
         if a == n or b == n or c == n or d == n:
             # only one cell is non-zero
@@ -1562,10 +1564,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         coefficient (F-score) as 'd' approaches infinity.
         """
         (a, b), (c, d) = self.rows
-        p1 = a + b
-        q1 = c + d
-        p2 = a + c
-        q2 = b + d
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
         n = p1 + q1
         if a == n or b == n or c == n or d == n:
             # only one cell is non-zero
@@ -1594,10 +1594,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         chance.
         """
         (a, b), (c, d) = self.rows
-        p1 = a + b
-        q1 = c + d
-        p2 = a + c
-        q2 = b + d
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
         n = p1 + q1
         if a == n or b == n or c == n or d == n:
             # only one cell is non-zero
