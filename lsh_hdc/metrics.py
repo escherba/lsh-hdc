@@ -746,13 +746,26 @@ class ContingencyTable(CrossTab):
         if null_model is None:
             null_score = 0
         elif null_model == 'm1':
-            m = plen(self.row_totals)
-            n = plen(self.col_totals)
-            null_score = self.grand_total * (m + n) / float(m * n)
+            # only N fixed
+            R = plen(self.row_totals)
+            C = plen(self.col_totals)
+            N = float(self.grand_total)
+            null_score = N / R + N / C
+        elif null_model == 'm2r':
+            # fixed row margin
+            C = plen(self.col_totals)
+            N = float(self.grand_total)
+            null_score = max(self.row_totals.itervalues()) + N / C
+        elif null_model == 'm2c':
+            # fixed column margin
+            R = plen(self.row_totals)
+            N = float(self.grand_total)
+            null_score = max(self.col_totals.itervalues()) + N / R
         elif null_model == 'm3':
+            # both row and column margins fixed
             null_score = \
-                max(self.col_totals.itervalues()) + \
-                max(self.row_totals.itervalues())
+                max(self.row_totals.itervalues()) + \
+                max(self.col_totals.itervalues())
         else:
             raise NotImplementedError(
                 "Can't calculate score for %s model" % null_model)
