@@ -327,25 +327,25 @@ def test_IR_example():
     # test perfect variants
     rd = cm.row_diag()
     cd = cm.col_diag()
-    assert_almost_equal(rd.assignment_score_nadj(),   1.0, 6)
+    assert_almost_equal(rd.assignment_score_m3(),   1.0, 6)
 
-    assert_almost_equal(cd.assignment_score_nadj(),   1.0, 6)
-    assert_almost_equal(cd.assignment_score_nadjd(),  1.0, 6)
-    assert_almost_equal(rd.assignment_score_nadj(),   1.0, 6)
-    assert_almost_equal(rd.assignment_score_nadjd(),  1.0, 6)
+    assert_almost_equal(cd.assignment_score_m3(),   1.0, 6)
+    assert_almost_equal(cd.assignment_score_m3_disc(),  1.0, 6)
+    assert_almost_equal(rd.assignment_score_m3(),   1.0, 6)
+    assert_almost_equal(rd.assignment_score_m3_disc(),  1.0, 6)
 
     # test that no redraws happen by default
-    assert_almost_equal(cm.assignment_score_nadj(),
-                        cm.assignment_score_nadj(), 6)
+    assert_almost_equal(cm.assignment_score_m3(),
+                        cm.assignment_score_m3(), 6)
 
     ex = cm.expected(discrete=False)
-    assert_almost_equal(ex.assignment_score_nadj(), 0.0, 6)
+    assert_almost_equal(ex.assignment_score_m3(), 0.0, 6)
 
     # test that H1 results in greater score than H0
     ex = cm.expected(discrete=True)
     assert_greater(
-        cm.assignment_score_nadj(),
-        ex.assignment_score_nadj())
+        cm.assignment_score_m3(),
+        ex.assignment_score_m3())
 
     # test entropy metrics
     h, c, v = cm.entropy_metrics()
@@ -359,7 +359,7 @@ def test_IR_example():
     assert_almost_equal(cm.fowlkes_mallows(),       0.476731, 6)
     assert_almost_equal(cm.assignment_score(),      0.705882, 6)
     assert_almost_equal(cm.assignment_score_slow(), 0.705882, 6)
-    assert_almost_equal(cm.assignment_score_nadj(), 0.554974, 6)
+    assert_almost_equal(cm.assignment_score_m3(), 0.554974, 6)
 
     assert_almost_equal(cm.chisq_score(),          11.900000, 6)
     assert_almost_equal(cm.g_score(),              13.325845, 6)

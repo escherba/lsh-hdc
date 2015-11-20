@@ -1,6 +1,5 @@
 EXP_MAPPER_ARGS := --h0_err 0.9 --h1_err 0.5 --pos_ratio 0.2
 EXP_REDUCER_ARGS := --legend_loc "lower right"
-EXP_COMPUTE_METRICS := split_join_similarity_fadj split_join_similarity_nadj split_join_similarity
 
 GROUP_FIELD := population_size
 GROUPS := 16000 32000
