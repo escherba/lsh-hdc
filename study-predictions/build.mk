@@ -43,14 +43,15 @@ endef
 COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
 	entropy_metrics mic_scores \
 	adjusted_mutual_info adjusted_rand_index matthews_corr \
-	informedness markedness odds_ratio \
-	ochiai_coeff dice_coeff \
+	informedness markedness \
+	ochiai_coeff dice_coeff odds_similarity \
 	assignment_score split_join_similarity talburt_wang_index \
 	vi_similarity \
-	muc_scores bc_metrics odds_ratio
+	muc_scores bc_metrics
 
 PLOT_METRICS := $(EXP_PLOT_METRICS) $(COMPUTE_METRICS) \
 	entropy_metrics-2 \
+	odds_similarity-2 \
 	muc_scores-2 \
 	bc_metrics-2 \
 	mic_scores-2
