@@ -94,11 +94,27 @@ import numpy as np
 from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
-from pymaptools.iter import ilen, iter_items, isiterable
+from pymaptools.iter import iter_items, isiterable
 from lsh_hdc.utils import randround
 from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, \
     assignment_cost
 from lsh_hdc.hungarian import linear_sum_assignment
+
+
+def plen(iterable):
+    """Consumes an iterator and returns number of non-zero values
+
+    Also works on all iterables.
+
+    ::
+
+        >>> g = (x for x in [0, 1, 2, 3])
+        >>> plen(g)
+        3
+        >>> plen([0, 1, 2, 3])
+        3
+    """
+    return sum(bool(el) for el in iterable)
 
 
 def _div(numer, denom):
@@ -294,7 +310,7 @@ class ContingencyTable(CrossTab):
             maximum = np.asarray(maximum)
         return np.divide(value - center, maximum - center)
 
-    def _adjust_to_null(self, measure):
+    def adjust_to_null(self, measure, with_warnings=False):
         """Adjust a measure to null model
 
         Tbe general formula for chance correction of an association measure
@@ -320,14 +336,14 @@ class ContingencyTable(CrossTab):
             measure = measure.__name__
         actual = getattr(self, measure)()
         null_model = getattr(self.expected(), measure)()
-        if np.isclose(np.sum(null_model), 0.0):
-            warnings.warn("Measure is already centered")
+        if with_warnings and np.isclose(np.sum(null_model), 0.0):
+            warnings.warn("'%s' is already centered" % measure)
         max_row = getattr(self.row_diag(), measure)()
-        if np.isclose(np.average(max_row), 1.0):
-            warnings.warn("Measure is already row-normalized")
+        if with_warnings and np.isclose(np.average(max_row), 1.0):
+            warnings.warn("'%s' is already row-normalized" % measure)
         max_col = getattr(self.col_diag(), measure)()
-        if np.isclose(np.average(max_col), 1.0):
-            warnings.warn("Measure is already column-normalized")
+        if with_warnings and np.isclose(np.average(max_col), 1.0):
+            warnings.warn("'%s' is already column-normalized" % measure)
         row_adjusted = self._normalize_measure(actual, max_row, null_model)
         col_adjusted = self._normalize_measure(actual, max_col, null_model)
         return row_adjusted, col_adjusted
@@ -530,19 +546,19 @@ class ContingencyTable(CrossTab):
         return score
 
     def assignment_score_nadjd(self, normalize=True, redraw=False):
-        """Eq. to ``assignment_score(subtract_null=True, discrete_null=True)``
+        """Eq. to ``assignment_score(null_model='m3', discrete_null=True)``
         """
         return self.assignment_score(
-            normalize=normalize, subtract_null=True, discrete_null=True,
+            normalize=normalize, null_model='m3', discrete_null=True,
             redraw=redraw)
 
     def assignment_score_nadj(self, normalize=True):
-        """Eq. to ``assignment_score(subtract_null=True, discrete_null=False)``
+        """Eq. to ``assignment_score(null_model='m3', discrete_null=False)``
         """
         return self.assignment_score(
-            normalize=normalize, subtract_null=True, discrete_null=False)
+            normalize=normalize, null_model='m3', discrete_null=False)
 
-    def assignment_score(self, normalize=True, subtract_null=False,
+    def assignment_score(self, normalize=True, null_model=None,
                          discrete_null=True, redraw=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
@@ -552,8 +568,8 @@ class ContingencyTable(CrossTab):
         asymptotically approaches the optimal solution as the clustering
         quality improves.
 
-        On the ``subtract_null`` parameter: adjusting assignment cost for
-        chance by relying on the hypergeometric distribution is extremely
+        On the ``null_model`` parameter: adjusting assignment cost for chance
+        by relying on the hypergeometric distribution is extremely
         computationally expensive, but one way to get a better behaved metric
         is to just subtract the cost of a null model from the obtained score
         (in case of normalization, the null cost also has to be subtracted from
@@ -610,17 +626,20 @@ class ContingencyTable(CrossTab):
             cost = assignment_cost(self.to_rows(), maximize=True)
             self._assignment_cost = cost
 
-        if subtract_null:
+        if null_model is None:
+            null_cost = 0
+        elif null_model == 'm3':
             expected = self.expected(discrete=discrete_null, redraw=redraw)
             null_cost = expected.assignment_score(
-                subtract_null=False, normalize=False)
-            cost -= null_cost
+                null_model=None, normalize=False)
+        else:
+            raise NotImplementedError(
+                "Can't calculate score for %s model" % null_model)
 
+        cost -= null_cost
         if normalize:
             max_cost = self.grand_total
-            if subtract_null:
-                max_cost -= null_cost
-            cost = _div(cost, max_cost)
+            cost = _div(cost, max_cost - null_cost)
 
         return cost
 
@@ -670,19 +689,14 @@ class ContingencyTable(CrossTab):
     def split_join_distance(self, normalize=True):
         """Distance metric based on ``split_join_similarity``
         """
-        sim = self.split_join_similarity(normalize=False, subtract_null=False)
+        sim = self.split_join_similarity(normalize=False, null_model=None)
         max_sim = 2 * self.grand_total
         score = max_sim - sim
         if normalize:
             score = _div(score, max_sim)
         return score
 
-    def split_join_similarity_nadj(self, normalize=True):
-        """Eq. to ``split_join_similarity(subtract_null=True)``
-        """
-        return self.split_join_similarity(normalize=normalize, subtract_null=True)
-
-    def split_join_similarity(self, normalize=True, subtract_null=False):
+    def split_join_similarity(self, normalize=True, null_model=None):
         """Split-join similarity score
 
         Split-join similarity is a two-way assignment-based score first
@@ -695,11 +709,6 @@ class ContingencyTable(CrossTab):
         frequency, then the procedure is inversed to assign a class to each
         cluster. The final unnormalized distance score comprises of a simple
         sum of the two one-way assignment scores.
-
-        On the ``subtract_null`` parameter: one way to get a better behaved
-        metric is to just subtract the cost of a null model from the obtained
-        score (this is similar to but not technically the same as correcting
-        for chance).
 
         A relatively decent clustering::
 
@@ -734,19 +743,24 @@ class ContingencyTable(CrossTab):
         pb_A = sum(max(col) for col in self.iter_cols())
         score = pa_B + pb_A
 
-        if subtract_null:
-            # split-join metric for a null model is simply the average values
-            # of row and column margins added together.
-            m = ilen(self.row_totals)
-            n = ilen(self.col_totals)
+        if null_model is None:
+            null_score = 0
+        elif null_model == 'm1':
+            m = plen(self.row_totals)
+            n = plen(self.col_totals)
             null_score = self.grand_total * (m + n) / float(m * n)
-            score -= null_score
+        elif null_model == 'm3':
+            null_score = \
+                max(self.col_totals.itervalues()) + \
+                max(self.row_totals.itervalues())
+        else:
+            raise NotImplementedError(
+                "Can't calculate score for %s model" % null_model)
 
+        score -= null_score
         if normalize:
             max_score = 2 * self.grand_total
-            if subtract_null:
-                max_score -= null_score
-            score = _div(score, max_score)
+            score = _div(score, max_score - null_score)
 
         return score
 
@@ -804,6 +818,11 @@ class ContingencyTable(CrossTab):
     def talburt_wang_index(self):
         """Talburt-Wang index of similarity of two partitions
 
+        On sparse matrices, the resolving power of this measure asymptotically
+        approaches that of assignment-based scores likes ``assignment_score``
+        and ``split_join_similarity``, however on dense matrices this measure
+        performs more poorly than the other two mentioned.
+
         A relatively decent clustering::
 
             >>> a = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
@@ -829,16 +848,20 @@ class ContingencyTable(CrossTab):
                applications, 1-22.
                <http://www.igi-global.com/chapter/algebraic-approach-data-quality-metrics/23022>`_
         """
-        A_card = ilen(self.iter_row_totals())
-        B_card = ilen(self.iter_col_totals())
-        V_card = sum(ilen(row) for row in self.iter_rows())
+        A_card = plen(self.iter_row_totals())
+        B_card = plen(self.iter_col_totals())
+        V_card = plen(self.itervalues())
         return _div(sqrt(A_card * B_card), V_card)
 
     def muc_scores(self):
         """MUC similarity indices for coreference scoring
 
-        As described in [1]_. The compound fscore-like metric performs
-        similarly to Ochiai association coefficient.
+        As described in [1]_. The compound fscore-like metric has quite good
+        resolving power when comparing bad models with worse ones, similar to
+        ``fowlkes_mallows`` (pairwise ``ochiai_coeff``) and to pairwise
+        ``odds_similarity``, however it has poor range properties (its values
+        tend to be very close to 1, and therefore it is difficult to use this
+        measure to compare two decently performing models).
 
         ::
 
@@ -867,14 +890,13 @@ class ContingencyTable(CrossTab):
                Linguistics.
                <http://www.aclweb.org/anthology/M/M95/M95-1005.pdf>`_
         """
-        A_card = ilen(self.iter_row_totals())
-        A_sum = sum(ilen(row) for row in self.iter_rows())
-        B_card = ilen(self.iter_col_totals())
-        B_sum = sum(ilen(col) for col in self.iter_cols())
+        A_card = plen(self.iter_row_totals())
+        B_card = plen(self.iter_col_totals())
+        V_card = plen(self.itervalues())
         N = self.grand_total
 
-        recall = _div(N - A_sum,  N - A_card)
-        precision = _div(N - B_sum,  N - B_card)
+        recall = _div(N - V_card,  N - A_card)
+        precision = _div(N - V_card,  N - B_card)
         fscore = harmonic_mean(recall, precision)
         return precision, recall, fscore
 
@@ -1208,12 +1230,15 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         ad, bc = a * d, b * c
         return _div(ad, bc)
 
-    def norm_odds(self):
-        """An asymmetric rescaling of the odds ratio
+    def odds_similarity(self):
+        """Asymmetric rescaling of odds ratio for similarity comparisons
 
         Alternatively, odds ratio can be transformed into into an
         association-like measure (weighted kappa) with range [-1, 1] using
         Kraemer rescaling [1]_ or by using one of Yule's formulas.
+
+        This harmonic mean has similar resolving power to ``ochiai_coeff`` and
+        the harmonic mean of ``muc_scores``.
 
         References
         ----------

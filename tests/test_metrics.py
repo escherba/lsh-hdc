@@ -327,9 +327,7 @@ def test_IR_example():
     # test perfect variants
     rd = cm.row_diag()
     cd = cm.col_diag()
-    assert_almost_equal(rd.assignment_score_nadj(),      1.0, 6)
-    assert_almost_equal(rd.split_join_similarity_nadj(), 1.0, 6)
-    assert_almost_equal(cd.split_join_similarity_nadj(), 1.0, 6)
+    assert_almost_equal(rd.assignment_score_nadj(),   1.0, 6)
 
     assert_almost_equal(cd.assignment_score_nadj(),   1.0, 6)
     assert_almost_equal(cd.assignment_score_nadjd(),  1.0, 6)

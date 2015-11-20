@@ -445,6 +445,9 @@ class Grid(object):
         if not isiterable(scores):
             scores = [scores]
         for idx, conf in self.iter_matrices():
+            pct_done = 100 * idx / float(self.n)
+            if pct_done % 5 == 0:
+                sys.stderr.write("%d%% done\n" % pct_done)
             for score in scores:
                 score_arr = conf.get_score(score)
                 if isiterable(score_arr):
@@ -487,7 +490,7 @@ class Grid(object):
             result_grid.append(result_row)
         return result_grid
 
-    def corrplot(self, compute_result, save_to, **kwargs):
+    def corrplot(self, compute_result, save_to, symmetric=False, **kwargs):
         items = compute_result.items()
         if not os.path.exists(save_to):
             os.mkdir(save_to)
@@ -498,9 +501,9 @@ class Grid(object):
         for (lbl1, arr1), (lbl2, arr2) in product(items, items):
             if lbl1 == lbl2:
                 continue
-            elif (lbl2, lbl1) in seen_pairs:
+            elif (not symmetric) and (lbl2, lbl1) in seen_pairs:
                 continue
-            elif (lbl1, lbl2) in seen_pairs:
+            elif (not symmetric) and (lbl1, lbl2) in seen_pairs:
                 continue
             figtitle = "%s vs. %s" % (lbl1, lbl2)
             filename = "%s_vs_%s.png" % (lbl1, lbl2)
@@ -517,7 +520,7 @@ class Grid(object):
             seen_pairs.add((lbl2, lbl1))
 
     def plot(self, pairs, xlim=None, ylim=None, title=None,
-             dither=0.001, marker='.', s=0.01, color='black', alpha=1.0,
+             dither=0.0002, marker='.', s=0.01, color='black', alpha=1.0,
              save_to=None, label=None, xlabel=None, ylabel=None, **kwargs):
         from matplotlib import pyplot as plt
         fig, ax = plt.subplots()
