@@ -1017,7 +1017,7 @@ class ClusteringMetrics(ContingencyTable):
 
     def __init__(self, *args, **kwargs):
         ContingencyTable.__init__(self, *args, **kwargs)
-        self._pairwise_ = None
+        self._pairwise = None
 
     @property
     def pairwise(self):
@@ -1040,7 +1040,7 @@ class ClusteringMetrics(ContingencyTable):
         original partitions are not symmetric.
 
         """
-        pairwise = self._pairwise_
+        pairwise = self._pairwise
         if pairwise is None:
             actual_positives = fsum_pairs(self.iter_row_totals())
             called_positives = fsum_pairs(self.iter_col_totals())
@@ -1048,7 +1048,7 @@ class ClusteringMetrics(ContingencyTable):
             FN = actual_positives - TP
             FP = called_positives - TP
             TN = fnum_pairs(self.grand_total) - TP - FP - FN
-            pairwise = self._pairwise_ = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
+            pairwise = self._pairwise = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
         return pairwise
 
     def get_score(self, scoring_method, *args, **kwargs):
