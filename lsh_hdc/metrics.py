@@ -98,7 +98,6 @@ from pymaptools.iter import iter_items, isiterable
 from lsh_hdc.utils import randround
 from lsh_hdc.entropy import fentropy, fnum_pairs, fsum_pairs, \
     emi_from_margins, assignment_cost
-from lsh_hdc.hungarian import linear_sum_assignment
 
 
 def _div(numer, denom):
@@ -534,21 +533,6 @@ class ContingencyTable(CrossTab):
         # Calculate the adjusted MI score
         ami = (mi - emi) / (mi_max - emi)
         return ami
-
-    def assignment_score_slow(self, normalize=True):
-        """Calls Python/Numpy implementation of the Hungarian method
-
-        Since the original implementation of the Hungarian algorithm is
-        designed to minimize cost, we produce a negative of the frequency
-        matrix in order to maximize it. The obtained cost assignment is then
-        normalized by its maximum, which is N.
-        """
-        cost_matrix = -self.to_array()
-        ris, cis = linear_sum_assignment(cost_matrix)
-        score = -cost_matrix[ris, cis].sum()
-        if normalize:
-            score = _div(score, self.grand_total)
-        return score
 
     def assignment_score_m1(self, normalize=True, redraw=False):
         return self.assignment_score(
