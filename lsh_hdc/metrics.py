@@ -101,22 +101,6 @@ from lsh_hdc.entropy import fentropy, fnum_pairs, fsum_pairs, \
 from lsh_hdc.hungarian import linear_sum_assignment
 
 
-def plen(iterable):
-    """Consumes an iterator and returns number of non-zero values
-
-    Also works on all iterables.
-
-    ::
-
-        >>> g = (x for x in [0, 1, 2, 3])
-        >>> plen(g)
-        3
-        >>> plen([0, 1, 2, 3])
-        3
-    """
-    return sum(bool(el) for el in iterable)
-
-
 def _div(numer, denom):
     """Divide without raising zero division error or losing decimal part
     """
@@ -243,10 +227,11 @@ class ContingencyTable(CrossTab):
         self._expected_freqs_ = {}
         self._expected_freqs_discrete_ = {}
 
-    def to_array(self):
+    def to_array(self, default=0, cpad=False, rpad=False):
         """Convert to NumPy array
         """
-        return np.array(self.to_rows())
+        rows = self.to_rows(default=default, cpad=cpad, rpad=rpad)
+        return np.array(rows)
 
     # Factory methods
 
@@ -650,8 +635,7 @@ class ContingencyTable(CrossTab):
             self._assignment_cost = cost
 
         N = self.grand_total
-        R = len(self.row_totals)
-        C = len(self.col_totals)
+        R, C = self.shape
 
         if model is None:
             null_cost = 0
@@ -792,22 +776,19 @@ class ContingencyTable(CrossTab):
         """
         pa_B = sum(max(row) for row in self.iter_rows())
         pb_A = sum(max(col) for col in self.iter_cols())
-
         score = pa_B + pb_A
-        N = float(self.grand_total)
+
+        N = self.grand_total
+        R, C = self.shape
 
         if model is None:
             null_score = 0
         elif model == 'm1':         # only N is fixed
-            R = len(self.row_totals)
-            C = len(self.col_totals)
-            null_score = N / R + N / C
+            null_score = N / float(R) + N / float(C)
         elif model == 'm2r':        # fixed row margin
-            C = len(self.col_totals)
-            null_score = max(self.row_totals.itervalues()) + N / C
+            null_score = max(self.row_totals.itervalues()) + N / float(C)
         elif model == 'm2c':        # fixed column margin
-            R = len(self.row_totals)
-            null_score = N / R + max(self.col_totals.itervalues())
+            null_score = N / float(R) + max(self.col_totals.itervalues())
         elif model == 'm3':         # both row and column margins fixed
             null_score = \
                 max(self.row_totals.itervalues()) + \
@@ -879,7 +860,9 @@ class ContingencyTable(CrossTab):
         On sparse matrices, the resolving power of this measure asymptotically
         approaches that of assignment-based scores such as ``assignment_score``
         and ``split_join_similarity``, however on dense matrices this measure
-        performs more poorly than the latter two.
+        will not perform well due to its reliance on category cardinalities
+        (how many types were seen) rather than on observation counts (how many
+        instances of each type were seen).
 
         A relatively decent clustering::
 
@@ -906,20 +889,19 @@ class ContingencyTable(CrossTab):
                applications, 1-22.
                <http://www.igi-global.com/chapter/algebraic-approach-data-quality-metrics/23022>`_
         """
-        A_card = plen(self.iter_row_totals())
-        B_card = plen(self.iter_col_totals())
-        V_card = plen(self.itervalues())
+        A_card, B_card = self.shape
+        V_card = len(self)
         return _div(sqrt(A_card * B_card), V_card)
 
     def muc_scores(self):
         """MUC similarity indices for coreference scoring
 
-        As described in [1]_. The compound fscore-like metric has quite good
-        resolving power when comparing bad models with worse ones, similar to
+        Implemented after description in [1]_. The compound fscore-like metric
+        has good resolving power on sparse models, similar to
         ``fowlkes_mallows`` (pairwise ``ochiai_coeff``) and to pairwise
-        ``odds_similarity``, however it has poor range properties (its values
-        tend to be very close to 1, and therefore it is difficult to use this
-        measure to compare two decently performing models).
+        ``odds_similarity``, however it becomes useless on dense matrices since
+        it relies on category cardinalities (how many types were seen) rather
+        than on observation counts (how many instances of each type were seen).
 
         ::
 
@@ -948,9 +930,8 @@ class ContingencyTable(CrossTab):
                Linguistics.
                <http://www.aclweb.org/anthology/M/M95/M95-1005.pdf>`_
         """
-        A_card = plen(self.iter_row_totals())
-        B_card = plen(self.iter_col_totals())
-        V_card = plen(self.itervalues())
+        A_card, B_card = self.shape
+        V_card = len(self)
         N = self.grand_total
 
         recall = _div(N - V_card,  N - A_card)
