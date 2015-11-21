@@ -440,14 +440,15 @@ class Grid(object):
             if matches(mx):
                 return idx, mx
 
-    def compute(self, scores, dtype=np.float16):
+    def compute(self, scores, show_progress=False, dtype=np.float16):
         result = defaultdict(partial(np.empty, (self.n,), dtype=dtype))
         if not isiterable(scores):
             scores = [scores]
         for idx, conf in self.iter_matrices():
-            pct_done = 100 * idx / float(self.n)
-            if pct_done % 5 == 0:
-                sys.stderr.write("%d%% done\n" % pct_done)
+            if show_progress:
+                pct_done = 100 * idx / float(self.n)
+                if pct_done % 5 == 0:
+                    sys.stderr.write("%d%% done\n" % pct_done)
             for score in scores:
                 score_arr = conf.get_score(score)
                 if isiterable(score_arr):

@@ -240,8 +240,8 @@ class ContingencyTable(CrossTab):
     def __init__(self, *args, **kwargs):
         CrossTab.__init__(self, *args, **kwargs)
         self._assignment_cost = None
-        self._expected_freqs_ = None
-        self._expected_freqs_discrete_ = None
+        self._expected_freqs_ = {}
+        self._expected_freqs_discrete_ = {}
 
     def to_array(self):
         """Convert to NumPy array
@@ -250,43 +250,63 @@ class ContingencyTable(CrossTab):
 
     # Factory methods
 
-    @property
-    def expected_freqs_(self):
-        table = self._expected_freqs_
-        if table is None:
-            rows = self._row_type_2d()
-            N = float(self.grand_total)
-            row_margin = self.row_totals
-            col_margin = self.col_totals
+    def expected_freqs_(self, model='m3'):
+        table = self._expected_freqs_.get(model)
+        if table is not None:
+            return table
 
-            # create a dense instance
+        rows = self._row_type_2d()
+        N = float(self.grand_total)
+        row_margin = self.row_totals
+        col_margin = self.col_totals
+
+        if model == 'm1':                # no fixed margin
+            expected = N / float(len(row_margin) * len(col_margin))
+            for (ri, ci), _ in self.iter_all():
+                rows[ri][ci] = expected
+        elif model == 'm2r':             # fixed row margin
+            cm = N / float(len(col_margin))
+            for (ri, ci), _ in self.iter_all():
+                rm = row_margin[ri]
+                numer = rm * cm
+                if numer != 0:
+                    rows[ri][ci] = numer / N
+        elif model == 'm2c':             # fixed column margin
+            rm = N / float(len(row_margin))
+            for (ri, ci), _ in self.iter_all():
+                cm = col_margin[ci]
+                numer = rm * cm
+                if numer != 0:
+                    rows[ri][ci] = numer / N
+        elif model == 'm3':              # fixed row *and* column margin
             for (ri, ci), _ in self.iter_all():
                 rm = row_margin[ri]
                 cm = col_margin[ci]
                 numer = rm * cm
                 if numer != 0:
-                    expected = numer / N
-                    rows[ri][ci] = expected
-            self._expected_freqs_ = table = self.__class__(rows=rows)
+                    rows[ri][ci] = numer / N
+        else:
+            raise NotImplementedError(model)
+        self._expected_freqs_[model] = table = self.__class__(rows=rows)
         return table
 
-    def expected(self, discrete=False, redraw=False):
+    def expected(self, model='m3', discrete=False, redraw=False):
         """Factory creating expected table given current margins
         """
         if discrete:
-            table = self._expected_freqs_discrete_
+            table = self._expected_freqs_discrete_.get(model)
         else:
-            table = self.expected_freqs_
+            table = self.expected_freqs_(model)
 
         # continous
         if not discrete:
             if table is None:
-                raise RuntimeError("should never happen")
+                raise RuntimeError("line should be unreachable")
             return table
 
         # discrete
         if table is None or redraw:
-            continuous = self.expected_freqs_
+            continuous = self.expected_freqs_(model)
             rows = self._row_type_2d()
 
             # create a sparse instance
@@ -295,7 +315,7 @@ class ContingencyTable(CrossTab):
                 if expected != 0:
                     rows[ri][ci] = expected
 
-            self._expected_freqs_discrete_ = table = self.__class__(rows=rows)
+            self._expected_freqs_discrete_[model] = table = self.__class__(rows=rows)
         return table
 
     @staticmethod
@@ -310,7 +330,7 @@ class ContingencyTable(CrossTab):
             maximum = np.asarray(maximum)
         return np.divide(value - center, maximum - center)
 
-    def adjust_to_null(self, measure, with_warnings=False):
+    def adjust_to_null(self, measure, model='m3', with_warnings=False):
         """Adjust a measure to null model
 
         Tbe general formula for chance correction of an association measure
@@ -335,8 +355,8 @@ class ContingencyTable(CrossTab):
         if callable(measure):
             measure = measure.__name__
         actual = getattr(self, measure)()
-        null_model = getattr(self.expected(), measure)()
-        if with_warnings and np.isclose(np.sum(null_model), 0.0):
+        model = getattr(self.expected(model=model), measure)()
+        if with_warnings and np.isclose(np.sum(model), 0.0):
             warnings.warn("'%s' is already centered" % measure)
         max_row = getattr(self.row_diag(), measure)()
         if with_warnings and np.isclose(np.average(max_row), 1.0):
@@ -344,8 +364,8 @@ class ContingencyTable(CrossTab):
         max_col = getattr(self.col_diag(), measure)()
         if with_warnings and np.isclose(np.average(max_col), 1.0):
             warnings.warn("'%s' is already column-normalized" % measure)
-        row_adjusted = self._normalize_measure(actual, max_row, null_model)
-        col_adjusted = self._normalize_measure(actual, max_col, null_model)
+        row_adjusted = self._normalize_measure(actual, max_row, model)
+        col_adjusted = self._normalize_measure(actual, max_col, model)
         return row_adjusted, col_adjusted
 
     def row_diag(self):
@@ -545,21 +565,24 @@ class ContingencyTable(CrossTab):
             score = _div(score, self.grand_total)
         return score
 
-    def assignment_score_nadjd(self, normalize=True, redraw=False):
-        """Eq. to ``assignment_score(null_model='m3', discrete_null=True)``
-        """
+    def assignment_score_m1(self, normalize=True, redraw=False):
         return self.assignment_score(
-            normalize=normalize, null_model='m3', discrete_null=True,
-            redraw=redraw)
+            normalize=normalize, model='m1', discrete=False, redraw=redraw)
 
-    def assignment_score_nadj(self, normalize=True):
-        """Eq. to ``assignment_score(null_model='m3', discrete_null=False)``
-        """
+    def assignment_score_m2r(self, normalize=True, redraw=False):
         return self.assignment_score(
-            normalize=normalize, null_model='m3', discrete_null=False)
+            normalize=normalize, model='m2r', discrete=False, redraw=redraw)
 
-    def assignment_score(self, normalize=True, null_model=None,
-                         discrete_null=True, redraw=False):
+    def assignment_score_m2c(self, normalize=True, redraw=False):
+        return self.assignment_score(
+            normalize=normalize, model='m2c', discrete=False, redraw=redraw)
+
+    def assignment_score_m3(self, normalize=True, redraw=False):
+        return self.assignment_score(
+            normalize=normalize, model='m3', discrete=False, redraw=redraw)
+
+    def assignment_score(self, normalize=True, model=None,
+                         discrete=False, redraw=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
         This metric is uniformly more powerful than the similarly behaved
@@ -568,7 +591,7 @@ class ContingencyTable(CrossTab):
         asymptotically approaches the optimal solution as the clustering
         quality improves.
 
-        On the ``null_model`` parameter: adjusting assignment cost for chance
+        On the ``model`` parameter: adjusting assignment cost for chance
         by relying on the hypergeometric distribution is extremely
         computationally expensive, but one way to get a better behaved metric
         is to just subtract the cost of a null model from the obtained score
@@ -626,19 +649,37 @@ class ContingencyTable(CrossTab):
             cost = assignment_cost(self.to_rows(), maximize=True)
             self._assignment_cost = cost
 
-        if null_model is None:
+        N = self.grand_total
+        R = len(self.row_totals)
+        C = len(self.col_totals)
+
+        if model is None:
             null_cost = 0
-        elif null_model == 'm3':
-            expected = self.expected(discrete=discrete_null, redraw=redraw)
-            null_cost = expected.assignment_score(
-                null_model=None, normalize=False)
+        elif (not discrete) and model == 'm1':
+            # No margin is fixed, assignment doesn't matter (all cells are
+            # equal under this assumption), so we can calculate expected cost
+            # directly
+            null_cost = N / float(max(R, C))
+        elif (not discrete) and model == 'm2r':
+            # fixed row margin, assignment also doesn't matter
+            sum_top_rows = N if R <= C else \
+                sum(sorted(self.row_totals.itervalues(), reverse=True)[:C])
+            null_cost = sum_top_rows / float(C)
+        elif (not discrete) and model == 'm2c':
+            # fixed column margin, assignment also doesn't matter
+            sum_top_cols = N if C <= R else \
+                sum(sorted(self.col_totals.itervalues(), reverse=True)[:R])
+            null_cost = sum_top_cols / float(R)
         else:
-            raise NotImplementedError(
-                "Can't calculate score for %s model" % null_model)
+            # all margins fixed, assignment matters
+            expected = self.expected(
+                model=model, discrete=discrete, redraw=redraw)
+            null_cost = expected.assignment_score(
+                model=None, normalize=False)
 
         cost -= null_cost
         if normalize:
-            max_cost = self.grand_total
+            max_cost = N
             cost = _div(cost, max_cost - null_cost)
 
         return cost
@@ -689,14 +730,26 @@ class ContingencyTable(CrossTab):
     def split_join_distance(self, normalize=True):
         """Distance metric based on ``split_join_similarity``
         """
-        sim = self.split_join_similarity(normalize=False, null_model=None)
+        sim = self.split_join_similarity(normalize=False, model=None)
         max_sim = 2 * self.grand_total
         score = max_sim - sim
         if normalize:
             score = _div(score, max_sim)
         return score
 
-    def split_join_similarity(self, normalize=True, null_model=None):
+    def split_join_similarity_m1(self, normalize=True):
+        return self.split_join_similarity(normalize=normalize, model='m1')
+
+    def split_join_similarity_m2r(self, normalize=True):
+        return self.split_join_similarity(normalize=normalize, model='m2r')
+
+    def split_join_similarity_m2c(self, normalize=True):
+        return self.split_join_similarity(normalize=normalize, model='m2c')
+
+    def split_join_similarity_m3(self, normalize=True):
+        return self.split_join_similarity(normalize=normalize, model='m3')
+
+    def split_join_similarity(self, normalize=True, model=None):
         """Split-join similarity score
 
         Split-join similarity is a two-way assignment-based score first
@@ -710,21 +763,19 @@ class ContingencyTable(CrossTab):
         cluster. The final unnormalized distance score comprises of a simple
         sum of the two one-way assignment scores.
 
-        A relatively decent clustering::
+        By default, ``m1`` null model is subtracted, to make the final
+        score independent of the number of clusters::
 
-            >>> a = [ 1,  1,  1,  2,  2,  2,  2,  3,  3,  4]
-            >>> b = [43, 56, 56,  5, 36, 36, 36, 74, 74, 66]
-            >>> t = ContingencyTable.from_labels(a, b)
-            >>> t.split_join_similarity()
-            0.9
-
-        Less good clustering::
-
-            >>> clusters = [[1, 1], [1, 1, 1, 1], [2, 3], [2, 2, 3, 3],
-            ...             [3, 3, 4], [3, 4, 4, 4, 4, 4, 4, 4, 4, 4]]
-            >>> t = ContingencyTable.from_clusters(clusters)
-            >>> t.split_join_similarity()
-            0.74
+            >>> t2 = ClusteringMetrics(rows=10 * np.ones((2, 2), dtype=int))
+            >>> t2.split_join_similarity(model=None)
+            0.5
+            >>> t2.split_join_similarity(model='m1')
+            0.0
+            >>> t8 = ClusteringMetrics(rows=10 * np.ones((8, 8), dtype=int))
+            >>> t8.split_join_similarity(model=None)
+            0.125
+            >>> t8.split_join_similarity(model='m1')
+            0.0
 
         See Also
         --------
@@ -741,25 +792,32 @@ class ContingencyTable(CrossTab):
         """
         pa_B = sum(max(row) for row in self.iter_rows())
         pb_A = sum(max(col) for col in self.iter_cols())
-        score = pa_B + pb_A
 
-        if null_model is None:
+        score = pa_B + pb_A
+        N = float(self.grand_total)
+
+        if model is None:
             null_score = 0
-        elif null_model == 'm1':
-            m = plen(self.row_totals)
-            n = plen(self.col_totals)
-            null_score = self.grand_total * (m + n) / float(m * n)
-        elif null_model == 'm3':
+        elif model == 'm1':         # only N is fixed
+            R = len(self.row_totals)
+            C = len(self.col_totals)
+            null_score = N / R + N / C
+        elif model == 'm2r':        # fixed row margin
+            C = len(self.col_totals)
+            null_score = max(self.row_totals.itervalues()) + N / C
+        elif model == 'm2c':        # fixed column margin
+            R = len(self.row_totals)
+            null_score = N / R + max(self.col_totals.itervalues())
+        elif model == 'm3':         # both row and column margins fixed
             null_score = \
-                max(self.col_totals.itervalues()) + \
-                max(self.row_totals.itervalues())
+                max(self.row_totals.itervalues()) + \
+                max(self.col_totals.itervalues())
         else:
-            raise NotImplementedError(
-                "Can't calculate score for %s model" % null_model)
+            raise NotImplementedError(model)
 
         score -= null_score
         if normalize:
-            max_score = 2 * self.grand_total
+            max_score = 2 * N
             score = _div(score, max_score - null_score)
 
         return score
@@ -953,7 +1011,7 @@ class ClusteringMetrics(ContingencyTable):
         >>> Y1 = {(1, 2, 3), (4, 5, 6)}
         >>> Y2 = {(1, 2), (3, 4, 5), (6,)}
         >>> cm = ClusteringMetrics.from_partitions(Y1, Y2)
-        >>> cm.split_join_similarity()
+        >>> cm.split_join_similarity(model=None)
         0.75
     """
 

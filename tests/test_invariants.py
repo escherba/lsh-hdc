@@ -33,10 +33,36 @@ def check_with_nans(num1, num2, places=None, msg=None, delta=None, ensure_nans=T
         assert_almost_equal(num1, num2, places=places, msg=msg, delta=delta)
 
 
-def test_RxC_invariants():
+def test_RxC_general():
+    """General conteingency-table mathods
+    """
+    for _ in xrange(100):
+        size = np.random.randint(4, 100)
+        a = np.random.randint(low=0, high=np.random.randint(low=2, high=100),
+                              size=(size,))
+        b = np.random.randint(low=0, high=np.random.randint(low=2, high=100),
+                              size=(size,))
+        cm = ClusteringMetrics.from_labels(a, b)
+
+        for model in ['m1', 'm2r', 'm2c', 'm3']:
+
+            assert_almost_equal(
+                cm.grand_total,
+                sum(cm.expected(model=model).itervalues()))
+
+            assert_almost_equal(
+                cm.assignment_score(model=model),
+                cm.adjust_to_null(cm.assignment_score, model=model)[0])
+
+            assert_almost_equal(
+                cm.split_join_similarity(model=model),
+                cm.adjust_to_null(cm.split_join_similarity, model=model)[0])
+
+
+def test_RxC_metrics():
     """Alternative implementations should coincide for RxC matrices
     """
-    for _ in xrange(1000):
+    for _ in xrange(100):
         ltrue = np.random.randint(low=0, high=5, size=(20,))
         lpred = np.random.randint(low=0, high=5, size=(20,))
         cm = ClusteringMetrics.from_labels(ltrue, lpred)
@@ -66,7 +92,7 @@ def test_2x2_invariants():
     """Alternative implementations should coincide for 2x2 matrices
     """
 
-    for _ in xrange(1000):
+    for _ in xrange(100):
         cm = ConfusionMatrix2.from_random_counts(low=0, high=10)
 
         # object idempotency
