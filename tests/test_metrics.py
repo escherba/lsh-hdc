@@ -327,25 +327,24 @@ def test_IR_example():
     # test perfect variants
     rd = cm.row_diag()
     cd = cm.col_diag()
-    assert_almost_equal(rd.assignment_score_m3(),   1.0, 6)
-
-    assert_almost_equal(cd.assignment_score_m3(),   1.0, 6)
-    assert_almost_equal(cd.assignment_score_m3_disc(),  1.0, 6)
-    assert_almost_equal(rd.assignment_score_m3(),   1.0, 6)
-    assert_almost_equal(rd.assignment_score_m3_disc(),  1.0, 6)
+    assert_almost_equal(rd.assignment_score(model='m3'), 1.0, 6)
+    assert_almost_equal(cd.assignment_score(model='m3'), 1.0, 6)
+    assert_almost_equal(cd.assignment_score(model='m3', discrete=True),   1.0, 6)
+    assert_almost_equal(rd.assignment_score(model='m3'), 1.0, 6)
+    assert_almost_equal(rd.assignment_score(model='m3', discrete=True),   1.0, 6)
 
     # test that no redraws happen by default
-    assert_almost_equal(cm.assignment_score_m3(),
-                        cm.assignment_score_m3(), 6)
+    assert_almost_equal(cm.assignment_score(model='m3'),
+                        cm.assignment_score(model='m3'), 6)
 
     ex = cm.expected(discrete=False)
-    assert_almost_equal(ex.assignment_score_m3(), 0.0, 6)
+    assert_almost_equal(ex.assignment_score(model='m3'), 0.0, 6)
 
     # test that H1 results in greater score than H0
     ex = cm.expected(discrete=True)
     assert_greater(
-        cm.assignment_score_m3(),
-        ex.assignment_score_m3())
+        cm.assignment_score(model='m3'),
+        ex.assignment_score(model='m3'))
 
     # test entropy metrics
     h, c, v = cm.entropy_metrics()
@@ -353,13 +352,13 @@ def test_IR_example():
     assert_almost_equal(c, 0.357908, 6)
     assert_almost_equal(v, 0.364562, 6)
 
-    assert_almost_equal(cm.vi_similarity(),         0.517754, 6)
-    assert_almost_equal(cm.mirkin_match_coeff(),    0.695502, 6)
-    assert_almost_equal(cm.rand_index(),            0.676471, 6)
-    assert_almost_equal(cm.fowlkes_mallows(),       0.476731, 6)
-    assert_almost_equal(cm.assignment_score(),      0.705882, 6)
-    assert_almost_equal(cm.assignment_score_slow(), 0.705882, 6)
-    assert_almost_equal(cm.assignment_score_m3(), 0.554974, 6)
+    assert_almost_equal(cm.vi_similarity(),              0.517754, 6)
+    assert_almost_equal(cm.mirkin_match_coeff(),         0.695502, 6)
+    assert_almost_equal(cm.rand_index(),                 0.676471, 6)
+    assert_almost_equal(cm.fowlkes_mallows(),            0.476731, 6)
+    assert_almost_equal(cm.assignment_score(model=None), 0.705882, 6)
+    assert_almost_equal(cm.assignment_score_slow(),      0.705882, 6)
+    assert_almost_equal(cm.assignment_score(model='m3'), 0.554974, 6)
 
     assert_almost_equal(cm.chisq_score(),          11.900000, 6)
     assert_almost_equal(cm.g_score(),              13.325845, 6)
