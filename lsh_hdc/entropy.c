@@ -3046,7 +3046,7 @@ static __pyx_t_5numpy_int64_t __pyx_f_7lsh_hdc_7entropy_csum_pairs(PyObject *__p
  * 
  *     total = 0LL             # <<<<<<<<<<<<<<
  *     for n in counts:
- *         total += ((n * (n - 1LL)) >> 1LL)
+ *         total += (n * (n - 1LL))
  */
   __pyx_v_total = 0LL;
 
@@ -3054,8 +3054,8 @@ static __pyx_t_5numpy_int64_t __pyx_f_7lsh_hdc_7entropy_csum_pairs(PyObject *__p
  * 
  *     total = 0LL
  *     for n in counts:             # <<<<<<<<<<<<<<
- *         total += ((n * (n - 1LL)) >> 1LL)
- *     return total
+ *         total += (n * (n - 1LL))
+ *     return total >> 1LL
  */
   if (likely(PyList_CheckExact(__pyx_v_counts)) || PyTuple_CheckExact(__pyx_v_counts)) {
     __pyx_t_1 = __pyx_v_counts; __Pyx_INCREF(__pyx_t_1); __pyx_t_2 = 0;
@@ -3103,30 +3103,30 @@ static __pyx_t_5numpy_int64_t __pyx_f_7lsh_hdc_7entropy_csum_pairs(PyObject *__p
     /* "lsh_hdc/entropy.pyx":178
  *     total = 0LL
  *     for n in counts:
- *         total += ((n * (n - 1LL)) >> 1LL)             # <<<<<<<<<<<<<<
- *     return total
+ *         total += (n * (n - 1LL))             # <<<<<<<<<<<<<<
+ *     return total >> 1LL
  * 
  */
-    __pyx_v_total = (__pyx_v_total + ((__pyx_v_n * (__pyx_v_n - 1LL)) >> 1LL));
+    __pyx_v_total = (__pyx_v_total + (__pyx_v_n * (__pyx_v_n - 1LL)));
 
     /* "lsh_hdc/entropy.pyx":177
  * 
  *     total = 0LL
  *     for n in counts:             # <<<<<<<<<<<<<<
- *         total += ((n * (n - 1LL)) >> 1LL)
- *     return total
+ *         total += (n * (n - 1LL))
+ *     return total >> 1LL
  */
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "lsh_hdc/entropy.pyx":179
  *     for n in counts:
- *         total += ((n * (n - 1LL)) >> 1LL)
- *     return total             # <<<<<<<<<<<<<<
+ *         total += (n * (n - 1LL))
+ *     return total >> 1LL             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_r = __pyx_v_total;
+  __pyx_r = (__pyx_v_total >> 1LL);
   goto __pyx_L0;
 
   /* "lsh_hdc/entropy.pyx":169
@@ -3217,7 +3217,7 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_fsum_pairs(PyObject *_
  * 
  *     total = 0.0             # <<<<<<<<<<<<<<
  *     for n in freqs:
- *         total += (0.5 * (n * (n - 1.0)))
+ *         total += (n * (n - 1.0))
  */
   __pyx_v_total = 0.0;
 
@@ -3225,8 +3225,8 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_fsum_pairs(PyObject *_
  * 
  *     total = 0.0
  *     for n in freqs:             # <<<<<<<<<<<<<<
- *         total += (0.5 * (n * (n - 1.0)))
- *     return total
+ *         total += (n * (n - 1.0))
+ *     return 0.5 * total
  */
   if (likely(PyList_CheckExact(__pyx_v_freqs)) || PyTuple_CheckExact(__pyx_v_freqs)) {
     __pyx_t_1 = __pyx_v_freqs; __Pyx_INCREF(__pyx_t_1); __pyx_t_2 = 0;
@@ -3274,30 +3274,30 @@ static __pyx_t_5numpy_float64_t __pyx_f_7lsh_hdc_7entropy_fsum_pairs(PyObject *_
     /* "lsh_hdc/entropy.pyx":191
  *     total = 0.0
  *     for n in freqs:
- *         total += (0.5 * (n * (n - 1.0)))             # <<<<<<<<<<<<<<
- *     return total
+ *         total += (n * (n - 1.0))             # <<<<<<<<<<<<<<
+ *     return 0.5 * total
  * 
  */
-    __pyx_v_total = (__pyx_v_total + (0.5 * (__pyx_v_n * (__pyx_v_n - 1.0))));
+    __pyx_v_total = (__pyx_v_total + (__pyx_v_n * (__pyx_v_n - 1.0)));
 
     /* "lsh_hdc/entropy.pyx":190
  * 
  *     total = 0.0
  *     for n in freqs:             # <<<<<<<<<<<<<<
- *         total += (0.5 * (n * (n - 1.0)))
- *     return total
+ *         total += (n * (n - 1.0))
+ *     return 0.5 * total
  */
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "lsh_hdc/entropy.pyx":192
  *     for n in freqs:
- *         total += (0.5 * (n * (n - 1.0)))
- *     return total             # <<<<<<<<<<<<<<
+ *         total += (n * (n - 1.0))
+ *     return 0.5 * total             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_r = __pyx_v_total;
+  __pyx_r = (0.5 * __pyx_v_total);
   goto __pyx_L0;
 
   /* "lsh_hdc/entropy.pyx":182

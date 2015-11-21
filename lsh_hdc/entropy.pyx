@@ -175,8 +175,8 @@ cpdef np.int64_t csum_pairs(counts):
 
     total = 0LL
     for n in counts:
-        total += ((n * (n - 1LL)) >> 1LL)
-    return total
+        total += (n * (n - 1LL))
+    return total >> 1LL
 
 
 cpdef np.float64_t fsum_pairs(freqs):
@@ -188,8 +188,8 @@ cpdef np.float64_t fsum_pairs(freqs):
 
     total = 0.0
     for n in freqs:
-        total += (0.5 * (n * (n - 1.0)))
-    return total
+        total += (n * (n - 1.0))
+    return 0.5 * total
 
 
 cpdef np.float64_t centropy(counts):
