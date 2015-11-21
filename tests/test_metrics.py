@@ -364,7 +364,7 @@ def test_IR_example():
     assert_almost_equal(cm.g_score(),              13.325845, 6)
 
     # test metrics that are based on pairwise co-association matrix
-    conf = cm.pairwise_
+    conf = cm.pairwise
 
     assert_almost_equal(conf.chisq_score(),         8.063241, 6)
     assert_almost_equal(conf.g_score(),             7.804221, 6)

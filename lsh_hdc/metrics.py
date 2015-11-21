@@ -96,7 +96,7 @@ from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import iter_items, isiterable
 from lsh_hdc.utils import randround
-from lsh_hdc.entropy import fentropy, cnum_pairs, csum_pairs, \
+from lsh_hdc.entropy import fentropy, fnum_pairs, fsum_pairs, \
     emi_from_margins, assignment_cost
 from lsh_hdc.hungarian import linear_sum_assignment
 
@@ -565,10 +565,6 @@ class ContingencyTable(CrossTab):
             score = _div(score, self.grand_total)
         return score
 
-    def assignment_score_raw(self, normalize=True, redraw=False):
-        return self.assignment_score(
-            normalize=normalize, model=None, discrete=False, redraw=redraw)
-
     def assignment_score_m1(self, normalize=True, redraw=False):
         return self.assignment_score(
             normalize=normalize, model='m1', discrete=False, redraw=redraw)
@@ -585,7 +581,7 @@ class ContingencyTable(CrossTab):
         return self.assignment_score(
             normalize=normalize, model='m3', discrete=False, redraw=redraw)
 
-    def assignment_score(self, normalize=True, model='m1',
+    def assignment_score(self, normalize=True, model=None,
                          discrete=False, redraw=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
@@ -741,9 +737,6 @@ class ContingencyTable(CrossTab):
             score = _div(score, max_sim)
         return score
 
-    def split_join_similarity_raw(self, normalize=True):
-        return self.split_join_similarity(normalize=normalize, model=None)
-
     def split_join_similarity_m1(self, normalize=True):
         return self.split_join_similarity(normalize=normalize, model='m1')
 
@@ -756,7 +749,7 @@ class ContingencyTable(CrossTab):
     def split_join_similarity_m3(self, normalize=True):
         return self.split_join_similarity(normalize=normalize, model='m3')
 
-    def split_join_similarity(self, normalize=True, model='m1'):
+    def split_join_similarity(self, normalize=True, model=None):
         """Split-join similarity score
 
         Split-join similarity is a two-way assignment-based score first
@@ -1027,7 +1020,7 @@ class ClusteringMetrics(ContingencyTable):
         self._pairwise_ = None
 
     @property
-    def pairwise_(self):
+    def pairwise(self):
         """Confusion matrix on all pair assignments from two partitions
 
         A partition of N is a set of disjoint clusters s.t. every point in N
@@ -1049,12 +1042,12 @@ class ClusteringMetrics(ContingencyTable):
         """
         pairwise = self._pairwise_
         if pairwise is None:
-            actual_positives = csum_pairs(self.iter_row_totals())
-            called_positives = csum_pairs(self.iter_col_totals())
-            TP = csum_pairs(self.itervalues())
+            actual_positives = fsum_pairs(self.iter_row_totals())
+            called_positives = fsum_pairs(self.iter_col_totals())
+            TP = fsum_pairs(self.itervalues())
             FN = actual_positives - TP
             FP = called_positives - TP
-            TN = cnum_pairs(self.grand_total) - TP - FP - FN
+            TN = fnum_pairs(self.grand_total) - TP - FP - FN
             pairwise = self._pairwise_ = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
         return pairwise
 
@@ -1064,7 +1057,7 @@ class ClusteringMetrics(ContingencyTable):
         try:
             method = getattr(self, scoring_method)
         except AttributeError:
-            method = getattr(self.pairwise_, scoring_method)
+            method = getattr(self.pairwise, scoring_method)
         return method(*args, **kwargs)
 
     def adjusted_rand_index(self):
@@ -1073,21 +1066,21 @@ class ClusteringMetrics(ContingencyTable):
         This is a memory-efficient replacement for a similar Scikit-Learn
         function.
         """
-        return self.pairwise_.kappa()
+        return self.pairwise.kappa()
 
     def rand_index(self):
         """Pairwise accuracy (uncorrected for chance)
 
         Don't use this metric; it is only added here as the "worst reference"
         """
-        return self.pairwise_.accuracy()
+        return self.pairwise.accuracy()
 
     def fowlkes_mallows(self):
         """Fowlkes-Mallows index for partition comparison
 
         Defined as the Ochiai coefficient on the pairwise matrix
         """
-        return self.pairwise_.ochiai_coeff()
+        return self.pairwise.ochiai_coeff()
 
 
 confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
@@ -1574,7 +1567,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
             >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
             >>> t = ClusteringMetrics.from_clusters(clusters)
-            >>> t.pairwise_.loevinger_coeff()
+            >>> t.pairwise.loevinger_coeff()
             1.0
 
         At the same time, kappa and Matthews coefficients are 0.63 and 0.68,
@@ -1583,7 +1576,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
             >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
             >>> t = ClusteringMetrics.from_clusters(clusters)
-            >>> t.pairwise_.loevinger_coeff()
+            >>> t.pairwise.loevinger_coeff()
             1.0
 
         Loevinger's coefficient has a unique property: all relevant two-way
