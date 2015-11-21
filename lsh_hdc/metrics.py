@@ -565,6 +565,10 @@ class ContingencyTable(CrossTab):
             score = _div(score, self.grand_total)
         return score
 
+    def assignment_score_raw(self, normalize=True, redraw=False):
+        return self.assignment_score(
+            normalize=normalize, model=None, discrete=False, redraw=redraw)
+
     def assignment_score_m1(self, normalize=True, redraw=False):
         return self.assignment_score(
             normalize=normalize, model='m1', discrete=False, redraw=redraw)
@@ -581,7 +585,7 @@ class ContingencyTable(CrossTab):
         return self.assignment_score(
             normalize=normalize, model='m3', discrete=False, redraw=redraw)
 
-    def assignment_score(self, normalize=True, model=None,
+    def assignment_score(self, normalize=True, model='m1',
                          discrete=False, redraw=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
@@ -737,6 +741,9 @@ class ContingencyTable(CrossTab):
             score = _div(score, max_sim)
         return score
 
+    def split_join_similarity_raw(self, normalize=True):
+        return self.split_join_similarity(normalize=normalize, model=None)
+
     def split_join_similarity_m1(self, normalize=True):
         return self.split_join_similarity(normalize=normalize, model='m1')
 
@@ -749,7 +756,7 @@ class ContingencyTable(CrossTab):
     def split_join_similarity_m3(self, normalize=True):
         return self.split_join_similarity(normalize=normalize, model='m3')
 
-    def split_join_similarity(self, normalize=True, model=None):
+    def split_join_similarity(self, normalize=True, model='m1'):
         """Split-join similarity score
 
         Split-join similarity is a two-way assignment-based score first
@@ -877,9 +884,9 @@ class ContingencyTable(CrossTab):
         """Talburt-Wang index of similarity of two partitions
 
         On sparse matrices, the resolving power of this measure asymptotically
-        approaches that of assignment-based scores likes ``assignment_score``
+        approaches that of assignment-based scores such as ``assignment_score``
         and ``split_join_similarity``, however on dense matrices this measure
-        performs more poorly than the other two mentioned.
+        performs more poorly than the latter two.
 
         A relatively decent clustering::
 
