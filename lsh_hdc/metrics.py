@@ -96,8 +96,8 @@ from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import iter_items, isiterable
 from lsh_hdc.utils import randround
-from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, \
-    assignment_cost
+from lsh_hdc.entropy import fentropy, cnum_pairs, csum_pairs, \
+    emi_from_margins, assignment_cost
 from lsh_hdc.hungarian import linear_sum_assignment
 
 
@@ -1049,12 +1049,12 @@ class ClusteringMetrics(ContingencyTable):
         """
         pairwise = self._pairwise_
         if pairwise is None:
-            actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
-            called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
-            TP = sum(nchoose2(cell) for cell in self.itervalues())
+            actual_positives = csum_pairs(self.iter_row_totals())
+            called_positives = csum_pairs(self.iter_col_totals())
+            TP = csum_pairs(self.itervalues())
             FN = actual_positives - TP
             FP = called_positives - TP
-            TN = nchoose2(self.grand_total) - TP - FP - FN
+            TN = cnum_pairs(self.grand_total) - TP - FP - FN
             pairwise = self._pairwise_ = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
         return pairwise
 

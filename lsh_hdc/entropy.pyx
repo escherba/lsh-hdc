@@ -146,22 +146,86 @@ cpdef ndarray_from_iter(iterable, dtype=None, contiguous=False):
     return arr
 
 
-cpdef np.int64_t nchoose2(np.int64_t n) nogil:
-    """Binomial coefficient for k=2
+cpdef np.int64_t cnum_pairs(np.int64_t n) nogil:
+    """Binomial coefficient for k=2 (integer)
 
-    Scipy has ``scipy.special.binom`` and ``scipy.misc.comb``, however on
-    individual (non-vectorized) ops used in memory-constrained stream
-    computation, a simple definition below is faster. It is possible to get the
-    best of both worlds by writing a generator that returns NumPy arrays of
-    limited size and then calling a vectorized n-choose-2 function on those,
-    however the current way is fast enough for computing coincidence matrices
-    (turns out memory was the bottleneck, not raw computation speed).
+    For non-vectorized computation, this is faster than calling
+    ``scipy.misc.comb(x, 2)`` or ``scipy.special.binom(x, 2)``.  Unlike with
+    those two, the domain here extends into negative integers.
     """
     return (n * (n - 1LL)) >> 1LL
 
 
+cpdef np.float64_t fnum_pairs(np.float64_t n) nogil:
+    """Binomial coefficient for k=2 (floating point)
+
+    For non-vectorized computation, this is faster than calling
+    ``scipy.misc.comb(x, 2)`` or ``scipy.special.binom(x, 2)``.  Unlike with
+    those two, the domain here extends into negative integers.
+    """
+    return 0.5 * (n * (n - 1.0))
+
+
+cpdef np.int64_t csum_pairs(counts):
+    """Count sum of possible pairs (integer)
+
+    Use n choose 2 to calculate sum of possible pairs.
+    """
+    cdef np.int64_t n, total
+
+    total = 0LL
+    for n in counts:
+        total += ((n * (n - 1LL)) >> 1LL)
+    return total
+
+
+cpdef np.float64_t fsum_pairs(freqs):
+    """Count sum of possible pairs (floating points)
+
+    Use n choose 2 to calculate sum of possible pairs.
+    """
+    cdef np.float64_t n, total
+
+    total = 0.0
+    for n in freqs:
+        total += (0.5 * (n * (n - 1.0)))
+    return total
+
+
+cpdef np.float64_t centropy(counts):
+    """Entropy of an iterable of counts (integers)
+
+    Assumes every entry in the list belongs to a different class. The resulting
+    value is *not* normalized by N. Also note that the entropy value is
+    calculated using natural base, which may not be what you want, so you may
+    need to normalized it with log(base).
+
+    The 'counts' parameter is expected to be an list or tuple-like iterable.
+    For convenience, it can also be a dict/mapping type, in which case its
+    values will be used to calculate entropy.
+    """
+    # The Cython version of this method is 50x faster on large arrays than pure
+    # CPython implementation. The speed-up is primarily due to the ``cdef
+    # np.int64_t c`` definition.
+
+    cdef np.int64_t c, n
+    cdef np.float64_t sum_c_logn_c, result
+
+    if isinstance(counts, Mapping):
+        counts = counts.itervalues()
+
+    n = 0LL
+    sum_c_logn_c = 0.0
+    for c in counts:
+        if c != 0LL:
+            n += c
+            sum_c_logn_c += c * log(c)
+    result = 0.0 if n == 0LL else n * log(n) - sum_c_logn_c
+    return result
+
+
 cpdef np.float64_t fentropy(freqs):
-    """Entropy of an iterable of frequencies
+    """Entropy of an iterable of frequencies (floating point)
 
     Assumes every entry in the list belongs to a different class. The resulting
     value is *not* normalized by N. Also note that the entropy value is
@@ -171,7 +235,6 @@ cpdef np.float64_t fentropy(freqs):
     The 'freqs' parameter is expected to be an list or tuple-like iterable.
     For convenience, it can also be a dict/mapping type, in which case its
     values will be used to calculate entropy.
-
     """
 
     # The Cython version of this method is upt to 50x faster on large arrays
