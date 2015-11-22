@@ -1254,7 +1254,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         ad, bc = a * d, b * c
         return _div(ad, bc)
 
-    def odds_similarity(self):
+    def odds_scores_adj(self):
+        ps, qs = self.adjust_to_null(self.odds_scores, model='m3')
+        return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
+
+    def odds_scores(self):
         """Asymmetric rescaling of odds ratio for similarity comparisons
 
         Alternatively, odds ratio can be transformed into into an
@@ -1292,6 +1296,14 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """
         return harmonic_mean_weighted(self.precision(), self.recall(), beta ** 2)
 
+    def dice_coeff_adj(self):
+        """Dice coefficeint adjusted for chance
+
+        Identical to ``kappa``.
+
+        """
+        return harmonic_mean(*self.adjust_to_null(self.jaccard_coeff, model='m3'))
+
     def dice_coeff(self):
         """Dice similarity (Nei-Li coefficient)
 
@@ -1309,6 +1321,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, _, b = self.to_ccw()
         return _div(2 * a, 2 * a + b + c)
 
+    def jaccard_coeff_adj(self):
+        """Jaccard coefficient adjusted for chance
+        """
+        return harmonic_mean(*self.adjust_to_null(self.jaccard_coeff, model='m3'))
+
     def jaccard_coeff(self):
         """Jaccard similarity coefficient
 
@@ -1325,13 +1342,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, _, b = self.to_ccw()
         return _div(a, a + b + c)
 
-    def jaccard_adj(self):
-        """Experimental
-        """
-        return harmonic_mean(*self.adjust_to_null(self.jaccard_coeff, model='m3'))
-
-    def ochiai_adj(self):
-        """Experimental
+    def ochiai_coeff_adj(self):
+        """Ochiai coefficient adjusted for chance
         """
         return harmonic_mean(*self.adjust_to_null(self.ochiai_coeff, model='m3'))
 
@@ -1361,7 +1373,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return _div(a, sqrt((a + b) * (a + c)))
 
     def sokal_sneath_adj(self):
-        """Experimental
+        """Sokal and Sneath coefficient adjusted for chance
         """
         return harmonic_mean(*self.adjust_to_null(self.sokal_sneath_coeff, model='m3'))
 
@@ -1746,7 +1758,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def yule_q(self):
         """Yule's Q (association index)
 
-        this index relates to the D odds ratio:
+        This measure has a nice property in that it is already adjusted for
+        chance. Yule's Q relates to the odds ratio (DOR) as follows:
 
         .. math::
 
@@ -1759,8 +1772,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def yule_y(self):
         """Yule's Y (colligation coefficient)
 
-        The Y metric was used to produce a new association metric by adjusting
-        for entropy in [1]_.
+        This measure has a nice property in that it is already adjusted for
+        chance. The Y coefficient was used as basis of a new association
+        measure by accounting for entropy in [1]_.
 
         References
         ----------
