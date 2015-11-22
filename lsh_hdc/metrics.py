@@ -550,7 +550,7 @@ class ContingencyTable(CrossTab):
         return self.assignment_score(
             normalize=normalize, model='m3', discrete=False, redraw=redraw)
 
-    def assignment_score(self, normalize=True, model=None,
+    def assignment_score(self, normalize=True, model='m1',
                          discrete=False, redraw=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
@@ -717,7 +717,7 @@ class ContingencyTable(CrossTab):
     def split_join_similarity_m3(self, normalize=True):
         return self.split_join_similarity(normalize=normalize, model='m3')
 
-    def split_join_similarity(self, normalize=True, model=None):
+    def split_join_similarity(self, normalize=True, model='m1'):
         """Split-join similarity score
 
         Split-join similarity is a two-way assignment-based score first
@@ -1299,6 +1299,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         Note that Dice can be zero if total number of positives is zero, but
         F-score is undefined in that case (because recall is undefined).
 
+        When adjusted for chance, this coefficient becomes identical to
+        ``kappa``.
+
         See Also
         --------
         fscore, jaccard_coeff, ochiai_coeff
@@ -1321,6 +1324,16 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """
         a, c, _, b = self.to_ccw()
         return _div(a, a + b + c)
+
+    def jaccard_adj(self):
+        """Experimental
+        """
+        return harmonic_mean(*self.adjust_to_null(self.jaccard_coeff, model='m3'))
+
+    def ochiai_adj(self):
+        """Experimental
+        """
+        return harmonic_mean(*self.adjust_to_null(self.ochiai_coeff, model='m3'))
 
     def ochiai_coeff(self):
         """Ochiai similarity coefficient (Fowlkes-Mallows)
@@ -1346,6 +1359,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """
         a, c, _, b = self.to_ccw()
         return _div(a, sqrt((a + b) * (a + c)))
+
+    def sokal_sneath_adj(self):
+        """Experimental
+        """
+        return harmonic_mean(*self.adjust_to_null(self.sokal_sneath_coeff, model='m3'))
 
     def sokal_sneath_coeff(self):
         """Sokal and Sneath similarity index
@@ -1572,10 +1590,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         segmentation [4]_, feature selection [5]_, and forecasting [6]_. The
         first derivation of this measure is in [7]_.
 
-        Kappa can be derived by correcting Accuracy (Simple Matching
-        Coefficient, Rand Index) for chance. Kappa can be decomposed into a
-        pair of components (regression coefficients), :math:`k_1` (recall-like)
-        and :math:`k_0` (precision-like), of which it is a harmonic mean:
+        Kappa can be derived by correcting either Accuracy (Simple Matching
+        Coefficient, Rand Index) or F1-score (Dice Coefficient) for chance.
+        Kappa can be decomposed into a pair of components (regression
+        coefficients), :math:`k_1` (recall-like) and :math:`k_0`
+        (precision-like), of which it is a harmonic mean:
 
         .. math::
 
@@ -1583,14 +1602,14 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
             k_0 = \\frac{cov}{p_2 q_1}.
 
-        It is interesting to note that if one takes a geometric mean of the
-        above two components, one obtains Matthews' Correlation Coefficient.
-        The latter is also obtained from a geometric mean of informedness and
-        markedness (which are similar to, but not the same, as :math:`k_1` and
-        :math:`k_0`).  Unlike informedness and markedness, :math:`k_1` and
-        :math:`k_0` don't have a lower bound.  For that reason, when
-        characterizing one-way dependence in a 2x2 confusion matrix, it is
-        arguably better to use use informedness and markedness.
+        If one takes a geometric mean of the above two components, one will
+        obtain Matthews' Correlation Coefficient.  The latter is also equal to
+        the geometric mean of informedness and markedness (which are similar
+        to, but not the same, as :math:`k_1` and :math:`k_0`).  Unlike
+        informedness and markedness, :math:`k_1` and :math:`k_0` don't have a
+        lower bound.  For that reason, when characterizing one-way dependence
+        in a 2x2 confusion matrix, it is arguably better to use use
+        informedness and markedness.
 
         As 'd' approaches infinity, kappa turns into Dice coefficient
         (F-score).
