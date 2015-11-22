@@ -550,7 +550,7 @@ class ContingencyTable(CrossTab):
         return self.assignment_score(
             normalize=normalize, model='m3', discrete=False, redraw=redraw)
 
-    def assignment_score(self, normalize=True, model=None,
+    def assignment_score(self, normalize=True, model='m1',
                          discrete=False, redraw=False):
         """Similarity score by solving the Linear Sum Assignment Problem
 
@@ -717,7 +717,7 @@ class ContingencyTable(CrossTab):
     def split_join_similarity_m3(self, normalize=True):
         return self.split_join_similarity(normalize=normalize, model='m3')
 
-    def split_join_similarity(self, normalize=True, model=None):
+    def split_join_similarity(self, normalize=True, model='m1'):
         """Split-join similarity score
 
         Split-join similarity is a two-way assignment-based score first
