@@ -42,7 +42,7 @@ endef
 # Study definition
 COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
 	entropy_metrics mic_scores \
-	adjusted_mutual_info adjusted_rand_index matthews_corr \
+	mp_corr adjusted_mutual_info adjusted_rand_index matthews_corr \
 	informedness markedness \
 	ochiai_coeff dice_coeff odds_similarity \
 	assignment_score split_join_similarity talburt_wang_index \
