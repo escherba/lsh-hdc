@@ -205,7 +205,7 @@ def run(args):
 
 def get_conf(obj):
     try:
-        return obj.pairwise_
+        return obj.pairwise
     except AttributeError:
         return obj
 
@@ -234,7 +234,7 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
         word = "fewer" if actual_neg_ratio < 0.0 else "more"
         if with_warnings:
             warnings.warn("{:.1%} {} negatives than expected. Got: {} (expected: {}. Recommended population_size: {})"
-                        .format(abs(actual_neg_ratio), word, num_neg, int(expected_num_neg), int(expected_num_neg + num_pos)))
+                          .format(abs(actual_neg_ratio), word, num_neg, int(expected_num_neg), int(expected_num_neg + num_pos)))
 
     # the larger the cluster, the more probable it is some unclustered
     # items belong to it
@@ -339,11 +339,13 @@ class Grid(object):
                 "result": self.show_cluster(idx),
                 "inverse": self.show_cluster(idx, inverse=True)}
 
-    def matrix_from_labels(self, *args):
+    @staticmethod
+    def matrix_from_labels(*args):
         ltrue, lpred = args
         return ClusteringMetrics.from_labels(ltrue, lpred)
 
-    def matrix_from_matrices(self, *args):
+    @staticmethod
+    def matrix_from_matrices(*args):
         arr = args[0]
         return ConfusionMatrix2.from_ccw(*arr)
 
@@ -476,8 +478,7 @@ class Grid(object):
             result_row = {}
             for score_name, scores0 in result0.iteritems():
                 scores1 = result1[score_name]
-                rc = RocCurve.from_scores(scores0, scores1)
-                auc_score = rc.auc_score()
+                auc_score = RocCurve.from_scores(scores0, scores1).auc_score()
                 result_row[score_name] = auc_score
                 if plot:
                     hmin0, hmax0 = minmaxr(scores0)
@@ -520,9 +521,10 @@ class Grid(object):
             seen_pairs.add((lbl1, lbl2))
             seen_pairs.add((lbl2, lbl1))
 
-    def plot(self, pairs, xlim=None, ylim=None, title=None,
-             dither=0.0002, marker='.', s=0.01, color='black', alpha=1.0,
-             save_to=None, label=None, xlabel=None, ylabel=None, **kwargs):
+    @staticmethod
+    def plot(pairs, xlim=None, ylim=None, title=None, dither=0.0002,
+             marker='.', s=0.01, color='black', alpha=1.0, save_to=None,
+             label=None, xlabel=None, ylabel=None, **kwargs):
         from matplotlib import pyplot as plt
         fig, ax = plt.subplots()
         for (xs, ys), dither_, marker_, s_, color_, label_, alpha_ in \

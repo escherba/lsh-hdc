@@ -96,25 +96,8 @@ from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import iter_items, isiterable
 from lsh_hdc.utils import randround
-from lsh_hdc.entropy import fentropy, nchoose2, emi_from_margins, \
-    assignment_cost
-from lsh_hdc.hungarian import linear_sum_assignment
-
-
-def plen(iterable):
-    """Consumes an iterator and returns number of non-zero values
-
-    Also works on all iterables.
-
-    ::
-
-        >>> g = (x for x in [0, 1, 2, 3])
-        >>> plen(g)
-        3
-        >>> plen([0, 1, 2, 3])
-        3
-    """
-    return sum(bool(el) for el in iterable)
+from lsh_hdc.entropy import fentropy, fnum_pairs, fsum_pairs, \
+    emi_from_margins, assignment_cost
 
 
 def _div(numer, denom):
@@ -243,10 +226,11 @@ class ContingencyTable(CrossTab):
         self._expected_freqs_ = {}
         self._expected_freqs_discrete_ = {}
 
-    def to_array(self):
+    def to_array(self, default=0, cpad=False, rpad=False):
         """Convert to NumPy array
         """
-        return np.array(self.to_rows())
+        rows = self.to_rows(default=default, cpad=cpad, rpad=rpad)
+        return np.array(rows)
 
     # Factory methods
 
@@ -319,7 +303,7 @@ class ContingencyTable(CrossTab):
         return table
 
     @staticmethod
-    def _normalize_measure(value, maximum, center=0.0):
+    def _normalize_measure(value, maximum=1.0, center=0.0):
         """Normalize to maximum with optional centering
         """
         if isiterable(value):
@@ -550,21 +534,6 @@ class ContingencyTable(CrossTab):
         ami = (mi - emi) / (mi_max - emi)
         return ami
 
-    def assignment_score_slow(self, normalize=True):
-        """Calls Python/Numpy implementation of the Hungarian method
-
-        Since the original implementation of the Hungarian algorithm is
-        designed to minimize cost, we produce a negative of the frequency
-        matrix in order to maximize it. The obtained cost assignment is then
-        normalized by its maximum, which is N.
-        """
-        cost_matrix = -self.to_array()
-        ris, cis = linear_sum_assignment(cost_matrix)
-        score = -cost_matrix[ris, cis].sum()
-        if normalize:
-            score = _div(score, self.grand_total)
-        return score
-
     def assignment_score_m1(self, normalize=True, redraw=False):
         return self.assignment_score(
             normalize=normalize, model='m1', discrete=False, redraw=redraw)
@@ -650,8 +619,7 @@ class ContingencyTable(CrossTab):
             self._assignment_cost = cost
 
         N = self.grand_total
-        R = len(self.row_totals)
-        C = len(self.col_totals)
+        R, C = self.shape
 
         if model is None:
             null_cost = 0
@@ -792,22 +760,19 @@ class ContingencyTable(CrossTab):
         """
         pa_B = sum(max(row) for row in self.iter_rows())
         pb_A = sum(max(col) for col in self.iter_cols())
-
         score = pa_B + pb_A
-        N = float(self.grand_total)
+
+        N = self.grand_total
+        R, C = self.shape
 
         if model is None:
             null_score = 0
         elif model == 'm1':         # only N is fixed
-            R = len(self.row_totals)
-            C = len(self.col_totals)
-            null_score = N / R + N / C
+            null_score = N / float(R) + N / float(C)
         elif model == 'm2r':        # fixed row margin
-            C = len(self.col_totals)
-            null_score = max(self.row_totals.itervalues()) + N / C
+            null_score = max(self.row_totals.itervalues()) + N / float(C)
         elif model == 'm2c':        # fixed column margin
-            R = len(self.row_totals)
-            null_score = N / R + max(self.col_totals.itervalues())
+            null_score = N / float(R) + max(self.col_totals.itervalues())
         elif model == 'm3':         # both row and column margins fixed
             null_score = \
                 max(self.row_totals.itervalues()) + \
@@ -877,9 +842,11 @@ class ContingencyTable(CrossTab):
         """Talburt-Wang index of similarity of two partitions
 
         On sparse matrices, the resolving power of this measure asymptotically
-        approaches that of assignment-based scores likes ``assignment_score``
+        approaches that of assignment-based scores such as ``assignment_score``
         and ``split_join_similarity``, however on dense matrices this measure
-        performs more poorly than the other two mentioned.
+        will not perform well due to its reliance on category cardinalities
+        (how many types were seen) rather than on observation counts (how many
+        instances of each type were seen).
 
         A relatively decent clustering::
 
@@ -906,20 +873,19 @@ class ContingencyTable(CrossTab):
                applications, 1-22.
                <http://www.igi-global.com/chapter/algebraic-approach-data-quality-metrics/23022>`_
         """
-        A_card = plen(self.iter_row_totals())
-        B_card = plen(self.iter_col_totals())
-        V_card = plen(self.itervalues())
+        A_card, B_card = self.shape
+        V_card = len(self)
         return _div(sqrt(A_card * B_card), V_card)
 
     def muc_scores(self):
         """MUC similarity indices for coreference scoring
 
-        As described in [1]_. The compound fscore-like metric has quite good
-        resolving power when comparing bad models with worse ones, similar to
+        Implemented after description in [1]_. The compound fscore-like metric
+        has good resolving power on sparse models, similar to
         ``fowlkes_mallows`` (pairwise ``ochiai_coeff``) and to pairwise
-        ``odds_similarity``, however it has poor range properties (its values
-        tend to be very close to 1, and therefore it is difficult to use this
-        measure to compare two decently performing models).
+        ``odds_similarity``, however it becomes useless on dense matrices since
+        it relies on category cardinalities (how many types were seen) rather
+        than on observation counts (how many instances of each type were seen).
 
         ::
 
@@ -948,9 +914,8 @@ class ContingencyTable(CrossTab):
                Linguistics.
                <http://www.aclweb.org/anthology/M/M95/M95-1005.pdf>`_
         """
-        A_card = plen(self.iter_row_totals())
-        B_card = plen(self.iter_col_totals())
-        V_card = plen(self.itervalues())
+        A_card, B_card = self.shape
+        V_card = len(self)
         N = self.grand_total
 
         recall = _div(N - V_card,  N - A_card)
@@ -1017,10 +982,53 @@ class ClusteringMetrics(ContingencyTable):
 
     def __init__(self, *args, **kwargs):
         ContingencyTable.__init__(self, *args, **kwargs)
-        self._pairwise_ = None
+        self._pairwise = None
+        self._pairwise_models = {}
+
+    def pairwise_(self, model=None):
+
+        # check cache first
+        if model is None:
+            return self.pairwise
+        else:
+            result = self._pairwise_models.get(model)
+            if result is not None:
+                return result
+
+        # not found in cache
+        R, C = self.shape
+        N = self.grand_total
+        total_pairs = fnum_pairs(N)
+
+        if model == 'm1':
+            actual_positives = R * fnum_pairs(N / float(R))
+            called_positives = C * fnum_pairs(N / float(C))
+            TP = R * C * fnum_pairs(N / float(R * C))
+        elif model == 'm2r':
+            actual_positives = fsum_pairs(self.iter_row_totals())
+            called_positives = C * fnum_pairs(N / float(C))
+            TP = sum(rm * (rm - C) for rm in self.iter_row_totals()) / float(2 * C)
+        elif model == 'm2c':
+            actual_positives = R * fnum_pairs(N / float(R))
+            called_positives = fsum_pairs(self.iter_col_totals())
+            TP = sum(cm * (cm - R) for cm in self.iter_col_totals()) / float(2 * R)
+        elif model == 'm3':
+            actual_positives = fsum_pairs(self.iter_row_totals())
+            called_positives = fsum_pairs(self.iter_col_totals())
+            TP = sum(rm * cm * (rm * cm - N) for rm, cm, _ in self.iter_all_with_margins()) / float(2 * N * N)
+        else:
+            raise NotImplementedError(model)
+
+        FN = actual_positives - TP
+        FP = called_positives - TP
+        TN = total_pairs - TP - FP - FN
+
+        self._pairwise_models[model] = result = \
+            ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
+        return result
 
     @property
-    def pairwise_(self):
+    def pairwise(self):
         """Confusion matrix on all pair assignments from two partitions
 
         A partition of N is a set of disjoint clusters s.t. every point in N
@@ -1040,15 +1048,15 @@ class ClusteringMetrics(ContingencyTable):
         original partitions are not symmetric.
 
         """
-        pairwise = self._pairwise_
+        pairwise = self._pairwise
         if pairwise is None:
-            actual_positives = sum(nchoose2(b) for b in self.iter_row_totals())
-            called_positives = sum(nchoose2(a) for a in self.iter_col_totals())
-            TP = sum(nchoose2(cell) for cell in self.itervalues())
+            actual_positives = fsum_pairs(self.iter_row_totals())
+            called_positives = fsum_pairs(self.iter_col_totals())
+            TP = fsum_pairs(self.itervalues())
             FN = actual_positives - TP
             FP = called_positives - TP
-            TN = nchoose2(self.grand_total) - TP - FP - FN
-            pairwise = self._pairwise_ = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
+            TN = fnum_pairs(self.grand_total) - TP - FP - FN
+            pairwise = self._pairwise = ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
         return pairwise
 
     def get_score(self, scoring_method, *args, **kwargs):
@@ -1057,7 +1065,7 @@ class ClusteringMetrics(ContingencyTable):
         try:
             method = getattr(self, scoring_method)
         except AttributeError:
-            method = getattr(self.pairwise_, scoring_method)
+            method = getattr(self.pairwise, scoring_method)
         return method(*args, **kwargs)
 
     def adjusted_rand_index(self):
@@ -1066,21 +1074,42 @@ class ClusteringMetrics(ContingencyTable):
         This is a memory-efficient replacement for a similar Scikit-Learn
         function.
         """
-        return self.pairwise_.kappa()
+        return self.pairwise.kappa()
+
+    def ari_similarity_m1(self):
+        return self.ari_similarity(model='m1')
+
+    def ari_similarity_m2r(self):
+        return self.ari_similarity(model='m2r')
+
+    def ari_similarity_m2c(self):
+        return self.ari_similarity(model='m2c')
+
+    def ari_similarity_m3(self):
+        return self.ari_similarity(model='m3')
+
+    def ari_similarity(self, model=None):
+        """Like ARI but adjusts to 'true' null and is always positive
+        """
+        null = self.pairwise_(model)
+        act_score = self.pairwise.TP + self.pairwise.TN
+        exp_score = null.TP + null.TN
+        max_score = null.grand_total
+        return self._normalize_measure(act_score, max_score, exp_score)
 
     def rand_index(self):
         """Pairwise accuracy (uncorrected for chance)
 
         Don't use this metric; it is only added here as the "worst reference"
         """
-        return self.pairwise_.accuracy()
+        return self.pairwise.accuracy()
 
     def fowlkes_mallows(self):
         """Fowlkes-Mallows index for partition comparison
 
         Defined as the Ochiai coefficient on the pairwise matrix
         """
-        return self.pairwise_.ochiai_coeff()
+        return self.pairwise.ochiai_coeff()
 
 
 confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
@@ -1567,7 +1596,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
             >>> clusters = [[0, 0], [0, 0, 0, 0], [1, 1, 1, 1]]
             >>> t = ClusteringMetrics.from_clusters(clusters)
-            >>> t.pairwise_.loevinger_coeff()
+            >>> t.pairwise.loevinger_coeff()
             1.0
 
         At the same time, kappa and Matthews coefficients are 0.63 and 0.68,
@@ -1576,7 +1605,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
             >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
             >>> t = ClusteringMetrics.from_clusters(clusters)
-            >>> t.pairwise_.loevinger_coeff()
+            >>> t.pairwise.loevinger_coeff()
             1.0
 
         Loevinger's coefficient has a unique property: all relevant two-way

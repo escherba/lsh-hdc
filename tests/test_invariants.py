@@ -15,6 +15,21 @@ from sklearn.metrics import \
     adjusted_rand_score as sklearn_ari, \
     mutual_info_score as sklearn_mi, \
     adjusted_mutual_info_score as sklearn_ami
+from lsh_hdc.hungarian import linear_sum_assignment
+
+
+def assignment_score_slow(cm, normalize=True, rpad=False, cpad=False):
+    """Calls Python/Numpy implementation of the Hungarian method
+
+    Testing version (uses SciPy's implementation)
+
+    """
+    cost_matrix = -cm.to_array(rpad=rpad, cpad=cpad)
+    ris, cis = linear_sum_assignment(cost_matrix)
+    score = -cost_matrix[ris, cis].sum()
+    if normalize:
+        score = _div(score, cm.grand_total)
+    return score
 
 
 def check_with_nans(num1, num2, places=None, msg=None, delta=None, ensure_nans=True):
@@ -44,7 +59,19 @@ def test_RxC_general():
                               size=(size,))
         cm = ClusteringMetrics.from_labels(a, b)
 
+        assert_almost_equal(
+            cm.assignment_score(model=None),
+            assignment_score_slow(cm, rpad=False, cpad=False))
+
+        assert_almost_equal(
+            cm.assignment_score(model=None),
+            assignment_score_slow(cm, rpad=True, cpad=True))
+
         for model in ['m1', 'm2r', 'm2c', 'm3']:
+
+            pairwise1 = cm.expected(model=model).pairwise.to_ccw()
+            pairwise2 = cm.pairwise_(model).to_ccw()
+            assert_array_almost_equal(pairwise1, pairwise2)
 
             assert_almost_equal(
                 cm.grand_total,
