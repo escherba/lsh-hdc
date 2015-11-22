@@ -1372,7 +1372,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, _, b = self.to_ccw()
         return _div(a, sqrt((a + b) * (a + c)))
 
-    def sokal_sneath_adj(self):
+    def sokal_sneath_coeff_adj(self):
         """Sokal and Sneath coefficient adjusted for chance
         """
         return harmonic_mean(*self.adjust_to_null(self.sokal_sneath_coeff, model='m3'))
