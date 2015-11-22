@@ -985,48 +985,6 @@ class ClusteringMetrics(ContingencyTable):
         self._pairwise = None
         self._pairwise_models = {}
 
-    def pairwise_(self, model=None):
-
-        # check cache first
-        if model is None:
-            return self.pairwise
-        else:
-            result = self._pairwise_models.get(model)
-            if result is not None:
-                return result
-
-        # not found in cache
-        R, C = self.shape
-        N = self.grand_total
-        total_pairs = fnum_pairs(N)
-
-        if model == 'm1':
-            actual_positives = R * fnum_pairs(N / float(R))
-            called_positives = C * fnum_pairs(N / float(C))
-            TP = R * C * fnum_pairs(N / float(R * C))
-        elif model == 'm2r':
-            actual_positives = fsum_pairs(self.iter_row_totals())
-            called_positives = C * fnum_pairs(N / float(C))
-            TP = sum(rm * (rm - C) for rm in self.iter_row_totals()) / float(2 * C)
-        elif model == 'm2c':
-            actual_positives = R * fnum_pairs(N / float(R))
-            called_positives = fsum_pairs(self.iter_col_totals())
-            TP = sum(cm * (cm - R) for cm in self.iter_col_totals()) / float(2 * R)
-        elif model == 'm3':
-            actual_positives = fsum_pairs(self.iter_row_totals())
-            called_positives = fsum_pairs(self.iter_col_totals())
-            TP = sum(rm * cm * (rm * cm - N) for rm, cm, _ in self.iter_all_with_margins()) / float(2 * N * N)
-        else:
-            raise NotImplementedError(model)
-
-        FN = actual_positives - TP
-        FP = called_positives - TP
-        TN = total_pairs - TP - FP - FN
-
-        self._pairwise_models[model] = result = \
-            ConfusionMatrix2.from_ccw(TP, FP, TN, FN)
-        return result
-
     @property
     def pairwise(self):
         """Confusion matrix on all pair assignments from two partitions
@@ -1075,27 +1033,6 @@ class ClusteringMetrics(ContingencyTable):
         function.
         """
         return self.pairwise.kappa()
-
-    def ari_similarity_m1(self):
-        return self.ari_similarity(model='m1')
-
-    def ari_similarity_m2r(self):
-        return self.ari_similarity(model='m2r')
-
-    def ari_similarity_m2c(self):
-        return self.ari_similarity(model='m2c')
-
-    def ari_similarity_m3(self):
-        return self.ari_similarity(model='m3')
-
-    def ari_similarity(self, model=None):
-        """Like ARI but adjusts to 'true' null and is always positive
-        """
-        null = self.pairwise_(model)
-        act_score = self.pairwise.TP + self.pairwise.TN
-        exp_score = null.TP + null.TN
-        max_score = null.grand_total
-        return self._normalize_measure(act_score, max_score, exp_score)
 
     def rand_index(self):
         """Pairwise accuracy (uncorrected for chance)
