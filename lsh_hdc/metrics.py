@@ -883,9 +883,9 @@ class ContingencyTable(CrossTab):
         Implemented after description in [1]_. The compound fscore-like metric
         has good resolving power on sparse models, similar to
         ``fowlkes_mallows`` (pairwise ``ochiai_coeff``) and to pairwise
-        ``odds_similarity``, however it becomes useless on dense matrices since
-        it relies on category cardinalities (how many types were seen) rather
-        than on observation counts (how many instances of each type were seen).
+        ``odds_scores``, however it becomes useless on dense matrices as it
+        relies on category cardinalities (how many types were seen) rather than
+        on observation counts (how many instances of each type were seen).
 
         ::
 
