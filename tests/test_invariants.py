@@ -146,9 +146,15 @@ def test_2x2_invariants():
 
         # kappas
         actual_kappa = cm.kappa()
-        expected_kappa = harmonic_mean(*cm.kappas()[:2])
-        check_with_nans(actual_kappa, expected_kappa, 4, ensure_nans=False,
-                        msg="Kappa must equal expectd value")
+        expected_kappa_1 = harmonic_mean(*cm.kappas()[:2])
+        check_with_nans(actual_kappa, expected_kappa_1, 4, ensure_nans=False,
+                        msg="Kappa must equal expected value")
+        expected_kappa_2 = harmonic_mean(*cm.adjust_to_null(cm.accuracy, model='m3'))
+        check_with_nans(actual_kappa, expected_kappa_2, 4, ensure_nans=False,
+                        msg="Kappa must equal expected value")
+        expected_kappa_3 = harmonic_mean(*cm.adjust_to_null(cm.dice_coeff, model='m3'))
+        check_with_nans(actual_kappa, expected_kappa_3, 4, ensure_nans=False,
+                        msg="Kappa must equal expected value")
 
         # odds ratio and Yule's Q
         actual_odds_ratio = cm.DOR()
