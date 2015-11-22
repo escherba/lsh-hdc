@@ -69,6 +69,10 @@ def test_RxC_general():
 
         for model in ['m1', 'm2r', 'm2c', 'm3']:
 
+            pairwise1 = cm.expected(model=model).pairwise.to_ccw()
+            pairwise2 = cm.pairwise_(model).to_ccw()
+            assert_array_almost_equal(pairwise1, pairwise2)
+
             assert_almost_equal(
                 cm.grand_total,
                 sum(cm.expected(model=model).itervalues()))
