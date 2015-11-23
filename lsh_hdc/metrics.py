@@ -1478,13 +1478,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def ochiai_coeff(self):
         """Ochiai similarity coefficient (Fowlkes-Mallows)
 
-        Gives cosine similarity for a 2x2 table. Also known as Fowlkes-Mallows
-        Index in clustering evaluation.
+        One interpretation of this coefficient that it is equal to the
+        geometric mean of the conditional probability of an element (in the
+        case of pairwise clustering comparison, a pair of elements) belonging
+        to the same cluster given that they belong to the same class [1]_.
 
-        This similarity index has an interpretation that it is the geometric
-        mean of the conditional probability of an element (in the case of
-        pairwise clustering comparison, a pair of elements) belonging to the
-        same cluster given that they belong to the same class [1]_.
+        Synonyms: Cosine Similarity, Fowlkes-Mallows Index
 
         See Also
         --------
