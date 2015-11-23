@@ -1387,9 +1387,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         When adjusted for chance, this coefficient becomes identical to
         ``kappa`` [1]_.
 
+        Since this coefficient is monotonic with respect to Jaccard and Sokal
+        Sneath coefficients, its resolving power is identical to that of the
+        other two.
+
         See Also
         --------
-        fscore, jaccard_coeff, ochiai_coeff
+        jaccard_coeff, sokal_sneath_coeff
 
         References
         ----------
@@ -1411,6 +1415,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         conditional adjustment was found to be equally or better performing in
         terms of resolving power than the approximations to the correct
         expectation described in [1]_.
+
+        In terms of resolving power, the null-adjusted version of this index is
+        identical to ``kappa``.
 
         References
         ----------
@@ -1436,11 +1443,15 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         matrices where either FP or FN are close to zero, its scale becomes
         equivalent to the scale of either recall or precision respectively.
 
+        Since this coefficient is monotonic with respect to Dice (F-score) and
+        Sokal Sneath coefficients, its resolving power is identical to that of
+        the other two.
+
         Synonyms: critical success index
 
         See Also
         --------
-        dice_coeff, ochiai_coeff
+        dice_coeff, sokal_sneath_coeff
         """
         a, c, _, b = self.to_ccw()
         return _div(a, a + b + c)
@@ -1482,7 +1493,21 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return _div(a, sqrt((a + b) * (a + c)))
 
     def sokal_sneath_coeff_adj(self):
-        """Sokal and Sneath coefficient adjusted for chance
+        """Sokal and Sneath coefficient adjusted to the null model
+
+        See note under ``jaccard_coeff_adj`` about the (in)appropriateness of
+        the adjustment. In terms of resolving power, the null-adjusted version
+        of this index is identical to ``kappa``.
+
+        Since this coefficient is monotonic with respect to Jaccard and Dice
+        coefficients, its resolving power is identical to that of the other
+        two.
+
+        See Also
+        --------
+
+        dice_coeff, jaccard_coeff
+
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1818,6 +1843,10 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         MCC, based on a mean of informedness and markedness, except uses a
         harmonic mean instead of geometric. Like Kappa, turns into Dice
         coefficient (F-score) as 'd' approaches infinity.
+
+        On typical problems, the 'resolving power' of this coefficient is
+        nearly identical to ``kappa`` and is only very slightly below Matthews'
+        correlation coefficient.
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d

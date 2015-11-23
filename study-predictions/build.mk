@@ -43,8 +43,8 @@ COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
 	entropy_metrics mic_scores \
 	mp_corr adjusted_mutual_info adjusted_rand_index matthews_corr \
 	informedness markedness \
-	ochiai_coeff dice_coeff sokal_sneath_coeff jaccard_coeff yule_q yule_y \
-	ochiai_coeff_adj jaccard_coeff_adj sokal_sneath_coeff_adj \
+	ochiai_coeff dice_coeff yule_q yule_y \
+	ochiai_coeff_adj \
 	odds_scores1 odds_scores2 odds_scores1_adj odds_scores2_adj \
 	assignment_score split_join_similarity talburt_wang_index \
 	vi_similarity \
