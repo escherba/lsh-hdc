@@ -40,22 +40,20 @@ endef
 
 # Study definition
 COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
-	entropy_metrics mic_scores \
-	mp_corr adjusted_mutual_info adjusted_rand_index matthews_corr \
-	informedness markedness \
-	ochiai_coeff dice_coeff yule_q yule_y \
-	ochiai_coeff_adj \
+	entropy_metrics mic_scores adjusted_mutual_info vi_similarity \
+	mp_corr adjusted_rand_index matthews_corr adjusted_fowlkes_mallows \
+	informedness markedness precision recall \
+	fowlkes_mallows dice_coeff rand_index \
+	yule_q yule_y \
 	odds_scores1 odds_scores2 odds_scores1_adj odds_scores2_adj \
 	assignment_score split_join_similarity talburt_wang_index \
-	vi_similarity \
 	muc_scores bc_metrics
 
 PLOT_METRICS := $(EXP_PLOT_METRICS) $(COMPUTE_METRICS) \
-	entropy_metrics-2 \
+	entropy_metrics-2 mic_scores-2 \
 	odds_scores1-2 odds_scores2-2 odds_scores1_adj-2 odds_scores2_adj-2 \
-	muc_scores-2 \
-	bc_metrics-2 \
-	mic_scores-2
+	odds_scores1-3 odds_scores2-3 odds_scores1_adj-3 odds_scores2_adj-3 \
+	muc_scores-2 bc_metrics-2
 
 MAPPER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions mapper \
 	--sim_size 10000 \

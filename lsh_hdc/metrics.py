@@ -282,7 +282,7 @@ class ContingencyTable(CrossTab):
         else:
             table = self.expected_freqs_(model)
 
-        # continous
+        # continuous
         if not discrete:
             if table is None:
                 raise RuntimeError("line should be unreachable")
@@ -990,7 +990,7 @@ class ClusteringMetrics(ContingencyTable):
         """Confusion matrix on all pair assignments from two partitions
 
         A partition of N is a set of disjoint clusters s.t. every point in N
-        belongs to one and only one cluster and every cluster consits of at
+        belongs to one and only one cluster and every cluster consists of at
         least one point. Given two partitions A and B and a co-occurrence
         matrix of point pairs,
 
@@ -1278,7 +1278,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return _div(ad, bc)
 
     def odds_scores1_adj(self):
-        """Asymmetric rescalings of odds ratio adjusted to null model
+        """Asymmetric rescaling of odds ratio-derived scores adjusted to null model
         """
         ps, qs = self.adjust_to_null(self.odds_scores1, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1304,12 +1304,14 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
-        r0 = _div(a * d, p2 * q2)
-        r1 = _div(a * d, p1 * q1)
-        return r0, r1, harmonic_mean(r0, r1)
+        ad = a * d
+        p1q1, p2q2 = p1 * q1, p2 * q2
+        r0, r1 = _div(ad, p2q2), _div(ad, p1q1)
+        r2 = _div(2 * ad, p1q1 + p2q2)  # harmonic mean of r0 and r1
+        return r0, r1, r2, geometric_mean(r0, r1)
 
     def odds_scores2_adj(self):
-        """Asymmetric rescalings of odds ratio adjusted to null model
+        """Asymmetric rescaling of odds ratio-derived scores adjusted to null model
         """
         ps, qs = self.adjust_to_null(self.odds_scores2, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1335,9 +1337,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
-        r0 = _div(a * d, p2 * q1)
-        r1 = _div(a * d, p1 * q2)
-        return r0, r1, harmonic_mean(r0, r1)
+        ad = a * d
+        p2q1, p1q2 = p2 * q1, p1 * q2
+        r0, r1 = _div(ad, p2q1), _div(ad, p1q2)
+        r2 = _div(2 * ad, p1q2 + p2q1)  # harmonic mean of r0 and r1
+        return r0, r1, r2, geometric_mean(r0, r1)
 
     def risk_scores_adj(self):
         """Relative risks normalized and adjusted to null model
@@ -1418,6 +1422,10 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         In terms of resolving power, the null-adjusted version of this index is
         identical to ``kappa``.
+
+        See Also
+        --------
+        sokal_sneath_coeff_adj
 
         References
         ----------
@@ -1505,8 +1513,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         See Also
         --------
-
-        dice_coeff, jaccard_coeff
+        jaccard_coeff_adj
 
         """
         a, c, d, b = self.to_ccw()
@@ -1679,9 +1686,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def kappas(self):
         """Kappa and its harmonic components
 
-        ``kappa0`` is precisely ``precision`` corrected for chance, while
-        ``kappa1`` is precisely ``recall`` corrected for chance. Their harmonic
-        mean is precisely ``kappa`` agreement index.
+        Of the three measure, :math:`\\kappa_0` is exactly ``precision``
+        corrected for chance, while :math:`\\kappa_1` is exactly ``recall``
+        corrected for chance. Their harmonic mean is equal to ``kappa``
+        agreement index.
+
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1747,20 +1756,20 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         Kappa can be derived by correcting either Accuracy (Simple Matching
         Coefficient, Rand Index) or F1-score (Dice Coefficient) for chance.
         Kappa can be decomposed into a pair of components (regression
-        coefficients), :math:`k_1` (recall-like) and :math:`k_0`
+        coefficients), :math:`\\kappa_1` (recall-like) and :math:`\\kappa_0`
         (precision-like), of which it is a harmonic mean:
 
         .. math::
 
-            k_1 = \\frac{cov}{p_1 q_2},
+            \\kappa_1 = \\frac{cov}{p_1 q_2},
 
-            k_0 = \\frac{cov}{p_2 q_1}.
+            \\kappa_0 = \\frac{cov}{p_2 q_1}.
 
-        If one takes a geometric mean of the above two components, one will
-        obtain Matthews' Correlation Coefficient.  The latter is also equal to
-        the geometric mean of informedness and markedness (which are similar
-        to, but not the same, as :math:`k_1` and :math:`k_0`).  Unlike
-        informedness and markedness, :math:`k_1` and :math:`k_0` don't have a
+        The geometric mean of the above two components equals to Matthews'
+        Correlation Coefficient.  The latter is also equal to the geometric
+        mean of informedness and markedness (which are similar to, but not the
+        same, as :math:`\\kappa_1` and :math:`\\kappa_0`).  Unlike informedness
+        and markedness, :math:`\\kappa_1` and :math:`\\kappa_0` don't have a
         lower bound.  For that reason, when characterizing one-way dependence
         in a 2x2 confusion matrix, it is arguably better to use use
         informedness and markedness.
