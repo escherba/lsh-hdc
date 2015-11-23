@@ -1308,7 +1308,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         p1q1, p2q2 = p1 * q1, p2 * q2
         r0, r1 = _div(ad, p2q2), _div(ad, p1q1)
         r2 = _div(2 * ad, p1q1 + p2q2)  # harmonic mean of r0 and r1
-        return r0, r1, r2, geometric_mean(r0, r1)
+        return r0, r1, r2
 
     def odds_scores2_adj(self):
         """Asymmetric rescaling of odds ratio-derived scores adjusted to null model
@@ -1341,7 +1341,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         p2q1, p1q2 = p2 * q1, p1 * q2
         r0, r1 = _div(ad, p2q1), _div(ad, p1q2)
         r2 = _div(2 * ad, p1q2 + p2q1)  # harmonic mean of r0 and r1
-        return r0, r1, r2, geometric_mean(r0, r1)
+        return r0, r1, r2
 
     def risk_scores_adj(self):
         """Relative risks normalized and adjusted to null model
