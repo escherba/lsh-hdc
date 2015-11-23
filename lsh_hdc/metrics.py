@@ -1856,9 +1856,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         harmonic mean instead of geometric. Like Kappa, turns into Dice
         coefficient (F-score) as 'd' approaches infinity.
 
-        On typical problems, the 'resolving power' of this coefficient is
-        nearly identical to ``kappa`` and is only very slightly below Matthews'
-        correlation coefficient.
+        On typical problems, the resolving power of this coefficient is nearly
+        identical to that of Cohen's Kappa and is only very slightly below that
+        of Matthews' correlation coefficient.
 
         See Also
         --------
