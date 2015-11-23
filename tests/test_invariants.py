@@ -146,12 +146,18 @@ def test_2x2_invariants():
 
         # kappas
         actual_kappa = cm.kappa()
+
+        # kappa is the same as harmonic mean of kappa components
         expected_kappa_1 = harmonic_mean(*cm.kappas()[:2])
         check_with_nans(actual_kappa, expected_kappa_1, 4, ensure_nans=False,
                         msg="Kappa must equal expected value")
+
+        # kappa is the same as accuracy adjusted for chance
         expected_kappa_2 = harmonic_mean(*cm.adjust_to_null(cm.accuracy, model='m3'))
         check_with_nans(actual_kappa, expected_kappa_2, 4, ensure_nans=False,
                         msg="Kappa must equal expected value")
+
+        # kappa is the same as Dice coeff adjusted for chance
         expected_kappa_3 = harmonic_mean(*cm.adjust_to_null(cm.dice_coeff, model='m3'))
         check_with_nans(actual_kappa, expected_kappa_3, 4, ensure_nans=False,
                         msg="Kappa must equal expected value")
@@ -187,3 +193,18 @@ def test_2x2_invariants():
         actual_ss2 = cm.sokal_sneath_coeff()
         check_with_nans(actual_ss2, expected_ss2, 6, ensure_nans=False,
                         msg="SS2 coeff must match expected value")
+
+        # adjusted ochiai
+        actual = cm.ochiai_coeff_adj()
+        expected = harmonic_mean(*cm.adjust_to_null(cm.ochiai_coeff, model='m3'))
+        check_with_nans(actual, expected, 6, ensure_nans=False)
+
+        # adjusted jaccard
+        actual = cm.jaccard_coeff_adj()
+        expected = harmonic_mean(*cm.adjust_to_null(cm.jaccard_coeff, model='m3'))
+        check_with_nans(actual, expected, 6, ensure_nans=False)
+
+        # adjusted sokal sneath
+        actual = cm.sokal_sneath_coeff_adj()
+        expected = harmonic_mean(*cm.adjust_to_null(cm.sokal_sneath_coeff, model='m3'))
+        check_with_nans(actual, expected, 6, ensure_nans=False)
