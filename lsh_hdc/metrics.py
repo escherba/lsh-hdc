@@ -1778,6 +1778,10 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         Synonyms: Adjusted Rand Index, Heidke Skill Score
 
+        See Also
+        --------
+        mp_corr, matthews_corr
+
         References
         ----------
 
@@ -1855,6 +1859,10 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         On typical problems, the 'resolving power' of this coefficient is
         nearly identical to ``kappa`` and is only very slightly below Matthews'
         correlation coefficient.
+
+        See Also
+        --------
+        kappa, matthews_corr
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1874,17 +1882,41 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """Matthews Correlation Coefficient (Phi coefficient)
 
         MCC is directly related to the Chi-square statistic. Its value is equal
-        to the Chi-square value normalized by the maximum value Chi-Square
+        to the Chi-square value normalized by the maximum value the Chi-square
         can achieve with given margins (for a 2x2 table, the maximum Chi-square
-        score is equal to the grand total N) transformed to correlation space by
-        taking a square root.
+        score is equal to the grand total N) transformed to correlation space
+        by taking a square root.
 
         MCC is a also a geometric mean of informedness and markedness (the
         regression coefficients of the problem and its dual). As the value of
-        'd' approaches infinity, MCC turns into Ochiai coefficient.
+        'd' approaches infinity, MCC turns into Ochiai coefficient. Its
+        definition as a geometric mean of chance-corrected precision/recall
+        measures gives MCC a nice property in that this index is *unique*. For
+        comparison, ``kappa`` and ``mp_corr`` and not unique because each is a
+        harmonic mean of two slightly differently defined chance corrections of
+        precision and recall. In the case of MCC, regardless of which set of
+        chance-corrected definitions of precision and recall one starts with,
+        one always ends up with the same quantity after taking a geometric
+        mean, and that quantity is MCC.
 
-        Other names for MCC are Phi Coefficient and Yule's Q with correction for
-        chance.
+        The overall performance profile of this measure is similar to that of
+        ``kappa`` and ``mp_corr`` except that, in almost all cases tested, the
+        resolving power tilts very slightly in favor of MCC. For some reason
+        though (rather undeservedly so), this index is rarely used in the
+        context of clustering comparisons, with some exceptions [1]_.
+
+        Synonyms: Phi Coefficient, Yule's Q with correction for chance.
+
+        See Also
+        --------
+        kappa, mp_corr
+
+        References
+        ----------
+
+        .. [1] `Kao, D. (2012). Using Matthews correlation coefficient to
+               cluster annotations.  NextGenetics (personal blog).
+               <http://blog.nextgenetics.net/?e=47>`_
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
