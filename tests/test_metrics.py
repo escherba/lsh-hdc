@@ -8,7 +8,7 @@ from lsh_hdc.metrics import adjusted_rand_score, \
     homogeneity_completeness_v_measure, fentropy, \
     jaccard_similarity, ClusteringMetrics, \
     ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
-    matthews_corr, mutual_info_score, \
+    product_moment, mutual_info_score, \
     adjusted_mutual_info_score, emi_from_margins as emi_cython
 from lsh_hdc.fent import emi_from_margins as emi_fortran
 
@@ -734,18 +734,18 @@ def test_kappa_precalculated():
     # from literature
     assert_almost_equal(cohen_kappa(22, 4, 11, 2),
                         0.67, 2)
-    assert_almost_equal(matthews_corr(22, 4, 11, 2),
+    assert_almost_equal(product_moment(22, 4, 11, 2),
                         0.67, 2)
     assert_almost_equal(cohen_kappa(147, 10, 62, 3),
                         0.86, 2)
-    assert_almost_equal(matthews_corr(147, 10, 62, 3),
+    assert_almost_equal(product_moment(147, 10, 62, 3),
                         0.87, 2)
     # numeric stability cases
     assert_almost_equal(cohen_kappa(69, 1, 3, 11),
                         0.280000, 6)
-    assert_almost_equal(matthews_corr(69, 1, 3, 11),
+    assert_almost_equal(product_moment(69, 1, 3, 11),
                         0.350000, 6)
     assert_almost_equal(cohen_kappa(1, 2, 96, 5),
                         0.191111, 6)
-    assert_almost_equal(matthews_corr(1, 2, 96, 5),
+    assert_almost_equal(product_moment(1, 2, 96, 5),
                         0.203746, 6)

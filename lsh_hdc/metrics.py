@@ -2088,7 +2088,7 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
     return ct.adjusted_mutual_info()
 
 
-def matthews_corr(*args, **kwargs):
+def product_moment(*args, **kwargs):
     """Return MCC score for a 2x2 contingency table
     """
     return ConfusionMatrix2.from_ccw(*args, **kwargs).matthews_corr()
