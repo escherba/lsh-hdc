@@ -1278,7 +1278,14 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return _div(ad, bc)
 
     def odds_scores1_adj(self):
-        """Asymmetric rescaling of odds ratio-derived scores adjusted to null model
+        """Odds ratio-like scores adjusted to null model
+
+        Because of non-linearity, the null model scores do not correspond to
+        the expected ones, so the adjustement is not precisely "correction for
+        chance", yet in practice it works quite well, giving similar resolving
+        power to that of ``ochiai_coeff_adj``. Still, ``ochiai_coeff_adj``
+        should be preferred whenever a compound (mean) measure with similar
+        behvaior is required.
         """
         ps, qs = self.adjust_to_null(self.odds_scores1, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1311,7 +1318,14 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return r0, r1, r2
 
     def odds_scores2_adj(self):
-        """Asymmetric rescaling of odds ratio-derived scores adjusted to null model
+        """Odds ratio-like scores adjusted to null model
+
+        Because of non-linearity, the null model scores do not correspond to
+        the expected ones, so the adjustement is not precisely "correction for
+        chance", yet in practice it works quite well, giving similar resolving
+        power to that of ``ochiai_coeff_adj``. Still, ``ochiai_coeff_adj``
+        should be preferred whenever a compound (mean) measure with similar
+        behvaior is required.
         """
         ps, qs = self.adjust_to_null(self.odds_scores2, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1549,15 +1563,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         In interrater agreement studies, prevalence is high when the proportion
         of agreements on the positive classification differs from that of the
         negative classification.  Example of a confusion matrix with high
-        prevalence:
+        prevalence of negative response (note that this happens regardless of
+        which rater we look at):
 
         .. math::
 
             \\begin{matrix} 3 & 27 \\\\ 28 & 132 \\end{matrix}
-
-        In the example given, both raters agree that there are very few positive
-        examples relative to the number of negatives. In other word, the
-        negative rating is very prevalent.
 
         See Also
         --------
@@ -1578,17 +1589,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         In interrater agreement studies, bias is the extent to which the raters
         disagree on the positive-negative ratio of the binary variable studied.
-        Example of a confusion matrix with high bias:
+        Example of a confusion matrix with high bias of rater A (represented by
+        rows) towards negative rating:
 
         .. math::
 
             \\begin{matrix} 17 & 14 \\\\ 78 & 81 \\end{matrix}
-
-        Note that the rater whose judgment is represented by rows (A) believes
-        there are a lot more negative examples than positive ones, while the
-        rater whose judgment is represented by columns (B) thinks the number of
-        positives is roughly equal to the number of negatives. In other words,
-        the rater A appears to be negatively biased.
 
         See Also
         --------
