@@ -1278,7 +1278,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return _div(ad, bc)
 
     def odds_scores1_adj(self):
-        """Asymmetric rescalings of odds ratio corrected for chance
+        """Asymmetric rescalings of odds ratio adjusted to null model
         """
         ps, qs = self.adjust_to_null(self.odds_scores1, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1309,7 +1309,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return r0, r1, harmonic_mean(r0, r1)
 
     def odds_scores2_adj(self):
-        """Asymmetric rescalings of odds ratio corrected for chance
+        """Asymmetric rescalings of odds ratio adjusted to null model
         """
         ps, qs = self.adjust_to_null(self.odds_scores2, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1340,7 +1340,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return r0, r1, harmonic_mean(r0, r1)
 
     def risk_scores_adj(self):
-        """Relative risks normalized and adjusted for chance
+        """Relative risks normalized and adjusted to null model
         """
         ps, qs = self.adjust_to_null(self.risk_scores, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1715,8 +1715,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         Kappa coefficient is best known in the psychology field where it was
         introduced to measure interrater agreement [1]_. It has also been used
         in replication studies [2]_, clustering evaluation [3]_, image
-        segmentation [4]_, feature selection [5]_ [6]_, and forecasting [7]_. The
-        first derivation of this measure is in [8]_.
+        segmentation [4]_, feature selection [5]_ [6]_, forecasting [7]_, and
+        network link prediction [8]_. The first derivation of this measure is
+        in [9]_.
 
         Kappa can be derived by correcting either Accuracy (Simple Matching
         Coefficient, Rand Index) or F1-score (Dice Coefficient) for chance.
@@ -1785,7 +1786,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                contingency tables. Weather and Forecasting, 5(4), 576-585.
                <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
 
-        .. [8] `Heidke, Paul. "Berechnung des Erfolges und der Gute der
+        .. [8] `Hoffman, M., Steinley, D., & Brusco, M. J. (2015). A note on
+               using the adjusted Rand index for link prediction in networks.
+               Social Networks, 42, 72-79.
+               <http://dx.doi.org/10.1016/j.socnet.2015.03.002>`_
+
+        .. [9] `Heidke, Paul. "Berechnung des Erfolges und der Gute der
                Windstarkevorhersagen im Sturmwarnungsdienst." Geografiska
                Annaler (1926): 301-349.
                <http://www.jstor.org/stable/519729>`_
