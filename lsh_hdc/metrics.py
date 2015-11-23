@@ -1385,17 +1385,41 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         F-score is undefined in that case (because recall is undefined).
 
         When adjusted for chance, this coefficient becomes identical to
-        ``kappa``.
+        ``kappa`` [1]_.
 
         See Also
         --------
         fscore, jaccard_coeff, ochiai_coeff
+
+        References
+        ----------
+
+        .. [1] `Albatineh, A. N., Niewiadomska-Bugaj, M., & Mihalko, D. (2006).
+               On similarity indices and correction for chance agreement.
+               Journal of Classification, 23(2), 301-313.
+               <http://doi.org/10.1007/s00357-006-0017-z>`_
         """
         a, c, _, b = self.to_ccw()
         return _div(2 * a, 2 * a + b + c)
 
     def jaccard_coeff_adj(self):
-        """Jaccard coefficient adjusted for chance
+        """Jaccard coefficient adjusted by subtracting null model
+
+        Note: Due to non-linearity, Jaccard index is outside of L-family of
+        association indices that can be adjusted for chance by subtracting the
+        conditional expectation [1]_.  However empirically, the (incorrect)
+        conditional adjustment was found to be equally or better performing in
+        terms of resolving power than the approximations to the correct
+        expectation described in [1]_.
+
+        References
+        ----------
+
+        .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
+               Jaccard and other similarity indices for chance agreement in
+               cluster analysis. Advances in Data Analysis and Classification,
+               5(3), 179-200.
+               <http://doi.org/10.1007/s11634-011-0090-y>`_
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
