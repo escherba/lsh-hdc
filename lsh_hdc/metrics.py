@@ -1901,9 +1901,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         The overall performance profile of this measure is similar to that of
         ``kappa`` and ``mp_corr`` except that, in almost all cases tested, the
-        resolving power tilts very slightly in favor of MCC. For some reason
-        though (rather undeservedly so), this index is rarely used in the
-        context of clustering comparisons, with some exceptions [1]_.
+        resolving power tilts very slightly in favor of MCC. While MCC is a
+        commonly used and recently preferred measure of prediction and
+        reproducibility [1]_, it is somewhat strange that one can hardly find
+        any literature that uses this index in clustering comparison context,
+        with some rare exceptions [2]_ [3]_.
 
         Synonyms: Phi Coefficient, Yule's Q with correction for chance.
 
@@ -1914,7 +1916,19 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         References
         ----------
 
-        .. [1] `Kao, D. (2012). Using Matthews correlation coefficient to
+        .. [1] `MAQC Consortium. (2010). The MicroArray Quality Control
+               (MAQC)-II study of common practices for the development and
+               validation of microarray-based predictive models. Nature
+               biotechnology, 28(8), 827-838.
+               <http://doi.org/10.1038/nbt.1665>`_
+
+        .. [2] `Xiao, J., Wang, X. F., Yang, Z. F., & Xu, C. W. (2008).
+               Comparison of Supervised Clustering Methods for the Analysis of
+               DNA Microarray Expression Data. Agricultural Sciences in China,
+               7(2), 129-139.
+               <http://dx.doi.org/10.1016/S1671-2927%2808%2960032-2>`_
+
+        .. [3] `Kao, D. (2012). Using Matthews correlation coefficient to
                cluster annotations.  NextGenetics (personal blog).
                <http://blog.nextgenetics.net/?e=47>`_
         """
