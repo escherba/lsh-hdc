@@ -883,7 +883,7 @@ class ContingencyTable(CrossTab):
         Implemented after description in [1]_. The compound fscore-like metric
         has good resolving power on sparse models, similar to
         ``fowlkes_mallows`` (pairwise ``ochiai_coeff``) and to pairwise
-        ``odds_scores``, however it becomes useless on dense matrices as it
+        ``odds_scores1``, however it becomes useless on dense matrices as it
         relies on category cardinalities (how many types were seen) rather than
         on observation counts (how many instances of each type were seen).
 
@@ -1047,6 +1047,19 @@ class ClusteringMetrics(ContingencyTable):
         Defined as the Ochiai coefficient on the pairwise matrix
         """
         return self.pairwise.ochiai_coeff()
+
+    def adjusted_fowlkes_mallows(self):
+        """Fowlkes-Mallows index adjusted for chance
+
+        Adjustmend for chance done by subtracting the expected (Model 3)
+        pairwise matrix from the actual one. This coefficient appears to be
+        uniformly more powerful than the unadjusted version. Compared to ARI
+        and product-moment correlation coefficients, this index is generally
+        less powerful except in particularly poorly specified cases, e.g.
+        clusters of unequal size sampled with high error rate from a large
+        population.
+        """
+        return self.pairwise.ochiai_coeff_adj()
 
 
 confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
@@ -1248,17 +1261,29 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
             DOR = \\frac{PLL}{NLL}.
 
+        Odds ratio has a number of interesting/desirable properties, however
+        its one peculiarity that leaves us looking for an alternative measure
+        is that on L-shaped matrices like,
+
+        .. math::
+
+            \\begin{matrix} 77 & 0 \\\\ 5 & 26 \\end{matrix}
+
+        its value will be infinity.
+
         Also known as: crude odds ratio, Mantel-Haenszel estimate.
         """
         a, c, d, b = self.to_ccw()
         ad, bc = a * d, b * c
         return _div(ad, bc)
 
-    def odds_scores_adj(self):
-        ps, qs = self.adjust_to_null(self.odds_scores, model='m3')
+    def odds_scores1_adj(self):
+        """Asymmetric rescalings of odds ratio adjusted to null model
+        """
+        ps, qs = self.adjust_to_null(self.odds_scores1, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
 
-    def odds_scores(self):
+    def odds_scores1(self):
         """Asymmetric rescaling of odds ratio for similarity comparisons
 
         Alternatively, odds ratio can be transformed into into an
@@ -1283,6 +1308,62 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         r1 = _div(a * d, p1 * q1)
         return r0, r1, harmonic_mean(r0, r1)
 
+    def odds_scores2_adj(self):
+        """Asymmetric rescalings of odds ratio adjusted to null model
+        """
+        ps, qs = self.adjust_to_null(self.odds_scores2, model='m3')
+        return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
+
+    def odds_scores2(self):
+        """Asymmetric rescaling of odds ratio for similarity comparisons
+
+        Alternatively, odds ratio can be transformed into into an
+        association-like measure (weighted kappa) with range [-1, 1] using
+        Kraemer rescaling [1]_ or by using one of Yule's formulas.
+
+        This harmonic mean has similar resolving power to ``ochiai_coeff`` and
+        the harmonic mean of ``muc_scores``.
+
+        References
+        ----------
+
+        .. [1] `Warrens, M. J. (2010). A Kraemer-type rescaling that transforms
+               the odds ratio into the weighted kappa coefficient.
+               Psychometrika, 75(2), 328-330.
+               <http://doi.org/10.1007/s11336-010-9155-7>`_
+        """
+        a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
+        r0 = _div(a * d, p2 * q1)
+        r1 = _div(a * d, p1 * q2)
+        return r0, r1, harmonic_mean(r0, r1)
+
+    def risk_scores_adj(self):
+        """Relative risks normalized and adjusted to null model
+        """
+        ps, qs = self.adjust_to_null(self.risk_scores, model='m3')
+        return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
+
+    def risk_scores(self, normalize=True):
+        """Relative risks and their harmonic mean
+        """
+        a, c, d, b = self.to_ccw()
+
+        numer0 = a * (c + d)
+        denom0 = c * (a + b)
+        if normalize:
+            denom0 += numer0
+        r0 = _div(numer0, denom0)
+
+        numer1 = a * (b + d)
+        denom1 = b * (a + c)
+        if normalize:
+            denom1 += numer1
+        r1 = _div(numer1, denom1)
+
+        return r0, r1, harmonic_mean(r0, r1)
+
     def fscore(self, beta=1.0):
         """F-score
 
@@ -1296,14 +1377,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """
         return harmonic_mean_weighted(self.precision(), self.recall(), beta ** 2)
 
-    def dice_coeff_adj(self):
-        """Dice coefficeint adjusted for chance
-
-        Identical to ``kappa``.
-
-        """
-        return harmonic_mean(*self.adjust_to_null(self.jaccard_coeff, model='m3'))
-
     def dice_coeff(self):
         """Dice similarity (Nei-Li coefficient)
 
@@ -1312,19 +1385,49 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         F-score is undefined in that case (because recall is undefined).
 
         When adjusted for chance, this coefficient becomes identical to
-        ``kappa``.
+        ``kappa`` [1]_.
 
         See Also
         --------
         fscore, jaccard_coeff, ochiai_coeff
+
+        References
+        ----------
+
+        .. [1] `Albatineh, A. N., Niewiadomska-Bugaj, M., & Mihalko, D. (2006).
+               On similarity indices and correction for chance agreement.
+               Journal of Classification, 23(2), 301-313.
+               <http://doi.org/10.1007/s00357-006-0017-z>`_
         """
         a, c, _, b = self.to_ccw()
         return _div(2 * a, 2 * a + b + c)
 
     def jaccard_coeff_adj(self):
-        """Jaccard coefficient adjusted for chance
+        """Jaccard coefficient adjusted by subtracting null model
+
+        Note: Due to non-linearity, Jaccard index is outside of L-family of
+        association indices that can be adjusted for chance by subtracting the
+        conditional expectation [1]_.  However empirically, the (incorrect)
+        conditional adjustment was found to be equally or better performing in
+        terms of resolving power than the approximations to the correct
+        expectation described in [1]_.
+
+        References
+        ----------
+
+        .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
+               Jaccard and other similarity indices for chance agreement in
+               cluster analysis. Advances in Data Analysis and Classification,
+               5(3), 179-200.
+               <http://doi.org/10.1007/s11634-011-0090-y>`_
         """
-        return harmonic_mean(*self.adjust_to_null(self.jaccard_coeff, model='m3'))
+        a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
+        p1q2_p2q1 = p1 * q2 + p2 * q1
+        numer = a * p1q2_p2q1 - p1 * p2 * (b + c)
+        denom = (a + b + c) * p1q2_p2q1
+        return _div(numer, denom)
 
     def jaccard_coeff(self):
         """Jaccard similarity coefficient
@@ -1345,7 +1448,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def ochiai_coeff_adj(self):
         """Ochiai coefficient adjusted for chance
         """
-        return harmonic_mean(*self.adjust_to_null(self.ochiai_coeff, model='m3'))
+        a, c, d, b = self.to_ccw()
+        p1, p2 = a + b, a + c
+        N = a + b + c + d
+        p1_p2 = p1 * p2
+        numer = N * a - p1_p2
+        denom = N * sqrt(p1_p2) - p1_p2
+        return _div(numer, denom)
 
     def ochiai_coeff(self):
         """Ochiai similarity coefficient (Fowlkes-Mallows)
@@ -1375,7 +1484,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def sokal_sneath_coeff_adj(self):
         """Sokal and Sneath coefficient adjusted for chance
         """
-        return harmonic_mean(*self.adjust_to_null(self.sokal_sneath_coeff, model='m3'))
+        a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
+        p1q2_p2q1 = p1 * q2 + p2 * q1
+        numer = a * p1q2_p2q1 - p1 * p2 * (b + c)
+        denom = (a + 2 * (b + c)) * p1q2_p2q1
+        return _div(numer, denom)
 
     def sokal_sneath_coeff(self):
         """Sokal and Sneath similarity index
@@ -1539,8 +1654,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def kappas(self):
         """Kappa and its harmonic components
 
-        ``kappa0`` roughly corresponds to precision while ``kappa1``
-        roughly corresponds to recall.
+        ``kappa0`` is precisely ``precision`` corrected for chance, while
+        ``kappa1`` is precisely ``recall`` corrected for chance. Their harmonic
+        mean is precisely ``kappa`` agreement index.
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1599,8 +1715,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         Kappa coefficient is best known in the psychology field where it was
         introduced to measure interrater agreement [1]_. It has also been used
         in replication studies [2]_, clustering evaluation [3]_, image
-        segmentation [4]_, feature selection [5]_, and forecasting [6]_. The
-        first derivation of this measure is in [7]_.
+        segmentation [4]_, feature selection [5]_ [6]_, forecasting [7]_, and
+        network link prediction [8]_. The first derivation of this measure is
+        in [9]_.
 
         Kappa can be derived by correcting either Accuracy (Simple Matching
         Coefficient, Rand Index) or F1-score (Dice Coefficient) for chance.
@@ -1657,12 +1774,24 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                175-184).  Springer Berlin Heidelberg.
                <https://doi.org/10.1007/978-3-642-04277-5_18>`_
 
-        .. [6] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
+        .. [6] `Santos, J. M., & Ramos, S. (2010, November). Using a clustering
+               similarity measure for feature selection in high dimensional
+               data sets.  In Intelligent Systems Design and Applications
+               (ISDA), 2010 10th International Conference on (pp. 900-905).
+               IEEE.
+               <http://dx.doi.org/10.1109/ISDA.2010.5687073>`_
+
+        .. [7] `Doswell III, C. A., Davies-Jones, R., & Keller, D. L. (1990). On
                summary measures of skill in rare event forecasting based on
                contingency tables. Weather and Forecasting, 5(4), 576-585.
                <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
 
-        .. [7] `Heidke, Paul. "Berechnung des Erfolges und der Gute der
+        .. [8] `Hoffman, M., Steinley, D., & Brusco, M. J. (2015). A note on
+               using the adjusted Rand index for link prediction in networks.
+               Social Networks, 42, 72-79.
+               <http://dx.doi.org/10.1016/j.socnet.2015.03.002>`_
+
+        .. [9] `Heidke, Paul. "Berechnung des Erfolges und der Gute der
                Windstarkevorhersagen im Sturmwarnungsdienst." Geografiska
                Annaler (1926): 301-349.
                <http://www.jstor.org/stable/519729>`_
@@ -1808,7 +1937,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     # clinical diagnostics
     sensitivity = TPR
     specificity = TNR
-    odds_ratio = DOR
+    # odds_ratio = DOR
     # youden_j = informedness
 
     # sales/marketing
