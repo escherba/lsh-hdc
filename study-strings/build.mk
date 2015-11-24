@@ -42,11 +42,10 @@ endef
 # Study definition
 METRICS := \
 	homogeneity completeness nmi_score \
-	adjusted_rand_score jaccard_coeff \
+	adjusted_mutual_info_score split_join_similarity assignment_score \
+	matthews_corr adjusted_fowlkes_mallows \
 	informedness markedness \
 	aul_score roc_max_info roc_auc \
-	adjusted_mutual_info_score \
-	split_join_similarity talburt_wang_index \
 	time_cpu
 
 REDUCER := $(PYTHON) -m lsh_hdc.monte_carlo.strings reducer \
@@ -57,7 +56,7 @@ REDUCER := $(PYTHON) -m lsh_hdc.monte_carlo.strings reducer \
 	$(EXP_REDUCER_ARGS)
 
 MAPPER := $(PYTHON) -m lsh_hdc.monte_carlo.strings mapper \
-	--sim_size 1000 \
+	--sim_size 10000 \
 	--metrics $(METRICS) \
 	$(EXP_MAPPER_ARGS)
 

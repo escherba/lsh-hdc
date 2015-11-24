@@ -355,7 +355,7 @@ def add_incidence_metrics(args, clusters, pairs):
         cm = ClusteringMetrics.from_labels(*labels)
 
         if set(utils.ENTROPY_METRICS) & set(args_metrics):
-            pairs.extend(zip(utils.ENTROPY_METRICS, cm.entropy_metrics()))
+            pairs.extend(zip(utils.ENTROPY_METRICS, cm.entropy_scores()))
 
         pairwise_metrics = set(utils.PAIRWISE_METRICS) & set(args_metrics)
         append_scores(cm, pairs, pairwise_metrics)

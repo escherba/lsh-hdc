@@ -7,11 +7,13 @@ ENTROPY_METRICS = [
 
 CONTINGENCY_METRICS = [
     'adjusted_mutual_info_score', 'talburt_wang_index',
-    'split_join_similarity', 'mirkin_match_coeff'
+    'split_join_similarity', 'mirkin_match_coeff',
+    'assignment_score'
 ]
 
 PAIRWISE_METRICS = [
     # correlation triples
+    'adjusted_fowlkes_mallows',
     'adjusted_rand_score', 'kappa1', 'kappa0',
     'mi_corr', 'mi_corr1', 'mi_corr0',
     'matthews_corr', 'informedness', 'markedness',
@@ -41,5 +43,3 @@ def serialize_args(args):
         except KeyError:
             pass
     return namespace
-
-

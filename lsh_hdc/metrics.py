@@ -282,7 +282,7 @@ class ContingencyTable(CrossTab):
         else:
             table = self.expected_freqs_(model)
 
-        # continous
+        # continuous
         if not discrete:
             if table is None:
                 raise RuntimeError("line should be unreachable")
@@ -437,7 +437,7 @@ class ContingencyTable(CrossTab):
         _, _, I_CK = self._entropies()
         return I_CK / self.grand_total
 
-    def entropy_metrics(self):
+    def entropy_scores(self):
         """Gives three entropy-based metrics for a RxC table
 
         The metrics are: Homogeneity, Completeness, and V-measure
@@ -950,7 +950,7 @@ class ContingencyTable(CrossTab):
         .. [3] `Amigó, E., Gonzalo, J., Artiles, J., & Verdejo, F. (2009). A
                comparison of extrinsic clustering evaluation metrics based on
                formal constraints. Information retrieval, 12(4), 461-486.
-               <http://doi.org/10.1007/s10791-008-9066-8>`
+               <http://doi.org/10.1007/s10791-008-9066-8>`_
         """
         precision = 0.0
         recall = 0.0
@@ -990,7 +990,7 @@ class ClusteringMetrics(ContingencyTable):
         """Confusion matrix on all pair assignments from two partitions
 
         A partition of N is a set of disjoint clusters s.t. every point in N
-        belongs to one and only one cluster and every cluster consits of at
+        belongs to one and only one cluster and every cluster consists of at
         least one point. Given two partitions A and B and a co-occurrence
         matrix of point pairs,
 
@@ -1278,7 +1278,14 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return _div(ad, bc)
 
     def odds_scores1_adj(self):
-        """Asymmetric rescalings of odds ratio adjusted to null model
+        """Odds ratio-like scores adjusted to null model
+
+        Because of non-linearity, the null model scores do not correspond to
+        the expected ones, so the adjustment is not precisely "correction for
+        chance", yet in practice it works quite well, giving similar resolving
+        power to that of ``ochiai_coeff_adj``. Still, ``ochiai_coeff_adj``
+        should be preferred whenever a compound (mean) measure with similar
+        behavior is required.
         """
         ps, qs = self.adjust_to_null(self.odds_scores1, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1287,8 +1294,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """Asymmetric rescaling of odds ratio for similarity comparisons
 
         Alternatively, odds ratio can be transformed into into an
-        association-like measure (weighted kappa) with range [-1, 1] using
-        Kraemer rescaling [1]_ or by using one of Yule's formulas.
+        association-like measure (weighted kappa) with range [-1, 1] by using
+        Kraemer rescaling [1]_ or one of Yule's formulas.
 
         This harmonic mean has similar resolving power to ``ochiai_coeff`` and
         the harmonic mean of ``muc_scores``.
@@ -1304,12 +1311,21 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
-        r0 = _div(a * d, p2 * q2)
-        r1 = _div(a * d, p1 * q1)
-        return r0, r1, harmonic_mean(r0, r1)
+        ad = a * d
+        p1q1, p2q2 = p1 * q1, p2 * q2
+        r0, r1 = _div(ad, p2q2), _div(ad, p1q1)
+        r2 = _div(2 * ad, p1q1 + p2q2)  # harmonic mean of r0 and r1
+        return r0, r1, r2
 
     def odds_scores2_adj(self):
-        """Asymmetric rescalings of odds ratio adjusted to null model
+        """Odds ratio-like scores adjusted to null model
+
+        Because of non-linearity, the null model scores do not correspond to
+        the expected ones, so the adjustment is not precisely "correction for
+        chance", yet in practice it works quite well, giving similar resolving
+        power to that of ``ochiai_coeff_adj``. Still, ``ochiai_coeff_adj``
+        should be preferred whenever a compound (mean) measure with similar
+        behavior is required.
         """
         ps, qs = self.adjust_to_null(self.odds_scores2, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1335,9 +1351,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
-        r0 = _div(a * d, p2 * q1)
-        r1 = _div(a * d, p1 * q2)
-        return r0, r1, harmonic_mean(r0, r1)
+        ad = a * d
+        p2q1, p1q2 = p2 * q1, p1 * q2
+        r0, r1 = _div(ad, p2q1), _div(ad, p1q2)
+        r2 = _div(2 * ad, p1q2 + p2q1)  # harmonic mean of r0 and r1
+        return r0, r1, r2
 
     def risk_scores_adj(self):
         """Relative risks normalized and adjusted to null model
@@ -1387,9 +1405,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         When adjusted for chance, this coefficient becomes identical to
         ``kappa`` [1]_.
 
+        Since this coefficient is monotonic with respect to Jaccard and Sokal
+        Sneath coefficients, its resolving power is identical to that of the
+        other two.
+
         See Also
         --------
-        fscore, jaccard_coeff, ochiai_coeff
+        jaccard_coeff, sokal_sneath_coeff
 
         References
         ----------
@@ -1411,6 +1433,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         conditional adjustment was found to be equally or better performing in
         terms of resolving power than the approximations to the correct
         expectation described in [1]_.
+
+        In terms of resolving power, the null-adjusted version of this index is
+        identical to ``kappa``.
+
+        See Also
+        --------
+        sokal_sneath_coeff_adj
 
         References
         ----------
@@ -1436,11 +1465,15 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         matrices where either FP or FN are close to zero, its scale becomes
         equivalent to the scale of either recall or precision respectively.
 
+        Since this coefficient is monotonic with respect to Dice (F-score) and
+        Sokal Sneath coefficients, its resolving power is identical to that of
+        the other two.
+
         Synonyms: critical success index
 
         See Also
         --------
-        dice_coeff, ochiai_coeff
+        dice_coeff, sokal_sneath_coeff
         """
         a, c, _, b = self.to_ccw()
         return _div(a, a + b + c)
@@ -1459,13 +1492,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def ochiai_coeff(self):
         """Ochiai similarity coefficient (Fowlkes-Mallows)
 
-        Gives cosine similarity for a 2x2 table. Also known as Fowlkes-Mallows
-        Index in clustering evaluation.
+        One interpretation of this coefficient that it is equal to the
+        geometric mean of the conditional probability of an element (in the
+        case of pairwise clustering comparison, a pair of elements) belonging
+        to the same cluster given that they belong to the same class [1]_.
 
-        This similarity index has an interpretation that it is the geometric
-        mean of the conditional probability of an element (in the case of
-        pairwise clustering comparison, a pair of elements) belonging to the
-        same cluster given that they belong to the same class [1]_.
+        Synonyms: Cosine Similarity, Fowlkes-Mallows Index
 
         See Also
         --------
@@ -1482,7 +1514,20 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         return _div(a, sqrt((a + b) * (a + c)))
 
     def sokal_sneath_coeff_adj(self):
-        """Sokal and Sneath coefficient adjusted for chance
+        """Sokal and Sneath coefficient adjusted to the null model
+
+        See note under ``jaccard_coeff_adj`` about the (in)appropriateness of
+        the adjustment. In terms of resolving power, the null-adjusted version
+        of this index is identical to ``kappa``.
+
+        Since this coefficient is monotonic with respect to Jaccard and Dice
+        coefficients, its resolving power is identical to that of the other
+        two.
+
+        See Also
+        --------
+        jaccard_coeff_adj
+
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1518,15 +1563,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         In interrater agreement studies, prevalence is high when the proportion
         of agreements on the positive classification differs from that of the
         negative classification.  Example of a confusion matrix with high
-        prevalence:
+        prevalence of negative response (note that this happens regardless of
+        which rater we look at):
 
         .. math::
 
             \\begin{matrix} 3 & 27 \\\\ 28 & 132 \\end{matrix}
-
-        In the example given, both raters agree that there are very few positive
-        examples relative to the number of negatives. In other word, the
-        negative rating is very prevalent.
 
         See Also
         --------
@@ -1547,17 +1589,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         In interrater agreement studies, bias is the extent to which the raters
         disagree on the positive-negative ratio of the binary variable studied.
-        Example of a confusion matrix with high bias:
+        Example of a confusion matrix with high bias of rater A (represented by
+        rows) towards negative rating:
 
         .. math::
 
             \\begin{matrix} 17 & 14 \\\\ 78 & 81 \\end{matrix}
-
-        Note that the rater whose judgment is represented by rows (A) believes
-        there are a lot more negative examples than positive ones, while the
-        rater whose judgment is represented by columns (B) thinks the number of
-        positives is roughly equal to the number of negatives. In other words,
-        the rater A appears to be negatively biased.
 
         See Also
         --------
@@ -1654,9 +1691,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def kappas(self):
         """Kappa and its harmonic components
 
-        ``kappa0`` is precisely ``precision`` corrected for chance, while
-        ``kappa1`` is precisely ``recall`` corrected for chance. Their harmonic
-        mean is precisely ``kappa`` agreement index.
+        Of the three measure, :math:`\\kappa_0` is exactly ``precision``
+        corrected for chance, while :math:`\\kappa_1` is exactly ``recall``
+        corrected for chance. Their harmonic mean is equal to ``kappa``
+        agreement index.
+
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1722,20 +1761,20 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         Kappa can be derived by correcting either Accuracy (Simple Matching
         Coefficient, Rand Index) or F1-score (Dice Coefficient) for chance.
         Kappa can be decomposed into a pair of components (regression
-        coefficients), :math:`k_1` (recall-like) and :math:`k_0`
+        coefficients), :math:`\\kappa_1` (recall-like) and :math:`\\kappa_0`
         (precision-like), of which it is a harmonic mean:
 
         .. math::
 
-            k_1 = \\frac{cov}{p_1 q_2},
+            \\kappa_1 = \\frac{cov}{p_1 q_2},
 
-            k_0 = \\frac{cov}{p_2 q_1}.
+            \\kappa_0 = \\frac{cov}{p_2 q_1}.
 
-        If one takes a geometric mean of the above two components, one will
-        obtain Matthews' Correlation Coefficient.  The latter is also equal to
-        the geometric mean of informedness and markedness (which are similar
-        to, but not the same, as :math:`k_1` and :math:`k_0`).  Unlike
-        informedness and markedness, :math:`k_1` and :math:`k_0` don't have a
+        The geometric mean of the above two components equals to Matthews'
+        Correlation Coefficient.  The latter is also equal to the geometric
+        mean of informedness and markedness (which are similar to, but not the
+        same, as :math:`\\kappa_1` and :math:`\\kappa_0`).  Unlike informedness
+        and markedness, :math:`\\kappa_1` and :math:`\\kappa_0` don't have a
         lower bound.  For that reason, when characterizing one-way dependence
         in a 2x2 confusion matrix, it is arguably better to use use
         informedness and markedness.
@@ -1744,6 +1783,10 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         (F-score).
 
         Synonyms: Adjusted Rand Index, Heidke Skill Score
+
+        See Also
+        --------
+        mp_corr, matthews_corr
 
         References
         ----------
@@ -1818,6 +1861,14 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         MCC, based on a mean of informedness and markedness, except uses a
         harmonic mean instead of geometric. Like Kappa, turns into Dice
         coefficient (F-score) as 'd' approaches infinity.
+
+        On typical problems, the resolving power of this coefficient is nearly
+        identical to that of Cohen's Kappa and is only very slightly below that
+        of Matthews' correlation coefficient.
+
+        See Also
+        --------
+        kappa, matthews_corr
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1837,17 +1888,55 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """Matthews Correlation Coefficient (Phi coefficient)
 
         MCC is directly related to the Chi-square statistic. Its value is equal
-        to the Chi-square value normalized by the maximum value Chi-Square
+        to the Chi-square value normalized by the maximum value the Chi-square
         can achieve with given margins (for a 2x2 table, the maximum Chi-square
-        score is equal to the grand total N) transformed to correlation space by
-        taking a square root.
+        score is equal to the grand total N) transformed to correlation space
+        by taking a square root.
 
         MCC is a also a geometric mean of informedness and markedness (the
         regression coefficients of the problem and its dual). As the value of
-        'd' approaches infinity, MCC turns into Ochiai coefficient.
+        'd' approaches infinity, MCC turns into Ochiai coefficient. Its
+        definition as a geometric mean of chance-corrected precision/recall
+        measures gives MCC a nice property in that this index is *unique*. For
+        comparison, ``kappa`` and ``mp_corr`` and not unique because each is a
+        harmonic mean of two slightly differently defined chance corrections of
+        precision and recall. In the case of MCC, regardless of which set of
+        chance-corrected definitions of precision and recall one starts with,
+        one always ends up with the same quantity after taking a geometric
+        mean, and that quantity is MCC.
 
-        Other names for MCC are Phi Coefficient and Yule's Q with correction for
-        chance.
+        The overall performance profile of this measure is similar to that of
+        ``kappa`` and ``mp_corr`` except that, in almost all cases tested, the
+        resolving power tilts very slightly in favor of MCC. While MCC is a
+        commonly used and recently preferred measure of prediction and
+        reproducibility [1]_, it is somewhat strange that one can hardly find
+        any literature that uses this index in clustering comparison context,
+        with some rare exceptions [2]_ [3]_.
+
+        Synonyms: Phi Coefficient, Yule's Q with correction for chance.
+
+        See Also
+        --------
+        kappa, mp_corr
+
+        References
+        ----------
+
+        .. [1] `MAQC Consortium. (2010). The MicroArray Quality Control
+               (MAQC)-II study of common practices for the development and
+               validation of microarray-based predictive models. Nature
+               biotechnology, 28(8), 827-838.
+               <http://doi.org/10.1038/nbt.1665>`_
+
+        .. [2] `Xiao, J., Wang, X. F., Yang, Z. F., & Xu, C. W. (2008).
+               Comparison of Supervised Clustering Methods for the Analysis of
+               DNA Microarray Expression Data. Agricultural Sciences in China,
+               7(2), 129-139.
+               <http://dx.doi.org/10.1016/S1671-2927%2808%2960032-2>`_
+
+        .. [3] `Kao, D. (2012). Using Matthews correlation coefficient to
+               cluster annotations.  NextGenetics (personal blog).
+               <http://blog.nextgenetics.net/?e=47>`_
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1877,7 +1966,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         ``mic0`` roughly corresponds to precision (homogeneity) while ``mic1``
         roughly corresponds to recall (completeness).
         """
-        h, c, rsquare = self.entropy_metrics()
+        h, c, rsquare = self.entropy_scores()
         covsign = copysign(1, self.covar())
         mic0 = covsign * sqrt(c)
         mic1 = covsign * sqrt(h)
@@ -1964,7 +2053,7 @@ def homogeneity_completeness_v_measure(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Scikit-Learn function
     """
     ct = ContingencyTable.from_labels(labels_true, labels_pred)
-    return ct.entropy_metrics()
+    return ct.entropy_scores()
 
 
 def adjusted_rand_score(labels_true, labels_pred):
@@ -2019,7 +2108,7 @@ def adjusted_mutual_info_score(labels_true, labels_pred):
     return ct.adjusted_mutual_info()
 
 
-def matthews_corr(*args, **kwargs):
+def product_moment(*args, **kwargs):
     """Return MCC score for a 2x2 contingency table
     """
     return ConfusionMatrix2.from_ccw(*args, **kwargs).matthews_corr()
