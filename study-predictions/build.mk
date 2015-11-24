@@ -40,7 +40,7 @@ endef
 
 # Study definition
 COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
-	entropy_metrics mic_scores adjusted_mutual_info vi_similarity \
+	entropy_scores mic_scores adjusted_mutual_info vi_similarity \
 	mp_corr adjusted_rand_index matthews_corr adjusted_fowlkes_mallows \
 	informedness markedness precision recall \
 	fowlkes_mallows dice_coeff rand_index \
@@ -49,7 +49,7 @@ COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
 	muc_scores bc_metrics
 
 PLOT_METRICS := $(EXP_PLOT_METRICS) $(COMPUTE_METRICS) \
-	entropy_metrics-2 mic_scores-2 \
+	entropy_scores-2 mic_scores-2 \
 	muc_scores-2 bc_metrics-2
 
 MAPPER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions mapper \

@@ -92,7 +92,7 @@ def test_RxC_metrics():
 
         # homogeneity, completeness, V-measure
         expected_hcv = sklearn_hcv(ltrue, lpred)
-        actual_hcv = cm.entropy_metrics()
+        actual_hcv = cm.entropy_scores()
         assert_array_almost_equal(actual_hcv, expected_hcv)
 
         # mutual information score

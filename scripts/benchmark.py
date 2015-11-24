@@ -16,7 +16,7 @@ from IPython import get_ipython
 
 
 METHODS = {
-    'hcv': ('homogeneity_completeness_v_measure', 'entropy_metrics'),
+    'hcv': ('homogeneity_completeness_v_measure', 'entropy_scores'),
     'ami': ('adjusted_mutual_info_score', 'adjusted_mutual_info'),
     'ari': ('adjusted_rand_score', 'adjusted_rand_index')
 }

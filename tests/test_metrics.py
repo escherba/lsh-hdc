@@ -50,7 +50,7 @@ def _kappa(a, c, d, b):
         return _div(po - pe, n - pe)
 
 
-def _entropy_metrics(cm):
+def _entropy_scores(cm):
     """Given a ClusteringMetrics object, calculate three entropy-based metrics
 
     (Alternative implementation for testing)
@@ -347,7 +347,7 @@ def test_IR_example():
         ex.assignment_score(model='m3'))
 
     # test entropy metrics
-    h, c, v = cm.entropy_metrics()
+    h, c, v = cm.entropy_scores()
     assert_almost_equal(h, 0.371468, 6)
     assert_almost_equal(c, 0.357908, 6)
     assert_almost_equal(v, 0.364562, 6)
@@ -497,7 +497,7 @@ def test_1000():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    h, c, v = cm.entropy_metrics()
+    h, c, v = cm.entropy_scores()
     assert_almost_equal(h, 1.0, 4)
     assert_almost_equal(c, 1.0, 4)
     assert_almost_equal(v, 1.0, 4)
@@ -519,7 +519,7 @@ def test_0100():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    h, c, v = cm.entropy_metrics()
+    h, c, v = cm.entropy_scores()
     assert_almost_equal(h, 1.0, 4)
     assert_almost_equal(c, 1.0, 4)
     assert_almost_equal(v, 1.0, 4)
@@ -541,7 +541,7 @@ def test_0010():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    h, c, v = cm.entropy_metrics()
+    h, c, v = cm.entropy_scores()
     assert_almost_equal(h, 1.0, 4)
     assert_almost_equal(c, 1.0, 4)
     assert_almost_equal(v, 1.0, 4)
@@ -563,7 +563,7 @@ def test_0001():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    h, c, v = cm.entropy_metrics()
+    h, c, v = cm.entropy_scores()
     assert_almost_equal(h, 1.0, 4)
     assert_almost_equal(c, 1.0, 4)
     assert_almost_equal(v, 1.0, 4)

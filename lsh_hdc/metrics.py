@@ -437,7 +437,7 @@ class ContingencyTable(CrossTab):
         _, _, I_CK = self._entropies()
         return I_CK / self.grand_total
 
-    def entropy_metrics(self):
+    def entropy_scores(self):
         """Gives three entropy-based metrics for a RxC table
 
         The metrics are: Homogeneity, Completeness, and V-measure
@@ -1281,11 +1281,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """Odds ratio-like scores adjusted to null model
 
         Because of non-linearity, the null model scores do not correspond to
-        the expected ones, so the adjustement is not precisely "correction for
+        the expected ones, so the adjustment is not precisely "correction for
         chance", yet in practice it works quite well, giving similar resolving
         power to that of ``ochiai_coeff_adj``. Still, ``ochiai_coeff_adj``
         should be preferred whenever a compound (mean) measure with similar
-        behvaior is required.
+        behavior is required.
         """
         ps, qs = self.adjust_to_null(self.odds_scores1, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1321,11 +1321,11 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """Odds ratio-like scores adjusted to null model
 
         Because of non-linearity, the null model scores do not correspond to
-        the expected ones, so the adjustement is not precisely "correction for
+        the expected ones, so the adjustment is not precisely "correction for
         chance", yet in practice it works quite well, giving similar resolving
         power to that of ``ochiai_coeff_adj``. Still, ``ochiai_coeff_adj``
         should be preferred whenever a compound (mean) measure with similar
-        behvaior is required.
+        behavior is required.
         """
         ps, qs = self.adjust_to_null(self.odds_scores2, model='m3')
         return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
@@ -1966,7 +1966,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         ``mic0`` roughly corresponds to precision (homogeneity) while ``mic1``
         roughly corresponds to recall (completeness).
         """
-        h, c, rsquare = self.entropy_metrics()
+        h, c, rsquare = self.entropy_scores()
         covsign = copysign(1, self.covar())
         mic0 = covsign * sqrt(c)
         mic1 = covsign * sqrt(h)
@@ -2053,7 +2053,7 @@ def homogeneity_completeness_v_measure(labels_true, labels_pred):
     """Memory-efficient replacement for equivalently named Scikit-Learn function
     """
     ct = ContingencyTable.from_labels(labels_true, labels_pred)
-    return ct.entropy_metrics()
+    return ct.entropy_scores()
 
 
 def adjusted_rand_score(labels_true, labels_pred):
