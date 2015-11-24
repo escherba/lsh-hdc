@@ -950,7 +950,7 @@ class ContingencyTable(CrossTab):
         .. [3] `Amigó, E., Gonzalo, J., Artiles, J., & Verdejo, F. (2009). A
                comparison of extrinsic clustering evaluation metrics based on
                formal constraints. Information retrieval, 12(4), 461-486.
-               <http://doi.org/10.1007/s10791-008-9066-8>`
+               <http://doi.org/10.1007/s10791-008-9066-8>`_
         """
         precision = 0.0
         recall = 0.0
@@ -1294,8 +1294,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """Asymmetric rescaling of odds ratio for similarity comparisons
 
         Alternatively, odds ratio can be transformed into into an
-        association-like measure (weighted kappa) with range [-1, 1] using
-        Kraemer rescaling [1]_ or by using one of Yule's formulas.
+        association-like measure (weighted kappa) with range [-1, 1] by using
+        Kraemer rescaling [1]_ or one of Yule's formulas.
 
         This harmonic mean has similar resolving power to ``ochiai_coeff`` and
         the harmonic mean of ``muc_scores``.
