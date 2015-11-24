@@ -655,10 +655,9 @@ class ContingencyTable(CrossTab):
     def vi_distance(self, normalize=True):
         """Variation of Information distance
 
-        Defined in [1]_. This measure is one of several possible entropy- based
-        distance measure that could be defined on a RxC matrix. The given
-        measure is equivalent to :math:`2 D_{sum}` as listed in Table 2 in
-        [2]_.
+        Defined in [1]_. This is one of several possible entropy-based distance
+        measures that could be defined on a RxC matrix. The given measure is
+        equivalent to :math:`2 D_{sum}` as listed in Table 2 in [2]_.
 
         Note that the entropy variables H below are calculated using natural
         logs, so a base correction may be necessary if you need your result in
@@ -679,20 +678,53 @@ class ContingencyTable(CrossTab):
 
         """
         H_C, H_K, I_CK = self._entropies()
-        VI_CK = (H_C + H_K) - (I_CK + I_CK)
-        score = _div(VI_CK, self.grand_total)
+        score = H_C + H_K - 2 * I_CK
+        score = _div(score, self.grand_total)
         if normalize:
             score = _div(score, log(self.grand_total))
         return score
 
-    def vi_similarity(self, normalize=True):
+    def vi_similarity_m1(self, normalize=True):
+        return self.vi_similarity(normalize=normalize, model='m1')
+
+    def vi_similarity_m2r(self, normalize=True):
+        return self.vi_similarity(normalize=normalize, model='m2r')
+
+    def vi_similarity_m2c(self, normalize=True):
+        return self.vi_similarity(normalize=normalize, model='m2c')
+
+    def vi_similarity_m3(self, normalize=True):
+        return self.vi_similarity(normalize=normalize, model='m3')
+
+    def vi_similarity(self, normalize=True, model='m1'):
         """Inverse of ``vi_distance``
         """
-        dist = self.vi_distance(normalize=False)
         max_dist = log(self.grand_total)
+        dist = self.vi_distance(normalize=False)
         score = max_dist - dist
+
+        R, C = self.shape
+
+        if model is None:
+            null_score = 0
+        elif model == 'm1':         # only N is fixed
+            null_dist = log(R) + log(C)
+            null_score = max_dist - null_dist
+        elif model == 'm2r':        # fixed row margin
+            null_dist = self.expected(model).vi_distance(normalize=False)
+            null_score = max_dist - null_dist
+        elif model == 'm2c':        # fixed column margin
+            null_dist = self.expected(model).vi_distance(normalize=False)
+            null_score = max_dist - null_dist
+        elif model == 'm3':         # both row and column margins fixed
+            null_dist = self.expected(model).vi_distance(normalize=False)
+            null_score = max_dist - null_dist
+        else:
+            raise NotImplementedError(model)
+
+        score -= null_score
         if normalize:
-            score = _div(score, max_dist)
+            score = _div(score, max_dist - null_score)
         return score
 
     def split_join_distance(self, normalize=True):
@@ -785,57 +817,6 @@ class ContingencyTable(CrossTab):
             max_score = 2 * N
             score = _div(score, max_score - null_score)
 
-        return score
-
-    def mirkin_match_coeff(self, normalize=True):
-        """Equivalence match (similarity) coefficient
-
-        Derivation of distance variant described in [1]_. This measure is
-        nearly identical to pairwise unadjusted Rand index, as can be seen from
-        the definition (Mirkin match formula uses square while pairwise
-        accuracy uses n choose 2).
-
-        ::
-
-            >>> C3 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
-            >>> C4 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10, 11, 12}, {13, 14, 15, 16}]
-            >>> t = ClusteringMetrics.from_partitions(C3, C4)
-            >>> t.mirkin_match_coeff(normalize=False)
-            216
-
-        References
-        ----------
-
-        .. [1] `Mirkin, B (1996). Mathematical Classification and Clustering.
-               Kluwer Academic Press: Boston-Dordrecht.
-               <http://www.amazon.com/dp/0792341597>`_
-
-        """
-        max_score = self.grand_total ** 2
-        score = max_score - self.mirkin_mismatch_coeff(normalize=False)
-        if normalize:
-            score = _div(score, max_score)
-        return score
-
-    def mirkin_mismatch_coeff(self, normalize=True):
-        """Equivalence mismatch (distance) coefficient
-
-        ::
-
-            >>> C1 = [{1, 2, 3, 4, 5, 6, 7, 8}, {9, 10, 11, 12, 13, 14, 15, 16}]
-            >>> C2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
-            >>> t = ClusteringMetrics.from_partitions(C1, C2)
-            >>> t.mirkin_mismatch_coeff(normalize=False)
-            56
-
-        """
-        score = (
-            sum(x ** 2 for x in self.iter_row_totals()) +
-            sum(x ** 2 for x in self.iter_col_totals()) -
-            2 * sum(x ** 2 for x in self.itervalues())
-        )
-        if normalize:
-            score = _div(score, self.grand_total ** 2)
         return score
 
     def talburt_wang_index(self):
@@ -1060,6 +1041,62 @@ class ClusteringMetrics(ContingencyTable):
         population.
         """
         return self.pairwise.ochiai_coeff_adj()
+
+    def mirkin_match_coeff(self, normalize=True):
+        """Equivalence match (similarity) coefficient
+
+        Derivation of distance variant described in [1]_. This measure is
+        nearly identical to pairwise unadjusted Rand index, as can be seen from
+        the definition (Mirkin match formula uses square while pairwise
+        accuracy uses n choose 2).
+
+        ::
+
+            >>> C3 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
+            >>> C4 = [{1, 2, 3, 4}, {5, 6, 7, 8, 9, 10, 11, 12}, {13, 14, 15, 16}]
+            >>> t = ClusteringMetrics.from_partitions(C3, C4)
+            >>> t.mirkin_match_coeff(normalize=False)
+            216.0
+
+        References
+        ----------
+
+        .. [1] `Mirkin, B (1996). Mathematical Classification and Clustering.
+               Kluwer Academic Press: Boston-Dordrecht.
+               <http://www.amazon.com/dp/0792341597>`_
+
+        """
+        max_score = self.grand_total ** 2
+        score = max_score - self.mirkin_mismatch_coeff(normalize=False)
+        if normalize:
+            score = _div(score, max_score)
+        return score
+
+    def mirkin_mismatch_coeff(self, normalize=True):
+        """Equivalence mismatch (distance) coefficient
+
+        Direct formulation (without the pairwise abstraction):
+
+        .. math::
+
+            M = \\sum_{i=1}^{R} r_{i}^2 + \\sum_{j=1}^{C} c_{j}^2 - \\sum_{i=1}^{R}\\sum_{j=1}^{C} n_{ij}^2,
+
+        where :math:`r` and :math:`c` are row and column margins, respectively,
+        with :math:`R` and :math:`C` cardinalities.
+
+        ::
+
+            >>> C1 = [{1, 2, 3, 4, 5, 6, 7, 8}, {9, 10, 11, 12, 13, 14, 15, 16}]
+            >>> C2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, {11, 12, 13, 14, 15, 16}]
+            >>> t = ClusteringMetrics.from_partitions(C1, C2)
+            >>> t.mirkin_mismatch_coeff(normalize=False)
+            56.0
+
+        """
+        score = 2 * (self.pairwise.FN + self.pairwise.FP)
+        if normalize:
+            score = _div(score, self.grand_total ** 2)
+        return score
 
 
 confmat2_type = namedtuple("ConfusionMatrix2", "TP FP TN FN")
