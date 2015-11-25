@@ -715,18 +715,13 @@ class ContingencyTable(CrossTab):
             null_dist = log(R) + log(C)
             null_score = max_dist - null_dist
         elif model == 'm2r':        # fixed row margin
-            null_dist = log(C) + log(N) - \
-                sum(rm * log(rm) for rm in self.iter_row_totals()) / N
+            null_dist = log(C) + fentropy(self.row_totals) / N
             null_score = max_dist - null_dist
         elif model == 'm2c':        # fixed column margin
-            null_dist = log(R) + log(N) - \
-                sum(cm * log(cm) for cm in self.iter_col_totals()) / N
+            null_dist = log(R) + fentropy(self.col_totals) / N
             null_score = max_dist - null_dist
         elif model == 'm3':         # both row and column margins fixed
-            null_dist = 2 * log(N) - (
-                sum(rm * log(rm) for rm in self.iter_row_totals()) +
-                sum(cm * log(cm) for cm in self.iter_col_totals())
-            ) / N
+            null_dist = (fentropy(self.row_totals) + fentropy(self.col_totals)) / N
             null_score = max_dist - null_dist
         else:
             raise NotImplementedError(model)
