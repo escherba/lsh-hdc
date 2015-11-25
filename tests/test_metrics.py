@@ -352,7 +352,7 @@ def test_IR_example():
     assert_almost_equal(c, 0.357908, 6)
     assert_almost_equal(v, 0.364562, 6)
 
-    assert_almost_equal(cm.vi_similarity(),              0.517754, 6)
+    assert_almost_equal(cm.vi_similarity(model=None),    0.517754, 6)
     assert_almost_equal(cm.mirkin_match_coeff(),         0.695502, 6)
     assert_almost_equal(cm.rand_index(),                 0.676471, 6)
     assert_almost_equal(cm.fowlkes_mallows(),            0.476731, 6)
