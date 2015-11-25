@@ -698,12 +698,16 @@ class ContingencyTable(CrossTab):
 
     def vi_similarity(self, normalize=True, model='m1'):
         """Inverse of ``vi_distance``
+
+        The m1 adjustment is monotonic for tables of fixed size. The m3
+        adjustment turns this measure into Normalized Mutual Information (NMI)
         """
-        max_dist = log(self.grand_total)
+        R, C = self.shape
+        N = self.grand_total
+
+        max_dist = log(N)
         dist = self.vi_distance(normalize=False)
         score = max_dist - dist
-
-        R, C = self.shape
 
         if model is None:
             null_score = 0
@@ -711,13 +715,18 @@ class ContingencyTable(CrossTab):
             null_dist = log(R) + log(C)
             null_score = max_dist - null_dist
         elif model == 'm2r':        # fixed row margin
-            null_dist = self.expected(model).vi_distance(normalize=False)
+            null_dist = log(C) + log(N) - \
+                sum(rm * log(rm) for rm in self.iter_row_totals()) / N
             null_score = max_dist - null_dist
         elif model == 'm2c':        # fixed column margin
-            null_dist = self.expected(model).vi_distance(normalize=False)
+            null_dist = log(R) + log(N) - \
+                sum(cm * log(cm) for cm in self.iter_col_totals()) / N
             null_score = max_dist - null_dist
         elif model == 'm3':         # both row and column margins fixed
-            null_dist = self.expected(model).vi_distance(normalize=False)
+            null_dist = 2 * log(N) - (
+                sum(rm * log(rm) for rm in self.iter_row_totals()) +
+                sum(cm * log(cm) for cm in self.iter_col_totals())
+            ) / N
             null_score = max_dist - null_dist
         else:
             raise NotImplementedError(model)

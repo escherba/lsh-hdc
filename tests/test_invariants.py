@@ -48,6 +48,22 @@ def check_with_nans(num1, num2, places=None, msg=None, delta=None, ensure_nans=T
         assert_almost_equal(num1, num2, places=places, msg=msg, delta=delta)
 
 
+def test_m1():
+    """M1 model
+    """
+    t2 = ClusteringMetrics(rows=10 * np.ones((2, 2), dtype=int))
+    t8 = ClusteringMetrics(rows=10 * np.ones((8, 8), dtype=int))
+
+    assert_almost_equal(0.0, t2.vi_similarity_m1())
+    assert_almost_equal(0.0, t8.vi_similarity_m1())
+
+    assert_almost_equal(0.0, t2.split_join_similarity_m1())
+    assert_almost_equal(0.0, t8.split_join_similarity_m1())
+
+    assert_almost_equal(0.0, t2.assignment_score_m1())
+    assert_almost_equal(0.0, t8.assignment_score_m1())
+
+
 def test_RxC_general():
     """General conteingency-table mathods
     """
@@ -91,9 +107,11 @@ def test_RxC_metrics():
         cm = ClusteringMetrics.from_labels(ltrue, lpred)
 
         # homogeneity, completeness, V-measure
+        expected_v = cm.vi_similarity_m3()
         expected_hcv = sklearn_hcv(ltrue, lpred)
         actual_hcv = cm.entropy_scores()
         assert_array_almost_equal(actual_hcv, expected_hcv)
+        assert_array_almost_equal(actual_hcv[2], expected_v)
 
         # mutual information score
         expected_mi = sklearn_mi(ltrue, lpred)
