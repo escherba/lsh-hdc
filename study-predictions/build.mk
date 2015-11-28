@@ -46,7 +46,7 @@ COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
 	fowlkes_mallows dice_coeff rand_index \
 	yule_q yule_y \
 	assignment_score split_join_similarity talburt_wang_index \
-	muc_scores bc_metrics
+	muc_scores bc_metrics hypergeometric
 
 PLOT_METRICS := $(EXP_PLOT_METRICS) $(COMPUTE_METRICS) \
 	entropy_scores-2 mic_scores-2 \

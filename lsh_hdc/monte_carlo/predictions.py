@@ -233,11 +233,13 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
     if abs(actual_neg_ratio) > 0.2:
         word = "fewer" if actual_neg_ratio < 0.0 else "more"
         if with_warnings:
-            warnings.warn("{:.1%} {} negatives than expected. Got: {} (expected: {}. Recommended population_size: {})"
-                          .format(abs(actual_neg_ratio), word, num_neg, int(expected_num_neg), int(expected_num_neg + num_pos)))
+            warnings.warn(
+                "{:.1%} {} negatives than expected. Got: {} (expected: {}. Recommended population_size: {})"
+                .format(abs(actual_neg_ratio), word, num_neg, int(expected_num_neg),
+                        int(expected_num_neg + num_pos)))
 
-    # the larger the cluster, the more probable it is some unclustered
-    # items belong to it
+    # create a discrete probability distribution of cluster labels based on
+    # cluster sizes
     dist_class_labels = {}
     total_csizes = sum(csizes) + num_neg
     for idx, csize in enumerate([num_neg] + csizes):
@@ -530,9 +532,12 @@ class Grid(object):
         for (xs, ys), dither_, marker_, s_, color_, label_, alpha_ in \
                 izip_with_cycles(pairs, dither, marker, s, color, label, alpha):
 
-            #corr_coeff = scipy.stats.pearsonr(xs, ys)[0]
-            corr_coeff = scipy.stats.spearmanr(xs, ys)[0]
-            ax.annotate('r = %.3f' % corr_coeff, (0.05, 0.9), xycoords='axes fraction')
+            rho0 = scipy.stats.spearmanr(xs, ys)[0]
+            rho1 = scipy.stats.spearmanr(ys, xs)[0]
+            if not np.isclose(rho0, rho1):
+                # should never happen
+                raise RuntimeError("Error calculating Spearman's rho")
+            ax.annotate('$\\rho=%.3f$' % rho0, (0.05, 0.9), xycoords='axes fraction')
 
             if dither_ is not None:
                 xs = np.random.normal(xs, dither_)
