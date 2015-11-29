@@ -8,26 +8,31 @@ from operator import itemgetter
 from pymaptools.iter import isiterable
 
 
+PINF = float('inf')
+NINF = float('-inf')
+NAN = float('nan')
+
+
 def _log(x):
     """Safe natural log
     """
     if x == 0.0:
-        return float('-inf')
+        return NINF
     else:
         return log(x)
 
 
 def _div(numer, denom):
-    """Divide without raising zero division error or losing decimal part
+    """Safe division
     """
-    if denom == 0:
-        if numer == 0:
-            return float('nan')
-        elif numer > 0:
-            return float('inf')
+    if denom == 0.0:
+        if numer == 0.0:
+            return NAN
+        elif numer > 0.0:
+            return PINF
         else:
-            return float('-inf')
-    return float(numer) / denom
+            return NINF
+    return numer / float(denom)
 
 
 def get_df_subset(df, fields):
