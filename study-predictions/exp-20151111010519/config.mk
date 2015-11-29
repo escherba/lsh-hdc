@@ -1,4 +1,4 @@
-EXP_MAPPER_ARGS := --pos_ratio 0.2
+EXP_MAPPER_ARGS :=
 
 GROUP_FIELD := population_size
 GROUPS := 2000 8000

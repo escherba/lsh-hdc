@@ -95,23 +95,11 @@ from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import iter_items, isiterable
-from lsh_hdc.utils import randround
+from pymaptools.sample import randround
+from lsh_hdc.utils import _div, _log
 from lsh_hdc.entropy import fentropy, fnum_pairs, fsum_pairs, \
     emi_from_margins, assignment_cost
 from scipy.stats import fisher_exact
-
-
-def _div(numer, denom):
-    """Divide without raising zero division error or losing decimal part
-    """
-    if denom == 0:
-        if numer == 0:
-            return np.nan
-        elif numer > 0:
-            return np.PINF
-        else:
-            return np.NINF
-    return float(numer) / denom
 
 
 def jaccard_similarity(iterable1, iterable2):
@@ -1246,7 +1234,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """
         covsign = copysign(1, self.covar())
         _, pvalue = fisher_exact(self.to_array())
-        return covsign * (-log(pvalue))
+        return covsign * (-_log(pvalue))
 
     def ACC(self):
         """Accuracy (Rand Index)

@@ -10,13 +10,13 @@ from collections import defaultdict
 from functools import partial
 from pymaptools.iter import izip_with_cycles, isiterable, take
 from pymaptools.containers import labels_to_clusters, clusters_to_labels
-from pymaptools.sample import discrete_sample, freqs2probas
+from pymaptools.sample import discrete_sample, freqs2probas, randround
 from pymaptools.io import GzipFileType, PathArgumentParser, write_json_line, read_json_lines, ndjson2col
 from pymaptools.benchmark import PMTimer
 
 from lsh_hdc.monte_carlo import utils
 from lsh_hdc.fent import minmaxr
-from lsh_hdc.utils import randround
+from lsh_hdc.utils import _div
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
 from lsh_hdc.ranking import RocCurve
 from sklearn.metrics.ranking import auc
@@ -38,12 +38,12 @@ def parse_args(args=None):
                           help='H1 error rate')
     p_mapper.add_argument('--population_size', type=int, default=2000,
                           help='population size')
-    p_mapper.add_argument('--pos_ratio', type=float, default=0.2,
-                          help='ratio of positives to population')
     p_mapper.add_argument('--sim_size', type=int, default=1000,
                           help='Simulation size')
     p_mapper.add_argument('--nclusters', type=int, default=20,
                           help='number of clusters to generate')
+    p_mapper.add_argument('--split_join', type=int, default=0,
+                          help='number of splits (if positive) or joins (if negative) to perform')
     p_mapper.add_argument('--sampling_warnings', type=int, default=0,
                           help='if true, show sampling warnings')
     p_mapper.add_argument('--output', type=GzipFileType('w'),
@@ -84,6 +84,7 @@ def do_mapper(args):
         n=args.sim_size,
         p_err=args.h0_err,
         nclusters=args.nclusters,
+        split_join=args.split_join,
         population_size=args.population_size,
         with_warnings=args.sampling_warnings,
     )
@@ -91,6 +92,7 @@ def do_mapper(args):
         n=args.sim_size,
         p_err=args.h1_err,
         nclusters=args.nclusters,
+        split_join=args.split_join,
         population_size=args.population_size,
         with_warnings=args.sampling_warnings,
     )
@@ -225,7 +227,8 @@ def sample_with_error(label, error_distribution, null_distribution):
 
 
 def relabel_negatives(clusters):
-    # each negative should become its own class
+    """Place each negative label in its own class
+    """
     idx = -1
     relabeled = []
     for cluster in clusters:
@@ -240,14 +243,44 @@ def relabel_negatives(clusters):
     return relabeled
 
 
+def join_clusters(clusters):
+    """Reduce number of clusters 2x by joining
+    """
+    even = clusters[0::2]
+    odd = clusters[1::2]
+    if len(even) < len(odd):
+        even.append([])
+    elif len(even) > len(odd):
+        odd.append([])
+    assert len(even) == len(odd)
+
+    result = []
+    for c1, c2 in izip(even, odd):
+        result.append(c1 + c2)
+    return result
+
+
+def split_clusters(clusters):
+    """Increase number of clusters 2x by splitting
+    """
+    result = []
+    for cluster in clusters:
+        even = cluster[0::2]
+        odd = cluster[1::2]
+        assert len(even) + len(odd) == len(cluster)
+        if even:
+            result.append(even)
+        if odd:
+            result.append(odd)
+    return result
+
+
 def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
-                        p_err=0.05, population_size=2000, with_warnings=True):
+                        p_err=0.05, population_size=2000, split_join=0,
+                        join_negatives=False, with_warnings=True):
 
     if not 0.0 <= p_err <= 1.0:
         raise ValueError(p_err)
-
-    if not 0.0 <= pos_ratio <= 1.0:
-        raise ValueError(pos_ratio)
 
     csizes = map(randround, np.random.gamma(galpha, gbeta, nclusters))
 
@@ -260,8 +293,10 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
     num_neg = max(0, population_size - num_pos)
 
     if with_warnings:
-        expected_num_neg = num_pos * ((1.0 - pos_ratio) / pos_ratio)
-        actual_neg_ratio = (num_neg - expected_num_neg) / expected_num_neg
+        if not 0.0 <= pos_ratio <= 1.0:
+            raise ValueError(pos_ratio)
+        expected_num_neg = num_pos * _div(1.0 - pos_ratio, pos_ratio)
+        actual_neg_ratio = _div(num_neg - expected_num_neg, expected_num_neg)
         if abs(actual_neg_ratio) > 0.2:
             warnings.warn(
                 "{:.1%} {} negatives than expected. Got: {} "
@@ -273,14 +308,14 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
     null_dist = freqs2probas([num_neg] + csizes)
     error_dist = {False: 1.0 - p_err, True: p_err}
 
-    clusters = []
-
     # negative case first
+    negatives = []
     for _ in xrange(num_neg):
         class_label = sample_with_error(0, error_dist, null_dist)
-        clusters.append([class_label])
+        negatives.append([class_label])
 
     # positive cases
+    positives = []
     for idx, csize in enumerate(csizes, start=1):
         if csize < 1:
             continue
@@ -288,9 +323,19 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
         for _ in xrange(csize):
             class_label = sample_with_error(idx, error_dist, null_dist)
             cluster.append(class_label)
-        clusters.append(cluster)
+        positives.append(cluster)
 
-    return relabel_negatives(clusters)
+    if split_join > 0:
+        for _ in xrange(split_join):
+            positives = split_clusters(positives)
+    elif split_join < 0:
+        for _ in xrange(-split_join):
+            positives = join_clusters(positives)
+        if join_negatives:
+            for _ in xrange(-split_join):
+                negatives = join_clusters(negatives)
+
+    return relabel_negatives(positives + negatives)
 
 
 def simulate_labeling(sample_size=2000, **kwargs):

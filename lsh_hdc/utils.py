@@ -2,19 +2,32 @@
 import random
 import operator
 import string
+from math import log
 from itertools import imap
 from operator import itemgetter
 from pymaptools.iter import isiterable
-from pymaptools.sample import discrete_sample
 
 
-def randround(num):
-    """Round a number by drawing from a continuous distribution
+def _log(x):
+    """Safe natural log
     """
-    whole = int(num)
-    p_whole1 = num - float(whole)
-    whole += discrete_sample({0: 1.0 - p_whole1, 1: p_whole1})
-    return whole
+    if x == 0.0:
+        return float('-inf')
+    else:
+        return log(x)
+
+
+def _div(numer, denom):
+    """Divide without raising zero division error or losing decimal part
+    """
+    if denom == 0:
+        if numer == 0:
+            return float('nan')
+        elif numer > 0:
+            return float('inf')
+        else:
+            return float('-inf')
+    return float(numer) / denom
 
 
 def get_df_subset(df, fields):
