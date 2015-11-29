@@ -18,7 +18,7 @@ from lsh_hdc.monte_carlo import utils
 from lsh_hdc.fent import minmaxr
 from lsh_hdc.utils import _div
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
-from lsh_hdc.ranking import RocCurve
+from lsh_hdc.ranking import dist_auc
 from sklearn.metrics.ranking import auc
 
 
@@ -545,11 +545,11 @@ class Grid(object):
             result_row = {}
             for score_name, scores0 in result0.iteritems():
                 scores1 = result1[score_name]
-                scores0p = [x for x in scores0 if not np.isnan(x)]
-                scores1p = [x for x in scores1 if not np.isnan(x)]
-                auc_score = RocCurve.from_scores(scores0p, scores1p).auc_score()
+                auc_score = dist_auc(scores0, scores1)
                 result_row[score_name] = auc_score
                 if plot:
+                    scores0p = [x for x in scores0 if not np.isnan(x)]
+                    scores1p = [x for x in scores1 if not np.isnan(x)]
                     hmin0, hmax0 = minmaxr(scores0p)
                     hmin1, hmax1 = minmaxr(scores1p)
                     bins = np.linspace(min(hmin0, hmin1), max(hmax0, hmax1), 50)

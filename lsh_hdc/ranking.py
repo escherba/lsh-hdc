@@ -509,3 +509,32 @@ def roc_auc_score(y_true, y_score, sample_weight=None):
     Replaces Scikit Learn implementation (given binary ``y_true``).
     """
     return RocCurve.from_labels(y_true, y_score).auc_score()
+
+
+def hmean(arr, weights):
+    """weighted harmonic mean"""
+    numer = sum(weights)
+    denom = sum(w / float(x) for x, w in izip(arr, weights))
+    return numer / denom
+
+
+def dist_auc(scores0, scores1):
+    """AUC score for two distributions, with NaN correction
+    """
+    scores0_len = len(scores0)
+    scores1_len = len(scores1)
+    scores0p = [x for x in scores0 if not np.isnan(x)]
+    scores1p = [x for x in scores1 if not np.isnan(x)]
+
+    scores0p_len = len(scores0p)
+    scores1p_len = len(scores1p)
+
+    nans0p_len = scores0_len - scores0p_len
+    nans1p_len = scores1_len - scores1p_len
+
+    total_pairs = 2 * scores0_len * scores1_len
+    nan_pairs = nans0p_len * scores1_len + nans1p_len * scores0_len
+    def_pairs = total_pairs - nan_pairs
+
+    auc_score = RocCurve.from_scores(scores0p, scores1p).auc_score()
+    return hmean([auc_score, 0.5], [def_pairs, nan_pairs])
