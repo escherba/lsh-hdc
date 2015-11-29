@@ -1996,7 +1996,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         if a == n or d == n or b == n or c == n:
             # either all cells are zero, or only one cell is non-zero
             return np.nan
-        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+        elif p1 == n or p2 == n or q1 == n or q2 == n:
             # one row or column is zero, another non-zero
             return 0.0
 
