@@ -1,4 +1,4 @@
-EXP_MAPPER_ARGS := --h0_err 0.9 --h1_err 0.5 --pos_ratio 0.2
+EXP_MAPPER_ARGS := --h0_err 0.9 --h1_err 0.5
 
 EXP_REDUCER_ARGS := --legend_loc "lower right"
 

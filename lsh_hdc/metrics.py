@@ -95,22 +95,11 @@ from math import log, sqrt, copysign
 from collections import Set, namedtuple
 from pymaptools.containers import CrossTab, OrderedCrossTab
 from pymaptools.iter import iter_items, isiterable
-from lsh_hdc.utils import randround
+from pymaptools.sample import randround
+from lsh_hdc.utils import _div, _log
 from lsh_hdc.entropy import fentropy, fnum_pairs, fsum_pairs, \
     emi_from_margins, assignment_cost
-
-
-def _div(numer, denom):
-    """Divide without raising zero division error or losing decimal part
-    """
-    if denom == 0:
-        if numer == 0:
-            return np.nan
-        elif numer > 0:
-            return np.PINF
-        else:
-            return np.NINF
-    return float(numer) / denom
+from scipy.stats import fisher_exact
 
 
 def jaccard_similarity(iterable1, iterable2):
@@ -239,16 +228,18 @@ class ContingencyTable(CrossTab):
         if table is not None:
             return table
 
-        rows = self._row_type_2d()
         N = float(self.grand_total)
         row_margin = self.row_totals
         col_margin = self.col_totals
+        R, C = self.shape
 
         if model == 'm1':                # no fixed margin
+            rows = self._row_type_2d()
             expected = N / float(len(row_margin) * len(col_margin))
             for (ri, ci), _ in self.iter_all():
                 rows[ri][ci] = expected
         elif model == 'm2r':             # fixed row margin
+            rows = self._row_type_2d()
             cm = N / float(len(col_margin))
             for (ri, ci), _ in self.iter_all():
                 rm = row_margin[ri]
@@ -256,6 +247,7 @@ class ContingencyTable(CrossTab):
                 if numer != 0:
                     rows[ri][ci] = numer / N
         elif model == 'm2c':             # fixed column margin
+            rows = self._row_type_2d()
             rm = N / float(len(row_margin))
             for (ri, ci), _ in self.iter_all():
                 cm = col_margin[ci]
@@ -263,12 +255,24 @@ class ContingencyTable(CrossTab):
                 if numer != 0:
                     rows[ri][ci] = numer / N
         elif model == 'm3':              # fixed row *and* column margin
+            rows = self._row_type_2d()
             for (ri, ci), _ in self.iter_all():
                 rm = row_margin[ri]
                 cm = col_margin[ci]
                 numer = rm * cm
                 if numer != 0:
                     rows[ri][ci] = numer / N
+        elif model == 'x1':                # no fixed margin
+            rows = np.zeros((R, C), dtype=int)
+            rows[0][0] = self.grand_total
+        elif model == 'x2r':             # fixed row margin
+            rows = np.zeros((R, C), dtype=int)
+            for idx, rm in enumerate(self.iter_row_totals()):
+                rows[idx, 0] = rm
+        elif model == 'x2c':             # fixed column margin
+            rows = np.zeros((R, C), dtype=int)
+            for idx, cm in enumerate(self.iter_col_totals()):
+                rows[0, idx] = cm
         else:
             raise NotImplementedError(model)
         self._expected_freqs_[model] = table = self.__class__(rows=rows)
@@ -437,7 +441,7 @@ class ContingencyTable(CrossTab):
         _, _, I_CK = self._entropies()
         return I_CK / self.grand_total
 
-    def entropy_scores(self):
+    def entropy_scores(self, mean='harmonic'):
         """Gives three entropy-based metrics for a RxC table
 
         The metrics are: Homogeneity, Completeness, and V-measure
@@ -480,7 +484,12 @@ class ContingencyTable(CrossTab):
         H_C, H_K, I_CK = self._entropies()
         h = 1.0 if H_C == 0.0 else max(0.0, I_CK / H_C)
         c = 1.0 if H_K == 0.0 else max(0.0, I_CK / H_K)
-        rsquare = harmonic_mean(h, c)
+        if mean == 'harmonic':
+            rsquare = harmonic_mean(h, c)
+        elif mean == 'geometric':
+            rsquare = geometric_mean(h, c)
+        else:
+            raise NotImplementedError(mean)
         return h, c, rsquare
 
     def adjusted_mutual_info(self):
@@ -678,10 +687,10 @@ class ContingencyTable(CrossTab):
 
         """
         H_C, H_K, I_CK = self._entropies()
-        score = H_C + H_K - 2 * I_CK
-        score = _div(score, self.grand_total)
+        N = self.grand_total
+        score = (H_C + H_K - 2 * I_CK) / N
         if normalize:
-            score = _div(score, log(self.grand_total))
+            score = _div(score, log(N))
         return score
 
     def vi_similarity_m1(self, normalize=True):
@@ -724,7 +733,8 @@ class ContingencyTable(CrossTab):
             null_dist = (fentropy(self.row_totals) + fentropy(self.col_totals)) / N
             null_score = max_dist - null_dist
         else:
-            raise NotImplementedError(model)
+            expected = self.expected(model)
+            null_score = expected.vi_similarity(normalize=False, model=None)
 
         score -= null_score
         if normalize:
@@ -814,7 +824,8 @@ class ContingencyTable(CrossTab):
                 max(self.row_totals.itervalues()) + \
                 max(self.col_totals.itervalues())
         else:
-            raise NotImplementedError(model)
+            expected = self.expected(model)
+            null_score = expected.split_join_similarity(normalize=False, model=None)
 
         score -= null_score
         if normalize:
@@ -1217,6 +1228,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     @property
     def TN(self):
         return self.rows[1][1]
+
+    def hypergeometric(self):
+        """Hypergeometric association score
+        """
+        covsign = copysign(1, self.covar())
+        _, pvalue = fisher_exact(self.to_array())
+        return covsign * (-_log(pvalue))
 
     def ACC(self):
         """Accuracy (Rand Index)
@@ -1993,7 +2011,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             # no more than one cell is zero
             return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
 
-    def mic_scores(self):
+    def mic_scores_geom(self):
+        return self.mic_scores(mean='geometric')
+
+    def mic_scores_harm(self):
+        return self.mic_scores(mean='harmonic')
+
+    def mic_scores(self, mean='harmonic'):
         """Mutual information-based correlation
 
         The coefficient decomposes into regression coefficients defined
@@ -2007,7 +2031,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         ``mic0`` roughly corresponds to precision (homogeneity) while ``mic1``
         roughly corresponds to recall (completeness).
         """
-        h, c, rsquare = self.entropy_scores()
+        h, c, rsquare = self.entropy_scores(mean=mean)
         covsign = copysign(1, self.covar())
         mic0 = covsign * sqrt(c)
         mic1 = covsign * sqrt(h)
