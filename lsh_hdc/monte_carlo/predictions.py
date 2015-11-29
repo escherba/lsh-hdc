@@ -42,6 +42,8 @@ def parse_args(args=None):
                           help='Simulation size')
     p_mapper.add_argument('--nclusters', type=int, default=20,
                           help='number of clusters to generate')
+    p_mapper.add_argument('--join_negatives', type=int, default=0,
+                          help='whether to join negatives (if split_join<0)')
     p_mapper.add_argument('--split_join', type=int, default=0,
                           help='number of splits (if positive) or joins (if negative) to perform')
     p_mapper.add_argument('--sampling_warnings', type=int, default=0,
@@ -80,22 +82,16 @@ def parse_args(args=None):
 
 
 def do_mapper(args):
-    h0 = Grid.with_sim_clusters(
+    params = dict(
         n=args.sim_size,
-        p_err=args.h0_err,
         nclusters=args.nclusters,
         split_join=args.split_join,
+        join_negatives=bool(args.join_negatives),
         population_size=args.population_size,
         with_warnings=args.sampling_warnings,
     )
-    h1 = Grid.with_sim_clusters(
-        n=args.sim_size,
-        p_err=args.h1_err,
-        nclusters=args.nclusters,
-        split_join=args.split_join,
-        population_size=args.population_size,
-        with_warnings=args.sampling_warnings,
-    )
+    h0 = Grid.with_sim_clusters(p_err=args.h0_err, **params)
+    h1 = Grid.with_sim_clusters(p_err=args.h1_err, **params)
     with PMTimer() as timer:
         results = h0.compare(h1, args.metrics)
     for result in results:
@@ -549,14 +545,16 @@ class Grid(object):
             result_row = {}
             for score_name, scores0 in result0.iteritems():
                 scores1 = result1[score_name]
-                auc_score = RocCurve.from_scores(scores0, scores1).auc_score()
+                scores0p = [x for x in scores0 if not np.isnan(x)]
+                scores1p = [x for x in scores1 if not np.isnan(x)]
+                auc_score = RocCurve.from_scores(scores0p, scores1p).auc_score()
                 result_row[score_name] = auc_score
                 if plot:
-                    hmin0, hmax0 = minmaxr(scores0)
-                    hmin1, hmax1 = minmaxr(scores1)
+                    hmin0, hmax0 = minmaxr(scores0p)
+                    hmin1, hmax1 = minmaxr(scores1p)
                     bins = np.linspace(min(hmin0, hmin1), max(hmax0, hmax1), 50)
-                    plt.hist(scores0, bins, alpha=0.5, label='0', color=colors[0], edgecolor="none")
-                    plt.hist(scores1, bins, alpha=0.5, label='1', color=colors[1], edgecolor="none")
+                    plt.hist(scores0p, bins, alpha=0.5, label='0', color=colors[0], edgecolor="none")
+                    plt.hist(scores1p, bins, alpha=0.5, label='1', color=colors[1], edgecolor="none")
                     plt.legend(loc='upper right')
                     plt.title("%s: AUC=%.4f" % (score_name, auc_score))
                     plt.show()

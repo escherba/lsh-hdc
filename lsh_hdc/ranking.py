@@ -407,8 +407,8 @@ class RocCurve(object):
         The score arrays don't have to be the same length.
         """
 
-        scores_pos = ((1, x) for x in scores_pos)
-        scores_neg = ((0, x) for x in scores_neg)
+        scores_pos = ((1, x) for x in scores_pos if not np.isnan(x))
+        scores_neg = ((0, x) for x in scores_neg if not np.isnan(x))
         all_scores = zip(*chain(scores_neg, scores_pos)) or ([], [])
         return cls.from_labels(*all_scores)
 
