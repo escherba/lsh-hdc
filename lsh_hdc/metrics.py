@@ -1542,10 +1542,19 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """
         a, c, d, b = self.to_ccw()
         p1, p2 = a + b, a + c
-        N = a + b + c + d
+        n = a + b + c + d
+
+        if a == n or d == n:
+            # either all cells are zero, or only one cell is non-zero and it is
+            # a diagonal cell
+            return np.nan
+        elif p1 == 0 or p2 == 0:
+            # one row or column is zero, another non-zero
+            return 0.0
+
         p1_p2 = p1 * p2
-        numer = N * a - p1_p2
-        denom = N * sqrt(p1_p2) - p1_p2
+        numer = n * a - p1_p2
+        denom = n * sqrt(p1_p2) - p1_p2
         return _div(numer, denom)
 
     def ochiai_coeff(self):
@@ -1903,15 +1912,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
         n = p1 + q1
-        if a == n or b == n or c == n or d == n:
-            # only one cell is non-zero
+
+        if a == n or d == n:
+            # either all cells are zero, or only one cell is non-zero and it is
+            # a diagonal cell
             return np.nan
-        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
-            # one row or column is zero, another non-zero
-            return 0.0
-        else:
-            # no more than one cell is zero
-            return _div(2 * self.covar(), p1 * q2 + p2 * q1)
+
+        return _div(2 * self.covar(), p1 * q2 + p2 * q1)
 
     def mp_corr(self):
         """Maxwell & Pilliner's association index
@@ -1933,15 +1940,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
         n = p1 + q1
-        if a == n or b == n or c == n or d == n:
-            # only one cell is non-zero
+
+        if a == n or d == n or b == n or c == n:
+            # either all cells are zero or only one is non-zero
             return np.nan
-        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
-            # one row or column is zero, another non-zero
-            return 0.0
-        else:
-            # no more than one cell is zero
-            return _div(2 * self.covar(), p1 * q1 + p2 * q2)
+
+        return _div(2 * self.covar(), p1 * q1 + p2 * q2)
 
     def matthews_corr(self):
         """Matthews Correlation Coefficient (Phi coefficient)
@@ -2001,15 +2005,15 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
         n = p1 + q1
-        if a == n or b == n or c == n or d == n:
-            # only one cell is non-zero
+
+        if a == n or d == n or b == n or c == n:
+            # either all cells are zero, or only one cell is non-zero
             return np.nan
         elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
             # one row or column is zero, another non-zero
             return 0.0
-        else:
-            # no more than one cell is zero
-            return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
+
+        return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
 
     def mic_scores_geom(self):
         return self.mic_scores(mean='geometric')

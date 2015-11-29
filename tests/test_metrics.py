@@ -531,7 +531,7 @@ def test_0100():
 
     assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
-    assert_true(np.isnan(cm.kappa()))
+    assert_almost_equal(cm.kappa(), 0.0, 4)
 
     assert_true(np.isnan(cm.loevinger_coeff()))
     assert_true(np.isnan(cm.yule_q()))
@@ -575,7 +575,7 @@ def test_0001():
 
     assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
-    assert_true(np.isnan(cm.kappa()))
+    assert_almost_equal(cm.kappa(), 0.0, 4)
 
     assert_true(np.isnan(cm.loevinger_coeff()))
     assert_true(np.isnan(cm.yule_q()))
