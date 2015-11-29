@@ -10,12 +10,13 @@ from collections import defaultdict
 from functools import partial
 from pymaptools.iter import izip_with_cycles, isiterable, take
 from pymaptools.containers import labels_to_clusters, clusters_to_labels
-from pymaptools.sample import discrete_sample
+from pymaptools.sample import discrete_sample, freqs2probas
 from pymaptools.io import GzipFileType, PathArgumentParser, write_json_line, read_json_lines, ndjson2col
 from pymaptools.benchmark import PMTimer
 
 from lsh_hdc.monte_carlo import utils
 from lsh_hdc.fent import minmaxr
+from lsh_hdc.utils import randround
 from lsh_hdc.metrics import ClusteringMetrics, ConfusionMatrix2
 from lsh_hdc.ranking import RocCurve
 from sklearn.metrics.ranking import auc
@@ -210,61 +211,21 @@ def get_conf(obj):
         return obj
 
 
-def simulate_labeling(sample_size=2000, **kwargs):
+def sample_with_error(label, error_distribution, null_distribution):
+    """Return label given error probability and null distributions
 
-    clusters = simulate_clustering(**kwargs)
-    tuples = zip(*clusters_to_labels(clusters))
-    random.shuffle(tuples)
-    tuples = tuples[:sample_size]
-    ltrue, lpred = zip(*tuples) or ([], [])
-    return ltrue, lpred
+    error_distribution must be of form {False: 1.0 - p_err, True: p_err}
+    """
+    if discrete_sample(error_distribution):
+        # to generate error properly, draw from null distribution
+        return discrete_sample(null_distribution)
+    else:
+        # no error: append actual class label
+        return label
 
 
-def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
-                        p_err=0.05, population_size=2000, with_warnings=True):
-    csizes = map(int, np.random.gamma(galpha, gbeta, nclusters))
-    num_pos = sum(csizes)
-    if num_pos == 0:
-        csizes.append(1)
-        num_pos += 1
-    num_neg = max(0, population_size - num_pos)
-    expected_num_neg = num_pos * ((1.0 - pos_ratio) / pos_ratio)
-    actual_neg_ratio = (num_neg - expected_num_neg) / float(expected_num_neg)
-    if abs(actual_neg_ratio) > 0.2:
-        word = "fewer" if actual_neg_ratio < 0.0 else "more"
-        if with_warnings:
-            warnings.warn(
-                "{:.1%} {} negatives than expected. Got: {} (expected: {}. Recommended population_size: {})"
-                .format(abs(actual_neg_ratio), word, num_neg, int(expected_num_neg),
-                        int(expected_num_neg + num_pos)))
-
-    # create a discrete probability distribution of cluster labels based on
-    # cluster sizes
-    dist_class_labels = {}
-    total_csizes = sum(csizes) + num_neg
-    for idx, csize in enumerate([num_neg] + csizes):
-        p = (csize / float(total_csizes))
-        dist_class_labels[idx] = p
-
-    dist_err = {True: 1.0 - p_err, False: p_err}
-
-    clusters = []
-
-    # negative case first
-    for _ in xrange(num_neg):
-        no_error = discrete_sample(dist_err)
-        class_label = 0 if no_error else discrete_sample(dist_class_labels)
-        clusters.append([class_label])
-
-    # positive cases
-    for idx, csize in enumerate(csizes, start=1):
-        cluster = []
-        for _ in xrange(csize):
-            no_error = discrete_sample(dist_err)
-            class_label = idx if no_error else discrete_sample(dist_class_labels)
-            cluster.append(class_label)
-        clusters.append(cluster)
-
+def relabel_negatives(clusters):
+    # each negative should become its own class
     idx = -1
     relabeled = []
     for cluster in clusters:
@@ -277,6 +238,69 @@ def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
         relabeled.append(relabeled_cluster)
 
     return relabeled
+
+
+def simulate_clustering(galpha=2, gbeta=10, nclusters=20, pos_ratio=0.2,
+                        p_err=0.05, population_size=2000, with_warnings=True):
+
+    if not 0.0 <= p_err <= 1.0:
+        raise ValueError(p_err)
+
+    if not 0.0 <= pos_ratio <= 1.0:
+        raise ValueError(pos_ratio)
+
+    csizes = map(randround, np.random.gamma(galpha, gbeta, nclusters))
+
+    # make sure at least one cluster is generated
+    num_pos = sum(csizes)
+    if num_pos == 0:
+        csizes.append(1)
+        num_pos += 1
+
+    num_neg = max(0, population_size - num_pos)
+
+    if with_warnings:
+        expected_num_neg = num_pos * ((1.0 - pos_ratio) / pos_ratio)
+        actual_neg_ratio = (num_neg - expected_num_neg) / expected_num_neg
+        if abs(actual_neg_ratio) > 0.2:
+            warnings.warn(
+                "{:.1%} {} negatives than expected. Got: {} "
+                "(expected: {}. Recommended population_size: {})"
+                .format(abs(actual_neg_ratio), ("fewer" if actual_neg_ratio < 0.0 else "more"), num_neg,
+                        int(expected_num_neg), int(expected_num_neg + num_pos)))
+
+    # set up probability distributions we will use
+    null_dist = freqs2probas([num_neg] + csizes)
+    error_dist = {False: 1.0 - p_err, True: p_err}
+
+    clusters = []
+
+    # negative case first
+    for _ in xrange(num_neg):
+        class_label = sample_with_error(0, error_dist, null_dist)
+        clusters.append([class_label])
+
+    # positive cases
+    for idx, csize in enumerate(csizes, start=1):
+        if csize < 1:
+            continue
+        cluster = []
+        for _ in xrange(csize):
+            class_label = sample_with_error(idx, error_dist, null_dist)
+            cluster.append(class_label)
+        clusters.append(cluster)
+
+    return relabel_negatives(clusters)
+
+
+def simulate_labeling(sample_size=2000, **kwargs):
+
+    clusters = simulate_clustering(**kwargs)
+    tuples = zip(*clusters_to_labels(clusters))
+    random.shuffle(tuples)
+    tuples = tuples[:sample_size]
+    ltrue, lpred = zip(*tuples) or ([], [])
+    return ltrue, lpred
 
 
 class Grid(object):
