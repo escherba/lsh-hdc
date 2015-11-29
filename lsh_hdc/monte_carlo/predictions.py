@@ -42,6 +42,8 @@ def parse_args(args=None):
                           help='Simulation size')
     p_mapper.add_argument('--nclusters', type=int, default=20,
                           help='number of clusters to generate')
+    p_mapper.add_argument('--join_negatives', type=int, default=0,
+                          help='whether to join negatives (if split_join<0)')
     p_mapper.add_argument('--split_join', type=int, default=0,
                           help='number of splits (if positive) or joins (if negative) to perform')
     p_mapper.add_argument('--sampling_warnings', type=int, default=0,
@@ -80,22 +82,16 @@ def parse_args(args=None):
 
 
 def do_mapper(args):
-    h0 = Grid.with_sim_clusters(
+    params = dict(
         n=args.sim_size,
-        p_err=args.h0_err,
         nclusters=args.nclusters,
         split_join=args.split_join,
+        join_negatives=bool(args.join_negatives),
         population_size=args.population_size,
         with_warnings=args.sampling_warnings,
     )
-    h1 = Grid.with_sim_clusters(
-        n=args.sim_size,
-        p_err=args.h1_err,
-        nclusters=args.nclusters,
-        split_join=args.split_join,
-        population_size=args.population_size,
-        with_warnings=args.sampling_warnings,
-    )
+    h0 = Grid.with_sim_clusters(p_err=args.h0_err, **params)
+    h1 = Grid.with_sim_clusters(p_err=args.h1_err, **params)
     with PMTimer() as timer:
         results = h0.compare(h1, args.metrics)
     for result in results:
