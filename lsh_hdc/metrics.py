@@ -1911,13 +1911,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
-        n = p1 + q1
-
-        if a == n or d == n:
-            # either all cells are zero, or only one cell is non-zero and it is
-            # a diagonal cell
-            return np.nan
-
         return _div(2 * self.covar(), p1 * q2 + p2 * q1)
 
     def mp_corr(self):
@@ -1939,12 +1932,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
-        n = p1 + q1
-
-        if a == n or d == n or b == n or c == n:
-            # either all cells are zero or only one is non-zero
-            return np.nan
-
         return _div(2 * self.covar(), p1 * q1 + p2 * q2)
 
     def matthews_corr(self):

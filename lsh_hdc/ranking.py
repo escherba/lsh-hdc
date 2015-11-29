@@ -509,3 +509,22 @@ def roc_auc_score(y_true, y_score, sample_weight=None):
     Replaces Scikit Learn implementation (given binary ``y_true``).
     """
     return RocCurve.from_labels(y_true, y_score).auc_score()
+
+
+def dist_auc(scores0, scores1):
+    """AUC score for two distributions, with NaN correction
+
+    Note: arithmetic mean appears to be appropriate here, as other means don't
+    result in total of 1.0 when sides are switched.
+    """
+    scores0_len = len(scores0)
+    scores1_len = len(scores1)
+
+    scores0p = [x for x in scores0 if not np.isnan(x)]
+    scores1p = [x for x in scores1 if not np.isnan(x)]
+
+    def_pairs = len(scores0p) * scores1_len + len(scores1p) * scores0_len
+    nan_pairs = 2 * scores0_len * scores1_len - def_pairs
+
+    auc_score = RocCurve.from_scores(scores0p, scores1p).auc_score()
+    return np.average([auc_score, 0.5], weights=[def_pairs, nan_pairs])
