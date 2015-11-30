@@ -1579,7 +1579,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                <http://dx.doi.org/10.1016/j.neucom.2011.04.032>`_
         """
         a, c, _, b = self.to_ccw()
-        return _div(a, sqrt((a + b) * (a + c)))
+        p1, p2 = a + b, a + c
+        if a == b == c == 0:
+            return np.nan
+        elif a == 0:
+            return 0.0
+        return _div(a, sqrt(p1 * p2))
 
     def sokal_sneath_coeff_adj(self):
         """Sokal and Sneath coefficient adjusted to the null model
@@ -1996,7 +2001,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         if a == n or d == n or b == n or c == n:
             # either all cells are zero, or only one cell is non-zero
             return np.nan
-        elif p1 == 0 or p2 == 0 or q1 == 0 or q2 == 0:
+        elif p1 == n or p2 == n or q1 == n or q2 == n:
             # one row or column is zero, another non-zero
             return 0.0
 
