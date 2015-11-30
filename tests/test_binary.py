@@ -9,8 +9,9 @@ def test_0000():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.ochiai_coeff()))
     assert_true(np.isnan(cm.ochiai_coeff_adj()))
+    assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
 
@@ -30,8 +31,9 @@ def test_1000():
     assert_almost_equal(c, 1.0, 4)
     assert_almost_equal(v, 1.0, 4)
 
-    assert_true(np.isnan(cm.matthews_corr()))
+    assert_almost_equal(cm.ochiai_coeff(), 1.0, 4)
     assert_true(np.isnan(cm.ochiai_coeff_adj()))
+    assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
 
@@ -51,8 +53,9 @@ def test_0100():
     assert_almost_equal(c, 1.0, 4)
     assert_almost_equal(v, 1.0, 4)
 
-    assert_true(np.isnan(cm.matthews_corr()))
+    assert_almost_equal(cm.ochiai_coeff(), 0.0, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.0, 4)
+    assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
     assert_almost_equal(cm.kappa(), 0.0, 4)
 
@@ -72,8 +75,9 @@ def test_0010():
     assert_almost_equal(c, 1.0, 4)
     assert_almost_equal(v, 1.0, 4)
 
-    assert_true(np.isnan(cm.matthews_corr()))
+    assert_true(np.isnan(cm.ochiai_coeff()))
     assert_true(np.isnan(cm.ochiai_coeff_adj()))
+    assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
     assert_true(np.isnan(cm.kappa()))
 
@@ -93,8 +97,9 @@ def test_0001():
     assert_almost_equal(c, 1.0, 4)
     assert_almost_equal(v, 1.0, 4)
 
-    assert_true(np.isnan(cm.matthews_corr()))
+    assert_almost_equal(cm.ochiai_coeff(), 0.0, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.0, 4)
+    assert_true(np.isnan(cm.matthews_corr()))
     assert_true(np.isnan(cm.mp_corr()))
     assert_almost_equal(cm.kappa(), 0.0, 4)
 
@@ -109,8 +114,9 @@ def test_1010():
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
     assert_almost_equal(cm.g_score(), 2.7726, 4)
 
-    assert_almost_equal(cm.matthews_corr(), 1.0, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 1.0, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 1.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 1.0, 4)
     assert_almost_equal(cm.mp_corr(), 1.0, 4)
     assert_almost_equal(cm.kappa(), 1.0, 4)
 
@@ -125,8 +131,9 @@ def test_1100():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.7071, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
     assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
 
@@ -141,8 +148,9 @@ def test_0011():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.0, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
     assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
 
@@ -157,8 +165,9 @@ def test_0101():
     assert_almost_equal(cm.chisq_score(), 2.0, 4)
     assert_almost_equal(cm.g_score(), 2.7726, 4)
 
-    assert_almost_equal(cm.matthews_corr(), -1.0, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.0, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), -1.0, 4)
+    assert_almost_equal(cm.matthews_corr(), -1.0, 4)
     assert_almost_equal(cm.mp_corr(), -1.0, 4)
     assert_almost_equal(cm.kappa(), -1.0, 4)
 
@@ -173,8 +182,9 @@ def test_1001():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.7071, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
     assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
 
@@ -189,8 +199,9 @@ def test_0110():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.0, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
     assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
 
@@ -205,8 +216,9 @@ def test_0111():
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
 
-    assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.0, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), -0.5, 4)
+    assert_almost_equal(cm.matthews_corr(), -0.5, 4)
     assert_almost_equal(cm.mp_corr(), -0.5, 4)
     assert_almost_equal(cm.kappa(), -0.5, 4)
 
@@ -217,8 +229,9 @@ def test_1011():
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
 
-    assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.7071, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.4459, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.5, 4)
     assert_almost_equal(cm.mp_corr(), 0.5, 4)
     assert_almost_equal(cm.kappa(), 0.4, 4)
 
@@ -229,8 +242,9 @@ def test_1101():
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
 
-    assert_almost_equal(cm.matthews_corr(), -0.5, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.5, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), -0.5, 4)
+    assert_almost_equal(cm.matthews_corr(), -0.5, 4)
     assert_almost_equal(cm.mp_corr(), -0.5, 4)
     assert_almost_equal(cm.kappa(), -0.5, 4)
 
@@ -241,8 +255,9 @@ def test_1110():
     assert_almost_equal(cm.chisq_score(), 0.75, 4)
     assert_almost_equal(cm.g_score(), 1.0465, 4)
 
-    assert_almost_equal(cm.matthews_corr(), 0.5, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.7071, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.4459, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.5, 4)
     assert_almost_equal(cm.mp_corr(), 0.5, 4)
     assert_almost_equal(cm.kappa(), 0.4, 4)
 
@@ -253,7 +268,8 @@ def test_1111():
     assert_almost_equal(cm.chisq_score(), 0.0, 4)
     assert_almost_equal(cm.g_score(), 0.0, 4)
 
-    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.ochiai_coeff(), 0.5, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
     assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
