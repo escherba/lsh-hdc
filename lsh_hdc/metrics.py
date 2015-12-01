@@ -2029,12 +2029,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
 
-    def mic_scores_geom(self):
-        return self.mic_scores(mean='geometric')
-
-    def mic_scores_harm(self):
-        return self.mic_scores(mean='harmonic')
-
     def mic_scores(self, mean='harmonic'):
         """Mutual information-based correlation
 
