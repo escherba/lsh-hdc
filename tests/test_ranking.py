@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import chain
 from pymaptools.containers import clusters_to_labels
-from lsh_hdc.ranking import RocCurve, LiftCurve, \
+from lsh_hdc.ranking import RocCurve, LiftCurve, dist_auc, \
     aul_score_from_clusters, aul_score_from_labels, roc_auc_score
 from nose.tools import assert_almost_equal
 from pymaptools.sample import discrete_sample, random_seed
@@ -240,3 +240,56 @@ def test_sample_perverse():
 
     auc = RocCurve.from_clusters(clusters).auc_score()
     assert_almost_equal(auc, 0.0, 4)
+
+
+def test_scores_1():
+    """Complete separation
+    """
+
+    scores0 = [10, 20, 30, 33]
+    scores1 = [36, 40, 50, 60]
+    auc = dist_auc(scores0, scores1)
+    assert_almost_equal(auc, 1.0, 4)
+
+
+def test_scores_2():
+    """Complete separation (excluding NaNs)
+    """
+
+    nan = float('nan')
+    scores0 = [10, 20, 30, 33]
+    scores1 = [nan, 40, 50, 60]
+    auc = dist_auc(scores0, scores1)
+    assert_almost_equal(auc, 0.9375, 4)
+
+
+def test_scores_3():
+    """Complete separation (excluding NaNs)
+    """
+
+    nan = float('nan')
+    scores0 = [10, 20, 30, nan]
+    scores1 = [nan, 40, 50, 60]
+    auc = dist_auc(scores0, scores1)
+    assert_almost_equal(auc, 0.875, 4)
+
+
+def test_scores_4():
+    """NaN -> 45 (score should be worse)
+    """
+
+    nan = float('nan')
+    scores0 = [10, 20, 30, 45]
+    scores1 = [nan, 40, 50, 60]
+    auc = dist_auc(scores0, scores1)
+    assert_almost_equal(auc, 0.8646, 4)
+
+
+def test_scores_5():
+    """NaN -> 45 (score should be a lot worse)
+    """
+
+    scores0 = [10, 20, 30, 45]
+    scores1 = [25, 40, 50, 60]
+    auc = dist_auc(scores0, scores1)
+    assert_almost_equal(auc, 0.8125, 4)

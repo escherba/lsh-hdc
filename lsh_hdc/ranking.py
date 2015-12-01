@@ -523,8 +523,18 @@ def dist_auc(scores0, scores1):
     scores0p = [x for x in scores0 if not np.isnan(x)]
     scores1p = [x for x in scores1 if not np.isnan(x)]
 
-    def_pairs = len(scores0p) * scores1_len + len(scores1p) * scores0_len
-    nan_pairs = 2 * scores0_len * scores1_len - def_pairs
+    scores0n_len = scores0_len - len(scores0p)
+    scores1n_len = scores1_len - len(scores1p)
 
+    # ``nan_pairs`` are pairs for which it is impossible to define order, due
+    # to at least one of the members of each being a NaN. ``def_pairs`` are
+    # pairs for which order can be established.
+    all_pairs = 2 * scores0_len * scores1_len
+    nan_pairs = scores0n_len * scores1_len + scores1n_len * scores0_len
+    def_pairs = all_pairs - nan_pairs
+
+    # the final score is the average of the score for the defined portion and
+    # of random-chance AUC (0.5), weighted according to the number of pairs in
+    # each group.
     auc_score = RocCurve.from_scores(scores0p, scores1p).auc_score()
     return np.average([auc_score, 0.5], weights=[def_pairs, nan_pairs])
