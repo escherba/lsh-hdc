@@ -1544,12 +1544,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         p1, p2 = a + b, a + c
         n = a + b + c + d
 
-        if a == n or d == n:
-            # either all cells are zero, or only one cell is non-zero and it is
-            # a diagonal cell
+        if n == 0:
             return np.nan
+        elif a == n or d == n:
+            # only one (diagonal) cell is non-zero
+            return 1.0
         elif p1 == 0 or p2 == 0:
-            # one row or column is zero, another non-zero
+            # first row or column is zero, second non-zero
             return 0.0
 
         p1_p2 = p1 * p2
@@ -1916,6 +1917,14 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
+        n = p1 + q1
+
+        if n == 0:
+            return np.nan
+        elif a == n or d == n:
+            # only one (diagonal) cell is non-zero
+            return 1.0
+
         return _div(2 * self.covar(), p1 * q2 + p2 * q1)
 
     def mp_corr(self):
@@ -1937,6 +1946,17 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
+        n = p1 + q1
+
+        if n == 0:
+            return np.nan
+        elif a == n or d == n:
+            # only one (diagonal) cell is non-zero
+            return 1.0
+        elif b == n or c == n:
+            # only one (non-diagonal) cell is non-zero
+            return 0.0
+
         return _div(2 * self.covar(), p1 * q1 + p2 * q2)
 
     def matthews_corr(self):
@@ -1998,20 +2018,16 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         p2, q2 = a + c, b + d
         n = p1 + q1
 
-        if a == n or d == n or b == n or c == n:
-            # either all cells are zero, or only one cell is non-zero
+        if n == 0:
             return np.nan
+        elif a == n or d == n:
+            # only one (diagonal) cell is non-zero
+            return 1.0
         elif p1 == n or p2 == n or q1 == n or q2 == n:
             # one row or column is zero, another non-zero
             return 0.0
 
         return _div(self.covar(), sqrt(p1 * q1 * p2 * q2))
-
-    def mic_scores_geom(self):
-        return self.mic_scores(mean='geometric')
-
-    def mic_scores_harm(self):
-        return self.mic_scores(mean='harmonic')
 
     def mic_scores(self, mean='harmonic'):
         """Mutual information-based correlation

@@ -32,10 +32,10 @@ def test_1000():
     assert_almost_equal(v, 1.0, 4)
 
     assert_almost_equal(cm.ochiai_coeff(), 1.0, 4)
-    assert_true(np.isnan(cm.ochiai_coeff_adj()))
-    assert_true(np.isnan(cm.matthews_corr()))
-    assert_true(np.isnan(cm.mp_corr()))
-    assert_true(np.isnan(cm.kappa()))
+    assert_almost_equal(cm.ochiai_coeff_adj(), 1.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 1.0, 4)
+    assert_almost_equal(cm.mp_corr(), 1.0, 4)
+    assert_almost_equal(cm.kappa(), 1.0, 4)
 
     assert_true(np.isnan(cm.loevinger_coeff()))
     assert_true(np.isnan(cm.yule_q()))
@@ -55,8 +55,8 @@ def test_0100():
 
     assert_almost_equal(cm.ochiai_coeff(), 0.0, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.0, 4)
-    assert_true(np.isnan(cm.matthews_corr()))
-    assert_true(np.isnan(cm.mp_corr()))
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
 
     assert_true(np.isnan(cm.loevinger_coeff()))
@@ -76,10 +76,10 @@ def test_0010():
     assert_almost_equal(v, 1.0, 4)
 
     assert_true(np.isnan(cm.ochiai_coeff()))
-    assert_true(np.isnan(cm.ochiai_coeff_adj()))
-    assert_true(np.isnan(cm.matthews_corr()))
-    assert_true(np.isnan(cm.mp_corr()))
-    assert_true(np.isnan(cm.kappa()))
+    assert_almost_equal(cm.ochiai_coeff_adj(), 1.0, 4)
+    assert_almost_equal(cm.matthews_corr(), 1.0, 4)
+    assert_almost_equal(cm.mp_corr(), 1.0, 4)
+    assert_almost_equal(cm.kappa(), 1.0, 4)
 
     assert_true(np.isnan(cm.loevinger_coeff()))
     assert_true(np.isnan(cm.yule_q()))
@@ -99,8 +99,8 @@ def test_0001():
 
     assert_almost_equal(cm.ochiai_coeff(), 0.0, 4)
     assert_almost_equal(cm.ochiai_coeff_adj(), 0.0, 4)
-    assert_true(np.isnan(cm.matthews_corr()))
-    assert_true(np.isnan(cm.mp_corr()))
+    assert_almost_equal(cm.matthews_corr(), 0.0, 4)
+    assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
 
     assert_true(np.isnan(cm.loevinger_coeff()))
