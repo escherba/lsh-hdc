@@ -1807,7 +1807,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         Loevinger's coefficient has a unique property: all relevant two-way
         correlation coefficients on a 2x2 table (including Kappa and Matthews'
         Correlation Coefficient) become Loevinger's coefficient after
-        normalization by maximum value [1]_.
+        normalization by maximum value [1]_. However, this measure is not
+        symmetric: when :math:`ad < bc`, it does not have a lower bound. For an
+        equivalent symmetric measure, see ``cole_coeff``.
 
         See Also
         --------
@@ -2146,8 +2148,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             else:
                 return 0.0
         else:
-            D = _div(cov, n * n)
-        return D
+            return _div(cov, n * n)
 
     def covar(self):
         """Covariance (determinant of a 2x2 matrix)
