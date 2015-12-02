@@ -13,13 +13,15 @@ NINF = float('-inf')
 NAN = float('nan')
 
 
-def _log(x):
+def _log(x, base=None):
     """Safe natural log
     """
     if x == 0.0:
         return NINF
-    else:
+    elif base is None:
         return log(x)
+    else:
+        return log(x, base)
 
 
 def _div(numer, denom):
