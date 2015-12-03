@@ -656,8 +656,8 @@ class ContingencyTable(CrossTab):
 
         cost -= null_cost
         if normalize:
-            max_cost = N
-            cost = _div(cost, max_cost - null_cost)
+            max_cost = N - null_cost
+            cost = 1.0 if cost == max_cost else _div(cost, max_cost)
 
         return cost
 
@@ -738,7 +738,9 @@ class ContingencyTable(CrossTab):
 
         score -= null_score
         if normalize:
-            score = _div(score, max_dist - null_score)
+            max_score = max_dist - null_score
+            score = 1.0 if score == max_score else _div(score, max_score)
+
         return score
 
     def split_join_distance(self, normalize=True):
@@ -829,8 +831,8 @@ class ContingencyTable(CrossTab):
 
         score -= null_score
         if normalize:
-            max_score = 2 * N
-            score = _div(score, max_score - null_score)
+            max_score = 2 * N - null_score
+            score = 1.0 if score == max_score else _div(score, max_score)
 
         return score
 

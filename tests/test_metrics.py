@@ -94,6 +94,19 @@ def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
     return scores
 
 
+def test_perfect():
+    p1 = [['A', 'B', 'C']]
+    p2 = [['A', 'B', 'C']]
+    cm = ClusteringMetrics.from_partitions(p1, p2)
+    assert_almost_equal(cm.assignment_score(), 1.0, 4)
+    assert_almost_equal(cm.vi_similarity(), 1.0, 4)
+    assert_almost_equal(cm.split_join_similarity(), 1.0, 4)
+    assert_almost_equal(cm.talburt_wang_index(), 1.0, 4)
+    assert_array_almost_equal(cm.entropy_scores(), (1.0,) * 3, 4)
+    assert_array_almost_equal(cm.bc_metrics(), (1.0,) * 3, 4)
+    assert_array_almost_equal(cm.muc_scores(), (1.0,) * 3, 4)
+
+
 def test_diseq():
     """Linkage disequilibrium should equal precalculated value
     """
