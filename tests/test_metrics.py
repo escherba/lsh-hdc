@@ -94,6 +94,15 @@ def uniform_labelings_scores(score_func, n_samples, k_range, n_runs=10,
     return scores
 
 
+def test_diseq():
+    """Linkage disequilibrium should equal precalculated value
+    """
+    cf = ConfusionMatrix2(rows=[[474, 142], [611, 773]])
+    assert_almost_equal(cf.diseq_coeff(), 0.0699, 4)
+    cf = ConfusionMatrix2(rows=[[331, 331], [6.6, 331]])
+    assert_almost_equal(cf.cole_coeff(), 0.942, 3)
+
+
 def test_adjusted_mutual_info_score():
     # Compute the Adjusted Mutual Information and test against known values
     labels_a = np.array([1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3])
