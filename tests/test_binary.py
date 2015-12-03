@@ -245,6 +245,11 @@ def test_0111():
     assert_almost_equal(cm.mp_corr(), -0.5, 4)
     assert_almost_equal(cm.kappa(), -0.5, 4)
 
+    assert_almost_equal(cm.loevinger_coeff(), -0.5, 4)
+    assert_almost_equal(cm.cole_coeff(), -1.0, 4)
+    assert_almost_equal(cm.yule_q(), -1.0, 4)
+    assert_almost_equal(cm.yule_y(), -1.0, 4)
+
 
 def test_1011():
     m = (1, 0, 1, 1)
@@ -258,6 +263,11 @@ def test_1011():
     assert_almost_equal(cm.matthews_corr(), 0.5, 4)
     assert_almost_equal(cm.mp_corr(), 0.5, 4)
     assert_almost_equal(cm.kappa(), 0.4, 4)
+
+    assert_almost_equal(cm.loevinger_coeff(), 1.0, 4)
+    assert_almost_equal(cm.cole_coeff(), 1.0, 4)
+    assert_almost_equal(cm.yule_q(), 1.0, 4)
+    assert_almost_equal(cm.yule_y(), 1.0, 4)
 
 
 def test_1101():
@@ -273,6 +283,11 @@ def test_1101():
     assert_almost_equal(cm.mp_corr(), -0.5, 4)
     assert_almost_equal(cm.kappa(), -0.5, 4)
 
+    assert_almost_equal(cm.loevinger_coeff(), -0.5, 4)
+    assert_almost_equal(cm.cole_coeff(), -1.0, 4)
+    assert_almost_equal(cm.yule_q(), -1.0, 4)
+    assert_almost_equal(cm.yule_y(), -1.0, 4)
+
 
 def test_1110():
     m = (1, 1, 1, 0)
@@ -287,6 +302,11 @@ def test_1110():
     assert_almost_equal(cm.mp_corr(), 0.5, 4)
     assert_almost_equal(cm.kappa(), 0.4, 4)
 
+    assert_almost_equal(cm.loevinger_coeff(), 1.0, 4)
+    assert_almost_equal(cm.cole_coeff(), 1.0, 4)
+    assert_almost_equal(cm.yule_q(), 1.0, 4)
+    assert_almost_equal(cm.yule_y(), 1.0, 4)
+
 
 def test_1111():
     m = (1, 1, 1, 1)
@@ -300,3 +320,8 @@ def test_1111():
     assert_almost_equal(cm.matthews_corr(), 0.0, 4)
     assert_almost_equal(cm.mp_corr(), 0.0, 4)
     assert_almost_equal(cm.kappa(), 0.0, 4)
+
+    assert_almost_equal(cm.loevinger_coeff(), 0.0, 4)
+    assert_almost_equal(cm.cole_coeff(), 0.0, 4)
+    assert_almost_equal(cm.yule_q(), 0.0, 4)
+    assert_almost_equal(cm.yule_y(), 0.0, 4)
