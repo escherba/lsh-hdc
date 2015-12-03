@@ -2087,10 +2087,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         if n == 0:
             return np.nan
-        elif a == n or d == n:
-            return 1.0
-        elif b == n or c == n:
-            return -1.0
         elif p1 == n:
             # c and d are zero
             return _div(a - b, p1)
@@ -2129,10 +2125,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         if n == 0:
             return np.nan
-        elif a == n or d == n:
-            return 1.0
-        elif b == n or c == n:
-            return -1.0
         elif p1 == n:
             # c and d are zero
             return _div(sqrt(a) - sqrt(b), sqrt(a) + sqrt(b))
