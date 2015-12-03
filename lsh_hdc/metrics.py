@@ -1548,7 +1548,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             return np.nan
         elif a == n or d == n:
             # only one (diagonal) cell is non-zero
-            return 1.0
+            return 0.5
         elif p1 == 0 or p2 == 0:
             # first row or column is zero, second non-zero
             return 0.0
@@ -1824,8 +1824,21 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                <https://doi.org/10.1007/s11336-008-9070-3>`_
 
         """
-        p1, q1 = self.row_totals.values()
-        p2, q2 = self.col_totals.values()
+        a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
+        n = p1 + q1
+
+        cov = self.covar()
+
+        if n == 0:
+            return np.nan
+        elif a == n or d == n:
+            # only one (diagonal) cell is non-zero
+            return 0.5
+        elif cov == 0.0:
+            return 0.0
+
         return _div(self.covar(), min(p1 * q2, p2 * q1))
 
     def kappa(self):
@@ -1929,7 +1942,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             return np.nan
         elif a == n or d == n:
             # only one (diagonal) cell is non-zero
-            return 1.0
+            return 0.5
 
         return _div(2 * self.covar(), p1 * q2 + p2 * q1)
 
@@ -1958,7 +1971,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             return np.nan
         elif a == n or d == n:
             # only one (diagonal) cell is non-zero
-            return 1.0
+            return 0.5
         elif b == n or c == n:
             # only one (non-diagonal) cell is non-zero
             return 0.0
@@ -2028,7 +2041,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             return np.nan
         elif a == n or d == n:
             # only one (diagonal) cell is non-zero
-            return 1.0
+            return 0.5
         elif p1 == n or p2 == n or q1 == n or q2 == n:
             # one row or column is zero, another non-zero
             return 0.0
@@ -2068,6 +2081,29 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         """
         a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
+        n = a + b + c + d
+
+        if n == 0:
+            return np.nan
+        elif a == n or d == n:
+            return 1.0
+        elif b == n or c == n:
+            return -1.0
+        elif p1 == n:
+            # c and d are zero
+            return _div(a - b, p1)
+        elif p2 == n:
+            # b and d are zero
+            return _div(a - c, p2)
+        elif q1 == n:
+            # a and b are zero
+            return _div(d - c, q1)
+        elif q2 == n:
+            # a and c are zero
+            return _div(d - b, q2)
+
         return _div(self.covar(), a * d + b * c)
 
     def yule_y(self):
@@ -2087,10 +2123,33 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         """
         a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
+        n = a + b + c + d
+
+        if n == 0:
+            return np.nan
+        elif a == n or d == n:
+            return 1.0
+        elif b == n or c == n:
+            return -1.0
+        elif p1 == n:
+            # c and d are zero
+            return _div(sqrt(a) - sqrt(b), sqrt(a) + sqrt(b))
+        elif p2 == n:
+            # b and d are zero
+            return _div(sqrt(a) - sqrt(c), sqrt(a) + sqrt(c))
+        elif q1 == n:
+            # a and b are zero
+            return _div(sqrt(d) - sqrt(c), sqrt(d) + sqrt(c))
+        elif q2 == n:
+            # a and c are zero
+            return _div(sqrt(d) - sqrt(b), sqrt(d) + sqrt(b))
+
         ad = a * d
         bc = b * c
-        return _div(sqrt(ad) - sqrt(bc),
-                    sqrt(ad) + sqrt(bc))
+
+        return _div(sqrt(ad) - sqrt(bc), sqrt(ad) + sqrt(bc))
 
     def cole_coeff(self):
         """Cole coefficient
@@ -2139,6 +2198,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             p2, q2 = a + c, b + d
             if n == 0:
                 return np.nan
+            elif a == n or d == n:
+                # only one (diagonal) cell is non-zero
+                return 0.5
             elif cov > 0.0:
                 cov_max = min(p1 * q2, p2 * q1)
                 return _div(cov, cov_max)
