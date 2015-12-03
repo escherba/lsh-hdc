@@ -1722,7 +1722,21 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                contingency tables. Weather and Forecasting, 5(4), 576-585.
                <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
         """
-        p1, q1 = self.row_totals.values()
+        a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        n = p1 + q1
+
+        # if either p1 or q1 are zero, assume the zero
+        # row cotains two equally small values
+        if n == 0:
+            return np.nan
+        elif p1 == n:
+            # c and d are zero
+            return _div(a - b, 2 * (a + b))
+        elif q1 == n:
+            # a and b are zero
+            return _div(d - c, 2 * (d + c))
+
         return _div(self.covar(), p1 * q1)
 
     def markedness(self):
@@ -1759,7 +1773,21 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                Meteorological Society, 128(584), 2145-2166.
                <https://doi.org/10.1256/003590002320603584>`_
         """
-        p2, q2 = self.col_totals.values()
+        a, c, d, b = self.to_ccw()
+        p2, q2 = a + c, b + d
+        n = p2 + q2
+
+        # if either p2 or q2 are zero, assume the zero
+        # column cotains two equally small values
+        if n == 0:
+            return np.nan
+        elif p2 == n:
+            # c and d are zero
+            return _div(a - c, 2 * (a + c))
+        elif q2 == n:
+            # a and b are zero
+            return _div(d - b, 2 * (d + b))
+
         return _div(self.covar(), p2 * q2)
 
     def kappas(self):
@@ -1974,7 +2002,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             return 0.5
         elif b == n or c == n:
             # only one (non-diagonal) cell is non-zero
-            return 0.0
+            return -0.5
 
         return _div(2 * self.covar(), p1 * q1 + p2 * q2)
 
@@ -2042,6 +2070,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         elif a == n or d == n:
             # only one (diagonal) cell is non-zero
             return 0.5
+        elif b == n or c == n:
+            # only one (non-diagonal) cell is non-zero
+            return -0.5
         elif p1 == n or p2 == n or q1 == n or q2 == n:
             # one row or column is zero, another non-zero
             return 0.0
@@ -2193,6 +2224,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             elif a == n or d == n:
                 # only one (diagonal) cell is non-zero
                 return 0.5
+            elif b == n or c == n:
+                # only one (non-diagonal) cell is non-zero
+                return -0.5
             elif cov > 0.0:
                 cov_max = min(p1 * q2, p2 * q1)
                 return _div(cov, cov_max)
