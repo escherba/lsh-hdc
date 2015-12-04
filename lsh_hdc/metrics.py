@@ -1802,8 +1802,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         if n == 0:
             return np.nan
-        elif p1 == n or q1 == n:
-            return 0.0  # define as zero
+        elif p1 == n:
+            return 0.0
+            # return _div(a - b, 2 * (a + b))
+        elif q1 == n:
+            return 0.0
+            # return _div(d - c, 2 * (d + c))
         else:
             return _div(self.covar(), p1 * q1)
 
@@ -1847,8 +1851,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         if n == 0:
             return np.nan
-        elif p2 == n or q2 == n:
-            return 0.0  # define as zero
+        elif p2 == n:
+            return 0.0
+            # return _div(a - c, 2 * (a + c))
+        elif q2 == n:
+            return 0.0
+            # return _div(d - b, 2 * (d + b))
         else:
             return _div(self.covar(), p2 * q2)
 
