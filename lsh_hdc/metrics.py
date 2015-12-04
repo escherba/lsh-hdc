@@ -656,8 +656,8 @@ class ContingencyTable(CrossTab):
 
         cost -= null_cost
         if normalize:
-            max_cost = N
-            cost = _div(cost, max_cost - null_cost)
+            max_cost = N - null_cost
+            cost = 1.0 if cost == max_cost else _div(cost, max_cost)
 
         return cost
 
@@ -738,7 +738,9 @@ class ContingencyTable(CrossTab):
 
         score -= null_score
         if normalize:
-            score = _div(score, max_dist - null_score)
+            max_score = max_dist - null_score
+            score = 1.0 if score == max_score else _div(score, max_score)
+
         return score
 
     def split_join_distance(self, normalize=True):
@@ -829,8 +831,8 @@ class ContingencyTable(CrossTab):
 
         score -= null_score
         if normalize:
-            max_score = 2 * N
-            score = _div(score, max_score - null_score)
+            max_score = 2 * N - null_score
+            score = 1.0 if score == max_score else _div(score, max_score)
 
         return score
 
@@ -1164,6 +1166,22 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             rows = ((TP, FN), (FP, TN))
         ContingencyTable.__init__(self, rows=rows)
 
+    def lform(self):
+        """Factory creating L-form version of current table
+        """
+        a, c, d, b = self.to_ccw()
+        if b < c:
+            a += b
+            b -= b
+            c -= b
+            d += b
+        else:
+            a += c
+            b -= c
+            c -= c
+            d += c
+        return self.__class__.from_ccw(a, c, d, b)
+
     @classmethod
     def from_sets(cls, set1, set2, universe_size=None):
         """Instantiate from two sets
@@ -1356,9 +1374,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         association-like measure (weighted kappa) with range [-1, 1] by using
         Kraemer rescaling [1]_ or one of Yule's formulas.
 
-        This harmonic mean has similar resolving power to ``ochiai_coeff`` and
-        the harmonic mean of ``muc_scores``.
-
         References
         ----------
 
@@ -1370,10 +1385,32 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
-        ad = a * d
-        p1q1, p2q2 = p1 * q1, p2 * q2
-        r0, r1 = _div(ad, p2q2), _div(ad, p1q1)
-        r2 = _div(2 * ad, p1q1 + p2q2)  # harmonic mean of r0 and r1
+        n = p1 + q1
+
+        if n == 0:
+            r0, r1, r2 = np.nan, np.nan, np.nan
+        elif a == n or d == n:
+            r0, r1, r2 = 0.5, 0.5, 0.5
+        elif b == n or c == n:
+            r0, r1, r2 = 0.0, 0.0, 0.0
+        elif p1 == n:
+            r0, r2 = 0.0, 0.0
+            r1 = _div(a, 2 * p1)
+        elif p2 == n:
+            r1, r2 = 0.0, 0.0
+            r0 = _div(a, 2 * p2)
+        elif q1 == n:
+            r1, r2 = 0.0, 0.0
+            r0 = _div(d, 2 * q1)
+        elif q2 == n:
+            r0, r2 = 0.0, 0.0
+            r1 = _div(d, 2 * q2)
+        else:
+            ad = a * d
+            p1q1, p2q2 = p1 * q1, p2 * q2
+            r0, r1 = _div(ad, p2q2), _div(ad, p1q1)
+            r2 = _div(2 * ad, p1q1 + p2q2)  # harmonic mean of r0 and r1
+
         return r0, r1, r2
 
     def odds_scores2_adj(self):
@@ -1396,9 +1433,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         association-like measure (weighted kappa) with range [-1, 1] using
         Kraemer rescaling [1]_ or by using one of Yule's formulas.
 
-        This harmonic mean has similar resolving power to ``ochiai_coeff`` and
-        the harmonic mean of ``muc_scores``.
-
         References
         ----------
 
@@ -1410,10 +1444,30 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
-        ad = a * d
-        p2q1, p1q2 = p2 * q1, p1 * q2
-        r0, r1 = _div(ad, p2q1), _div(ad, p1q2)
-        r2 = _div(2 * ad, p1q2 + p2q1)  # harmonic mean of r0 and r1
+        n = p1 + q1
+
+        if n == 0:
+            r0, r1, r2 = np.nan, np.nan, np.nan
+        elif a == n or d == n:
+            r0, r1, r2 = 0.5, 0.5, 0.5
+        elif b == n:
+            r0, r1, r2 = 0.25, 0.0, 0.0
+        elif c == n:
+            r0, r1, r2 = 0.0, 0.25, 0.0
+        elif p1 == n:
+            r0, r1, r2 = 0.0, 0.5, 0.0
+        elif p2 == n:
+            r0, r1, r2 = 0.5, 0.0, 0.0
+        elif q1 == n:
+            r0, r1, r2 = 0.0, 0.5, 0.0
+        elif q2 == n:
+            r0, r1, r2 = 0.5, 0.0, 0.0
+        else:
+            ad = a * d
+            p2q1, p1q2 = p2 * q1, p1 * q2
+            r0, r1 = _div(ad, p2q1), _div(ad, p1q2)
+            r2 = _div(2 * ad, p1q2 + p2q1)  # harmonic mean of r0 and r1
+
         return r0, r1, r2
 
     def risk_scores_adj(self):
@@ -1482,6 +1536,26 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         """
         a, c, _, b = self.to_ccw()
         return _div(2 * a, 2 * a + b + c)
+
+    def overlap_coeff(self):
+        """Overlap coefficient (Szymkiewicz-Simpson coefficient)
+
+        Can be obtained by standardizing Dice or Ochiai coefficients by their
+        maximum possible value given fixed marginals. Not corrected for chance.
+
+        Note that :math:`min(p_1, p_2)` is equal to the maximum value of
+        :math:`a` given fixed marginals.
+
+        When adjusted for chance, this coefficient turns into Loevinger's H.
+
+        See Also
+        --------
+        loevinger_coeff
+        """
+        a, c, _, b = self.to_ccw()
+        p1, p2 = a + b, a + c
+        a_max = min(p1, p2)
+        return 0.0 if a_max == 0 else _div(a, a_max)
 
     def jaccard_coeff_adj(self):
         """Jaccard coefficient adjusted by subtracting null model
@@ -1722,8 +1796,20 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                contingency tables. Weather and Forecasting, 5(4), 576-585.
                <http://journals.ametsoc.org/doi/abs/10.1175/1520-0434%281990%29005%3C0576%3AOSMOSI%3E2.0.CO%3B2>`_
         """
-        p1, q1 = self.row_totals.values()
-        return _div(self.covar(), p1 * q1)
+        a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        n = p1 + q1
+
+        if n == 0:
+            return np.nan
+        elif p1 == n:
+            return 0.0
+            # return _div(a - b, 2 * (a + b))
+        elif q1 == n:
+            return 0.0
+            # return _div(d - c, 2 * (d + c))
+        else:
+            return _div(self.covar(), p1 * q1)
 
     def markedness(self):
         """Markedness (precision corrected for chance)
@@ -1759,8 +1845,20 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
                Meteorological Society, 128(584), 2145-2166.
                <https://doi.org/10.1256/003590002320603584>`_
         """
-        p2, q2 = self.col_totals.values()
-        return _div(self.covar(), p2 * q2)
+        a, c, d, b = self.to_ccw()
+        p2, q2 = a + c, b + d
+        n = p2 + q2
+
+        if n == 0:
+            return np.nan
+        elif p2 == n:
+            return 0.0
+            # return _div(a - c, 2 * (a + c))
+        elif q2 == n:
+            return 0.0
+            # return _div(d - b, 2 * (d + b))
+        else:
+            return _div(self.covar(), p2 * q2)
 
     def kappas(self):
         """Kappa and its harmonic components
@@ -1804,12 +1902,12 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             >>> t.pairwise.loevinger_coeff()
             1.0
 
-        Loevinger's coefficient has a unique property: all relevant two-way
-        correlation coefficients on a 2x2 table (including Kappa and Matthews'
-        Correlation Coefficient) become Loevinger's coefficient after
+        Loevinger's coefficient has a unique property: all two-way correlation
+        coefficients on a 2x2 table that are in L-family (including Kappa and
+        Matthews' correlation coefficient) become Loevinger's coefficient after
         normalization by maximum value [1]_. However, this measure is not
         symmetric: when :math:`ad < bc`, it does not have a lower bound. For an
-        equivalent symmetric measure, see ``cole_coeff``.
+        equivalent symmetric measure, use Cole coefficient.
 
         See Also
         --------
@@ -1974,7 +2072,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             return 0.5
         elif b == n or c == n:
             # only one (non-diagonal) cell is non-zero
-            return 0.0
+            return -0.5
 
         return _div(2 * self.covar(), p1 * q1 + p2 * q2)
 
@@ -2042,6 +2140,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         elif a == n or d == n:
             # only one (diagonal) cell is non-zero
             return 0.5
+        elif b == n or c == n:
+            # only one (non-diagonal) cell is non-zero
+            return -0.5
         elif p1 == n or p2 == n or q1 == n or q2 == n:
             # one row or column is zero, another non-zero
             return 0.0
@@ -2193,6 +2294,9 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             elif a == n or d == n:
                 # only one (diagonal) cell is non-zero
                 return 0.5
+            elif b == n or c == n:
+                # only one (non-diagonal) cell is non-zero
+                return -0.5
             elif cov > 0.0:
                 cov_max = min(p1 * q2, p2 * q1)
                 return _div(cov, cov_max)
