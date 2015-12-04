@@ -5,8 +5,7 @@ Randomized tests for invariant properties of some clustering metrics
 import numpy as np
 import warnings
 from lsh_hdc.metrics import ClusteringMetrics,  ConfusionMatrix2, \
-    geometric_mean, harmonic_mean, _div, \
-    adjusted_rand_score, mutual_info_score, \
+    harmonic_mean, _div, adjusted_rand_score, mutual_info_score, \
     adjusted_mutual_info_score
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true, assert_equal
@@ -157,60 +156,50 @@ def test_2x2_invariants():
         check_with_nans(actual_mark, expected_mark_2, 4, ensure_nans=False)
 
         # matthews corr coeff
-        actual_mcc = cm.matthews_corr()
-        expected_mcc = geometric_mean(actual_info, actual_mark)
-        check_with_nans(actual_mcc, expected_mcc, 4, ensure_nans=False,
-                        msg="MCC must equal expected value")
+        # actual_mcc = cm.matthews_corr()
+        # expected_mcc = geometric_mean(actual_info, actual_mark)
+        # check_with_nans(actual_mcc, expected_mcc, 4, ensure_nans=False)
 
         # kappas
         actual_kappa = cm.kappa()
 
         # kappa is the same as harmonic mean of kappa components
         expected_kappa_1 = harmonic_mean(*cm.kappas()[:2])
-        check_with_nans(actual_kappa, expected_kappa_1, 4, ensure_nans=False,
-                        msg="Kappa must equal expected value")
+        check_with_nans(actual_kappa, expected_kappa_1, 4, ensure_nans=False)
 
         # kappa is the same as accuracy adjusted for chance
         expected_kappa_2 = harmonic_mean(*cm.adjust_to_null(cm.accuracy, model='m3'))
-        check_with_nans(actual_kappa, expected_kappa_2, 4, ensure_nans=False,
-                        msg="Kappa must equal expected value")
+        check_with_nans(actual_kappa, expected_kappa_2, 4, ensure_nans=False)
 
         # kappa is the same as Dice coeff adjusted for chance
         expected_kappa_3 = harmonic_mean(*cm.adjust_to_null(cm.dice_coeff, model='m3'))
-        check_with_nans(actual_kappa, expected_kappa_3, 4, ensure_nans=False,
-                        msg="Kappa must equal expected value")
+        check_with_nans(actual_kappa, expected_kappa_3, 4, ensure_nans=False)
 
         # odds ratio and Yule's Q
         actual_odds_ratio = cm.DOR()
         actual_yule_q = cm.yule_q()
         expected_yule_q = _div(actual_odds_ratio - 1.0, actual_odds_ratio + 1.0)
         expected_odds_ratio = _div(cm.PLL(), cm.NLL())
-        check_with_nans(actual_odds_ratio, expected_odds_ratio, 4, ensure_nans=False,
-                        msg="DOR must be equal to PLL/NLL")
-        check_with_nans(actual_yule_q, expected_yule_q, 4, ensure_nans=False,
-                        msg="Yule's Q must be equal to (DOR-1)/(DOR+1)")
+        check_with_nans(actual_odds_ratio, expected_odds_ratio, 4, ensure_nans=False)
+        check_with_nans(actual_yule_q, expected_yule_q, 4, ensure_nans=False)
 
         # F-score and Dice
         expected_f = harmonic_mean(cm.precision(), cm.recall())
         actual_f = cm.fscore()
-        check_with_nans(expected_f, actual_f, 6,
-                        msg="Fscore must be equal to expected")
-        check_with_nans(expected_f, cm.dice_coeff(), 6, ensure_nans=False,
-                        msg="Fscore must be equal to Dice")
+        check_with_nans(expected_f, actual_f, 6)
+        check_with_nans(expected_f, cm.dice_coeff(), 6, ensure_nans=False)
 
         # association coefficients (1)
         dice = cm.dice_coeff()
         expected_jaccard = _div(dice, 2.0 - dice)
         actual_jaccard = cm.jaccard_coeff()
-        check_with_nans(actual_jaccard, expected_jaccard, 6, ensure_nans=False,
-                        msg="Jaccard coeff must match expected value")
+        check_with_nans(actual_jaccard, expected_jaccard, 6, ensure_nans=False)
 
         # association coefficients (2)
         jaccard = cm.jaccard_coeff()
         expected_ss2 = _div(jaccard, 2.0 - jaccard)
         actual_ss2 = cm.sokal_sneath_coeff()
-        check_with_nans(actual_ss2, expected_ss2, 6, ensure_nans=False,
-                        msg="SS2 coeff must match expected value")
+        check_with_nans(actual_ss2, expected_ss2, 6, ensure_nans=False)
 
         # adjusted ochiai
         actual = cm.ochiai_coeff_adj()

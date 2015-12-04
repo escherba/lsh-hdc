@@ -46,8 +46,8 @@ def test_1000():
     assert_almost_equal(cm.cole_coeff(), 0.5, 4)
     assert_almost_equal(cm.yule_q(), 1.0, 4)
     assert_almost_equal(cm.yule_y(), 1.0, 4)
-    assert_almost_equal(cm.informedness(), 0.5, 4)
-    assert_almost_equal(cm.markedness(), 0.5, 4)
+    assert_almost_equal(cm.informedness(), 0.0, 4)
+    assert_almost_equal(cm.markedness(), 0.0, 4)
 
 
 def test_0100():
@@ -72,8 +72,8 @@ def test_0100():
     assert_almost_equal(cm.cole_coeff(), -0.5, 4)
     assert_almost_equal(cm.yule_y(), -1.0, 4)
     assert_almost_equal(cm.yule_q(), -1.0, 4)
-    assert_almost_equal(cm.informedness(), -0.5, 4)
-    assert_almost_equal(cm.markedness(), -0.5, 4)
+    assert_almost_equal(cm.informedness(), 0.0, 4)
+    assert_almost_equal(cm.markedness(), 0.0, 4)
 
 
 def test_0010():
@@ -98,8 +98,8 @@ def test_0010():
     assert_almost_equal(cm.cole_coeff(), 0.5, 4)
     assert_almost_equal(cm.yule_q(), 1.0, 4)
     assert_almost_equal(cm.yule_y(), 1.0, 4)
-    assert_almost_equal(cm.informedness(), 0.5, 4)
-    assert_almost_equal(cm.markedness(), 0.5, 4)
+    assert_almost_equal(cm.informedness(), 0.0, 4)
+    assert_almost_equal(cm.markedness(), 0.0, 4)
 
 
 def test_0001():
@@ -124,8 +124,8 @@ def test_0001():
     assert_almost_equal(cm.cole_coeff(), -0.5, 4)
     assert_almost_equal(cm.yule_y(), -1.0, 4)
     assert_almost_equal(cm.yule_q(), -1.0, 4)
-    assert_almost_equal(cm.informedness(), -0.5, 4)
-    assert_almost_equal(cm.markedness(), -0.5, 4)
+    assert_almost_equal(cm.informedness(), 0.0, 4)
+    assert_almost_equal(cm.markedness(), 0.0, 4)
 
 
 def test_1010():
