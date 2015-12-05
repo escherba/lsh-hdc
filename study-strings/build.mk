@@ -48,7 +48,7 @@ METRICS := \
 	aul_score roc_max_info roc_auc \
 	time_cpu
 
-PLOT_METRICS: = $(METRICS) \
+PLOT_METRICS := $(METRICS) \
 	entropy_scores-0 entropy_scores-1 entropy_scores-2 \
 	pairwise_hcv-0 pairwise_hcv-1 pairwise_hcv-2
 

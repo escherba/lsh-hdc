@@ -470,7 +470,7 @@ def do_reducer(args):
     csv_path = os.path.join(args.output, "summary.csv")
     logging.info("Writing brief summary to %s", csv_path)
     subset.to_csv(csv_path)
-    create_plots(args, subset, utils.METRICS)
+    create_plots(args, subset, args.metrics)
 
 
 def add_simul_args(p_simul):
@@ -554,8 +554,8 @@ def add_analy_args(parser):
         '--join_negs', type=int, default=1,
         help='label negative classes and clusters with the same label')
     parser.add_argument(
-        '--metrics', type=str, nargs='*', choices=utils.METRICS,
-        default=('roc_auc', 'nmi_score', 'time_cpu'),
+        '--metrics', type=str, nargs='*',
+        default=('roc_auc', 'matthews_corr', 'time_cpu'),
         help='Which metrics to calculate')
 
 
