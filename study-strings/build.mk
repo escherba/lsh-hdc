@@ -41,15 +41,19 @@ endef
 
 # Study definition
 METRICS := \
-	homogeneity completeness nmi_score \
-	adjusted_mutual_info_score split_join_similarity assignment_score \
-	matthews_corr adjusted_fowlkes_mallows \
+	entropy_scores pairwise_hcv \
+	adjusted_mutual_info split_join_similarity assignment_score \
+	loevinger_coeff \
 	informedness markedness \
 	aul_score roc_max_info roc_auc \
 	time_cpu
 
+PLOT_METRICS := $(METRICS) \
+	entropy_scores-0 entropy_scores-1 entropy_scores-2 \
+	pairwise_hcv-0 pairwise_hcv-1 pairwise_hcv-2
+
 REDUCER := $(PYTHON) -m lsh_hdc.monte_carlo.strings reducer \
-	--metrics $(METRICS) \
+	--metrics $(PLOT_METRICS) \
 	--group_by $(GROUP_FIELD) \
 	--x_axis $(PARAM_FIELD) \
 	--fig_title "$(GROUP_FIELD)" \

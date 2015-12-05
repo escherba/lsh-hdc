@@ -17,10 +17,10 @@ from itertools import izip, cycle
 from lsh_hdc import Shingler, HASH_FUNC_TABLE
 from lsh_hdc.cluster import MinHashCluster as Cluster
 from lsh_hdc.utils import random_string, get_df_subset
+from pymaptools.iter import intersperse, isiterable
 from pymaptools.io import GzipFileType, read_json_lines, ndjson2col, \
     PathArgumentParser, write_json_line
 from lsh_hdc.monte_carlo import utils
-from pymaptools.iter import intersperse
 from pymaptools.sample import discrete_sample
 from pymaptools.benchmark import PMTimer
 
@@ -332,18 +332,22 @@ LEGEND_METRIC_KWARGS = {
 def append_scores(cm, pairs, metrics):
     for metric in metrics:
         try:
-            score = cm.get_score(metric)
+            scores = cm.get_score(metric)
         except AttributeError:
             logging.warn("Method %s not defined", metric)
             continue
         else:
-            pairs.append((metric, score))
+            if isiterable(scores):
+                for idx, score in enumerate(scores):
+                    pairs.append(("%s-%d" % (metric, idx), score))
+            else:
+                pairs.append((metric, scores))
 
 
 def add_incidence_metrics(args, clusters, pairs):
     """Add metrics based on incidence matrix of classes and clusters
     """
-    args_metrics = utils.METRICS
+    args_metrics = args.metrics
     if set(utils.INCIDENCE_METRICS) & set(args_metrics):
 
         from lsh_hdc.metrics import ClusteringMetrics
@@ -353,9 +357,6 @@ def add_incidence_metrics(args, clusters, pairs):
             join_negs=bool(args.join_negs)
         )
         cm = ClusteringMetrics.from_labels(*labels)
-
-        if set(utils.ENTROPY_METRICS) & set(args_metrics):
-            pairs.extend(zip(utils.ENTROPY_METRICS, cm.entropy_scores()))
 
         pairwise_metrics = set(utils.PAIRWISE_METRICS) & set(args_metrics)
         append_scores(cm, pairs, pairwise_metrics)
@@ -469,7 +470,7 @@ def do_reducer(args):
     csv_path = os.path.join(args.output, "summary.csv")
     logging.info("Writing brief summary to %s", csv_path)
     subset.to_csv(csv_path)
-    create_plots(args, subset, utils.METRICS)
+    create_plots(args, subset, args.metrics)
 
 
 def add_simul_args(p_simul):
@@ -553,8 +554,8 @@ def add_analy_args(parser):
         '--join_negs', type=int, default=1,
         help='label negative classes and clusters with the same label')
     parser.add_argument(
-        '--metrics', type=str, nargs='*', choices=utils.METRICS,
-        default=('roc_auc', 'nmi_score', 'time_cpu'),
+        '--metrics', type=str, nargs='*',
+        default=('roc_auc', 'matthews_corr', 'time_cpu'),
         help='Which metrics to calculate')
 
 

@@ -1860,28 +1860,79 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         else:
             return _div(self.covar(), p2 * q2)
 
-    def kappas(self):
-        """Kappa and its harmonic components
+    def pairwise_hcv(self):
+        """Pairwise homogeneity and completeness
 
-        Of the three measure, :math:`\\kappa_0` is exactly ``precision``
-        corrected for chance, while :math:`\\kappa_1` is exactly ``recall``
-        corrected for chance. Their harmonic mean is equal to ``kappa``
-        agreement index.
-
+        For positive covariance, equal to the two one-sided kappas. For
+        negative covariance, equal to Matthews correlation coefficient.
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
         p2, q2 = a + c, b + d
-        p2_q1 = p2 * q1
-        p1_q2 = p1 * q2
+        n = a + b + c + d
+
         cov = self.covar()
-        kappa0 = _div(cov, p2_q1)
-        kappa1 = _div(cov, p1_q2)
-        kappa2 = _div(2 * cov,  p2_q1 + p1_q2)
-        return kappa0, kappa1, kappa2
+
+        if n == 0.0:
+            k0, k1 = np.nan, np.nan
+        elif a == n or d == n:
+            k0, k1 = 0.5, 0.5
+        elif b == n or c == n:
+            k0, k1 = -0.5, -0.5
+        elif p1 == n or q2 == n:
+            k0, k1 = 0.0, 0.0
+        elif p2 == n or q1 == n:
+            k0, k1 = 0.0, 0.0
+        elif cov > 0.0:
+            # use formulas for kappas
+            k0, k1 = _div(cov, p2 * q1), _div(cov, p1 * q2)
+        elif cov < 0.0:
+            # use formulas for markedness/informedness
+            k0, k1 = _div(cov, p2 * q2), _div(cov, p1 * q1)
+        else:
+            k0, k1 = 0.0, 0.0
+
+        return k0, k1, self.matthews_corr()
+
+    def kappas(self):
+        """Pairwise precision and recall corrected for chance
+
+        Of the two measures, :math:`\\kappa_0` is exactly ``precision``
+        corrected for chance, while :math:`\\kappa_1` is exactly ``recall``
+        corrected for chance. The harmonic mean of the two coefficients is
+        equal to ``kappa`` agreement index (F1-score corrected for chance);
+        their geometric mean is equal to ``matthews_corr`` association
+        coefficient; while the maximum of the two is equal to
+        ``loevinger_coeff`` when :math:`ad \\geq bc`.
+
+        In clustering context, :math:`\\kappa_0` corresponds to pairwise
+        homogeneity, while :math:`\\kappa_1` corresponds to pairwise
+        completeness.
+        """
+        a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
+        n = a + b + c + d
+
+        if a == n or d == n:
+            k0, k1 = np.nan, np.nan
+        elif b == n:
+            k0, k1 = np.NINF, -0.0
+        elif c == n:
+            k0, k1 = -0.0, np.NINF
+        elif p1 == n or q2 == n:
+            k0, k1 = np.nan, 0.0
+        elif p2 == n or q1 == n:
+            k0, k1 = 0.0, np.nan
+        else:
+            cov = self.covar()
+            p2_q1, p1_q2 = p2 * q1, p1 * q2
+            k0, k1 = _div(cov, p2_q1), _div(cov, p1_q2)
+
+        return k0, k1, self.kappa()
 
     def loevinger_coeff(self):
-        """Loevinger's H (two-sided coefficient of homogeneity)
+        """Loevinger's Index of Homogeneity (Loevinger's H)
 
         Given a clustering (numbers correspond to class labels, inner groups to
         clusters) with perfect homogeneity but imperfect completeness, Loevinger
@@ -1894,8 +1945,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             1.0
 
         At the same time, kappa and Matthews coefficients are 0.63 and 0.68,
-        respectively. Being symmetrically defined, Loevinger coefficient will
-        also return a perfect score in the dual (opposite) situation::
+        respectively. Loevinger coefficient will also return a perfect score
+        for the dual situation::
 
             >>> clusters = [[0, 2, 2, 0, 0, 0], [1, 1, 1, 1]]
             >>> t = ClusteringMetrics.from_clusters(clusters)
@@ -2105,7 +2156,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         any literature that uses this index in clustering comparison context,
         with some rare exceptions [2]_ [3]_.
 
-        Synonyms: Phi Coefficient, Yule's Q with correction for chance.
+        Synonyms: Phi Coefficient, Product-Moment Correlation
 
         See Also
         --------
@@ -2173,8 +2224,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def yule_q(self):
         """Yule's Q (association index)
 
-        This measure has a nice property in that it is already adjusted for
-        chance. Yule's Q relates to the odds ratio (DOR) as follows:
+        Yule's Q relates to the odds ratio (DOR) as follows:
 
         .. math::
 
@@ -2206,8 +2256,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def yule_y(self):
         """Yule's Y (colligation coefficient)
 
-        This measure has a nice property in that it is already adjusted for
-        chance. The Y coefficient was used as basis of a new association
+        The Y coefficient was used as basis of a new association
         measure by accounting for entropy in [1]_.
 
         References
