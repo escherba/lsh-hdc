@@ -1890,7 +1890,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         .. math::
 
-            M_{adj} = \\frac{M - E(M)}{max(M_{max} - E(M), M_{max} - M)},
+            M_{adj} = \\frac{M - E(M)}{max(M_{max} - E(M), M_{max} - M)}.
 
         It is easy to show that *iff* :math:`M < E(M)` and :math:`M \\leq
         M_{max}`, this formula will switch from using the typical expectation
