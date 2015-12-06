@@ -1890,32 +1890,33 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         .. math::
 
-            M_{adj} = \\frac{M - E(M)}{max(M_{max} - E(M), M_{max} - M)}.
+            M_{adj} = \\frac{M - E[M]}{M_{max} - min(E[M], M)}.
 
-        It is easy to show that *iff* :math:`M < E(M)` and :math:`M \\leq
-        M_{max}`, this formula will switch from using the typical expectation
-        normalization to the larger one, thus ensuring that :math:`-1.0 \\leq
-        M_{adj} \\leq 1.0`.
-
-        The resulting measure is not symmetric over its range (negative values
-        are scaled differently from positive values), however this may be
+        It is clear from the definition above that *iff* :math:`M < E[M]` and
+        :math:`M \\leq M_{max}`, the denominator will switch from the
+        standardly defined normalization interval to a larger one, in the
+        process ensuring that :math:`-1.0 \\leq M_{adj} \\leq 1.0`.  The
+        adjusted measure is not symmetric over its range (negative values are
+        scaled differently from positive values), however this may be
         acceptable for applications where negative correlation does not carry a
         special meaning (e.g. pairwise matrices in cluster analysis).
 
-        The geometric mean was chosen over the harmonic after the results of a
-        Monte Carlo power analysis, due to slightly better discriminating
-        performance. For positive matrices, the geometric mean is equal to
-        ``matthews_corr``, while the harmonic mean would have been equal to
-        ``kappa``. For negative matrices, the harmonic mean would have remained
-        monotonic (though not equal) to Kappa, while the geometric mean is
-        neither monotonic nor equal to MCC, despite the two being closely
-        correlated. The discriminating performance indices of the geometric
-        mean and of MCC are empirically equal (to within rounding error).
+        For the compound measure, the geometric mean was chosen over the
+        harmonic after the results of a Monte Carlo power analysis, due to
+        slightly better discriminating performance. For positive matrices, the
+        geometric mean is equal to ``matthews_corr``, while the harmonic mean
+        would have been equal to ``kappa``. For negative matrices, the harmonic
+        mean would have remained monotonic (though not equal) to Kappa, while
+        the geometric mean is neither monotonic nor equal to MCC, despite the
+        two being closely correlated. The discriminating performance indices of
+        the geometric mean and of MCC are empirically the same (equal to within
+        rounding error).
 
-        It is also possible to use ``markedness`` and ``informedness`` as
-        homogeneity and completeness, respectively, for matrices with negative
-        covariance. In such a case, however, measure orthogonality will not be
-        preserved, since markedness and informedness are correlated under the
+        For matrices with negative covariance, it is possible to switch to
+        ``markedness`` and ``informedness`` as one-sided components
+        (homogeneity and completeness, respectively). However, the desirable
+        property of measure orthogonality will not be preserved then, since
+        markedness and informedness exhibit strong correlation under the
         assumed null model.
         """
         a, c, d, b = self.to_ccw()
