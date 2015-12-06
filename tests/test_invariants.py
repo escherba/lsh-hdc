@@ -128,16 +128,6 @@ def test_RxC_metrics():
         assert_array_almost_equal(actual_ari, expected_ari)
 
 
-def test_2x2_invariants_large():
-    """Alternative implementations should coincide for 2x2 matrices
-    """
-
-    for _ in xrange(10000):
-        cm = ConfusionMatrix2.from_random_counts(low=0, high=10)
-        h, c, v = cm.pairwise_hcv()
-        check_with_nans(v, geometric_mean(h, c), ensure_nans=False)
-
-
 def test_2x2_invariants():
     """Alternative implementations should coincide for 2x2 matrices
     """
@@ -150,6 +140,10 @@ def test_2x2_invariants():
             cm.to_ccw(),
             ConfusionMatrix2.from_ccw(*cm.to_ccw()).to_ccw(),
             msg="must be able to convert to tuple and create from tuple")
+
+        # pairwise H, C, V
+        h, c, v = cm.pairwise_hcv()[:3]
+        check_with_nans(v, geometric_mean(h, c), ensure_nans=False)
 
         # informedness
         actual_info = cm.informedness()

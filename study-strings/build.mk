@@ -41,10 +41,8 @@ endef
 
 # Study definition
 METRICS := \
-	entropy_scores pairwise_hcv \
+	entropy_scores xcoeff pairwise_hcv \
 	adjusted_mutual_info split_join_similarity assignment_score \
-	loevinger_coeff \
-	informedness markedness \
 	aul_score roc_max_info roc_auc \
 	time_cpu
 
