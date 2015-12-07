@@ -42,6 +42,7 @@ endef
 # Study definition
 METRICS := \
 	entropy_scores pairwise_hcv \
+	fscore precision recall \
 	adjusted_mutual_info split_join_similarity assignment_score \
 	aul_score roc_max_info roc_auc \
 	time_cpu
