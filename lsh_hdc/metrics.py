@@ -1890,16 +1890,26 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         .. math::
 
-            M_{adj} = \\frac{M - E[M]}{M_{max} - min(E[M], M)}.
+            \\hat{M}_{adj} = \\frac{M - E[M]}{M_{max} - min(E[M], M)}.
 
         It is clear from the definition above that *iff* :math:`M < E[M]` and
         :math:`M \\leq M_{max}`, the denominator will switch from the
         standardly defined normalization interval to a larger one, in the
-        process ensuring that :math:`-1.0 \\leq M_{adj} \\leq 1.0`.  The
-        adjusted measure is not symmetric over its range (negative values are
-        scaled differently from positive values), however this may be
+        process ensuring that :math:`-1.0 \\leq \\hat{M}_{adj} \\leq 1.0`.  The
+        definition for the bottom half can also be expressed in terms of the
+        standard adjusted value:
+
+        .. math::
+
+            \\hat{M}_{adj} = \\frac{M_{adj}}{(1 + |M_{adj}|^n)^{1/n}}, \\quad M_{adj} < 0, n = 1.
+
+        The resulting measure is not symmetric over its range (negative values
+        are scaled differently from positive values), however this may be
         acceptable for applications where negative correlation does not carry a
-        special meaning (e.g. pairwise matrices in cluster analysis).
+        special meaning (e.g. pairwise matrices in cluster analysis). If more
+        symmetric behavior is desired, the upper part of the negative range can
+        be linearized either by increasing :math:`n` or by using
+        :math:`\\hat{M}_{adj} = tanh(M_{adj})` transform.
 
         For the compound measure, the geometric mean was chosen over the
         harmonic after the results of a Monte Carlo power analysis, due to
