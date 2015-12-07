@@ -209,13 +209,3 @@ def test_2x2_invariants():
         actual = cm.ochiai_coeff_adj()
         expected = harmonic_mean(*cm.adjust_to_null(cm.ochiai_coeff, model='m3'))
         check_with_nans(actual, expected, 6, ensure_nans=False)
-
-        # adjusted jaccard
-        actual = cm.jaccard_coeff_adj()
-        expected = harmonic_mean(*cm.adjust_to_null(cm.jaccard_coeff, model='m3'))
-        check_with_nans(actual, expected, 6, ensure_nans=False)
-
-        # adjusted sokal sneath
-        actual = cm.sokal_sneath_coeff_adj()
-        expected = harmonic_mean(*cm.adjust_to_null(cm.sokal_sneath_coeff, model='m3'))
-        check_with_nans(actual, expected, 6, ensure_nans=False)

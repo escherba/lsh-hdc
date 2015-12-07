@@ -1557,40 +1557,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a_max = min(p1, p2)
         return 0.0 if a_max == 0 else _div(a, a_max)
 
-    def jaccard_coeff_adj(self):
-        """Jaccard coefficient adjusted by subtracting null model
-
-        Note: Due to non-linearity, Jaccard index is outside of L-family of
-        association indices that can be adjusted for chance by subtracting the
-        conditional expectation [1]_.  However empirically, the (incorrect)
-        conditional adjustment was found to be equally or better performing in
-        terms of resolving power than the approximations to the correct
-        expectation described in [1]_.
-
-        In terms of resolving power, the null-adjusted version of this index is
-        identical to ``kappa``.
-
-        See Also
-        --------
-        sokal_sneath_coeff_adj
-
-        References
-        ----------
-
-        .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
-               Jaccard and other similarity indices for chance agreement in
-               cluster analysis. Advances in Data Analysis and Classification,
-               5(3), 179-200.
-               <http://doi.org/10.1007/s11634-011-0090-y>`_
-        """
-        a, c, d, b = self.to_ccw()
-        p1, q1 = a + b, c + d
-        p2, q2 = a + c, b + d
-        p1q2_p2q1 = p1 * q2 + p2 * q1
-        numer = a * p1q2_p2q1 - p1 * p2 * (b + c)
-        denom = (a + b + c) * p1q2_p2q1
-        return _div(numer, denom)
-
     def jaccard_coeff(self):
         """Jaccard similarity coefficient
 
@@ -1602,17 +1568,38 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         Sokal Sneath coefficients, its resolving power is identical to that of
         the other two.
 
+        Jaccard index does not belong to the L-family of association indices
+        and thus cannot be adjusted for chance by subtracting the its value
+        under fixed-margin null model. Instead, its expectation must be
+        calculated, for which no analytical solution exists [1]_.
+
         Synonyms: critical success index
 
         See Also
         --------
         dice_coeff, sokal_sneath_coeff
+
+        References
+        ----------
+
+        .. [1] `Albatineh, A. N., & Niewiadomska-Bugaj, M. (2011). Correcting
+               Jaccard and other similarity indices for chance agreement in
+               cluster analysis. Advances in Data Analysis and Classification,
+               5(3), 179-200.
+               <http://doi.org/10.1007/s11634-011-0090-y>`_
         """
         a, c, _, b = self.to_ccw()
         return _div(a, a + b + c)
 
     def ochiai_coeff_adj(self):
         """Ochiai coefficient adjusted for chance
+
+        This index is nearly identical to Mattthews' Correlation Coefficient,
+        which should be used instead.
+
+        See Also
+        --------
+        matthews_corr, ochiai_coeff
         """
         a, c, d, b = self.to_ccw()
         p1, p2 = a + b, a + c
@@ -1640,11 +1627,18 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         case of pairwise clustering comparison, a pair of elements) belonging
         to the same cluster given that they belong to the same class [1]_.
 
+        This coefficient is in the L-family, and thus it can be corrected for
+        chance by subtracting its value under fixed-margin null model. The
+        resulting adjusted index is very close to, but not the same as,
+        Matthews Correlation Coefficient. Empirically, the discriminating power
+        of the adjusted coefficient is equal to that of Matthews' Correlation
+        Coefficient to within rounding error.
+
         Synonyms: Cosine Similarity, Fowlkes-Mallows Index
 
         See Also
         --------
-        jaccard_coeff, dice_coeff
+        jaccard_coeff, dice_coeff, ochiai_coeff_adj
 
         References
         ----------
@@ -1660,30 +1654,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         elif a == 0:
             return 0.0
         return _div(a, sqrt(p1 * p2))
-
-    def sokal_sneath_coeff_adj(self):
-        """Sokal and Sneath coefficient adjusted to the null model
-
-        See note under ``jaccard_coeff_adj`` about the (in)appropriateness of
-        the adjustment. In terms of resolving power, the null-adjusted version
-        of this index is identical to ``kappa``.
-
-        Since this coefficient is monotonic with respect to Jaccard and Dice
-        coefficients, its resolving power is identical to that of the other
-        two.
-
-        See Also
-        --------
-        jaccard_coeff_adj
-
-        """
-        a, c, d, b = self.to_ccw()
-        p1, q1 = a + b, c + d
-        p2, q2 = a + c, b + d
-        p1q2_p2q1 = p1 * q2 + p2 * q1
-        numer = a * p1q2_p2q1 - p1 * p2 * (b + c)
-        denom = (a + 2 * (b + c)) * p1q2_p2q1
-        return _div(numer, denom)
 
     def sokal_sneath_coeff(self):
         """Sokal and Sneath similarity index
@@ -1893,23 +1863,25 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             \\hat{M}_{adj} = \\frac{M - E[M]}{M_{max} - min(E[M], M)}.
 
         It is clear from the definition above that *iff* :math:`M < E[M]` and
-        :math:`M \\leq M_{max}`, the denominator will switch from the
-        standardly defined normalization interval to a larger one, in the
-        process ensuring that :math:`-1.0 \\leq \\hat{M}_{adj} \\leq 1.0`.  The
-        definition for the bottom half can also be expressed in terms of the
-        standard adjusted value:
+        :math:`M \\leq M_{max}`, the denominator will switch from the standard
+        normalization interval to a larger one, thereby ensuring that
+        :math:`-1.0 \\leq \\hat{M}_{adj} \\leq 1.0`.  The definition for the
+        bottom half of the range can also be expressed in terms of the standard
+        adjusted value:
 
         .. math::
 
             \\hat{M}_{adj} = \\frac{M_{adj}}{(1 + |M_{adj}|^n)^{1/n}}, \\quad M_{adj} < 0, n = 1.
 
         The resulting measure is not symmetric over its range (negative values
-        are scaled differently from positive values), however this may be
-        acceptable for applications where negative correlation does not carry a
-        special meaning (e.g. pairwise matrices in cluster analysis). If more
-        symmetric behavior is desired, the upper part of the negative range can
-        be linearized either by increasing :math:`n` or by using
-        :math:`\\hat{M}_{adj} = tanh(M_{adj})` transform.
+        are scaled differently from positive values), however this should not
+        matter for applications where negative correlation does not carry any
+        special meaning other than being additional evidence for absence of
+        positive correlation.  Such as a situation occurs in pairwise confusion
+        matrices used in cluster analysis. Nevertheless, if more symmetric
+        behavior near zero is desired, the upper part of the negative range can
+        be linearized either by increasing :math:`n` in the definition above or
+        by replacing it with :math:`\\hat{M}_{adj} = tanh(M_{adj})` transform.
 
         For the compound measure, the geometric mean was chosen over the
         harmonic after the results of a Monte Carlo power analysis, due to
@@ -1964,17 +1936,26 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
     def kappas(self):
         """Pairwise precision and recall corrected for chance
 
-        Of the two measures, :math:`\\kappa_0` is exactly ``precision``
-        corrected for chance, while :math:`\\kappa_1` is exactly ``recall``
-        corrected for chance. The harmonic mean of the two coefficients is
-        equal to ``kappa`` agreement index (F1-score corrected for chance);
-        their geometric mean is equal to ``matthews_corr`` association
-        coefficient; while the maximum of the two is equal to
-        ``loevinger_coeff`` when :math:`ad \\geq bc`.
+        Kappa decomposes into a pair of components (regression coefficients),
+        :math:`\\kappa_0` (precision-like) and :math:`\\kappa_1` (recall-like),
+        of which it is a harmonic mean:
 
-        In clustering context, :math:`\\kappa_0` corresponds to pairwise
-        homogeneity, while :math:`\\kappa_1` corresponds to pairwise
-        completeness.
+        .. math::
+
+            \\kappa_0 = \\frac{cov}{p_2 q_1}, \\quad \\kappa_1 = \\frac{cov}{p_1 q_2}.
+
+        These coefficients are interesting because they represent precision and
+        recall, respectively, corrected for chance by subtracting the
+        fixed-margin null model. In clustering context, :math:`\\kappa_0`
+        corresponds to pairwise homogeneity, while :math:`\\kappa_1`
+        corresponds to pairwise completeness. The geometric mean of the two
+        components is equal to Matthews' Correlation Coefficient, while their
+        maximum is equal to Loevinger's H when :math:`ad \\geq bc`.
+
+        See Also
+        --------
+
+        kappa, loevinger_coeff, matthews_corr
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -2069,33 +2050,15 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         Kappa can be derived by correcting either Accuracy (Simple Matching
         Coefficient, Rand Index) or F1-score (Dice Coefficient) for chance.
-        Kappa can be decomposed into a pair of components (regression
-        coefficients), :math:`\\kappa_1` (recall-like) and :math:`\\kappa_0`
-        (precision-like), of which it is a harmonic mean:
-
-        .. math::
-
-            \\kappa_1 = \\frac{cov}{p_1 q_2},
-
-            \\kappa_0 = \\frac{cov}{p_2 q_1}.
-
-        The geometric mean of the above two components equals to Matthews'
-        Correlation Coefficient.  The latter is also equal to the geometric
-        mean of informedness and markedness (which are similar to, but not the
-        same, as :math:`\\kappa_1` and :math:`\\kappa_0`).  Unlike informedness
-        and markedness, :math:`\\kappa_1` and :math:`\\kappa_0` don't have a
-        lower bound.  For that reason, when characterizing one-way dependence
-        in a 2x2 confusion matrix, it is arguably better to use use
-        informedness and markedness.
-
-        As 'd' approaches infinity, kappa turns into Dice coefficient
-        (F-score).
+        Conversely, Dice coefficient can be derived from Kappa by obtaining its
+        limit as :math:`d \\rightarrow \\infty`. Normalizing Kappa by its
+        maximum value given fixed-margin table gives Loevinger's H.
 
         Synonyms: Adjusted Rand Index, Heidke Skill Score
 
         See Also
         --------
-        mp_corr, matthews_corr
+        kappas, loevinger_coeff, matthews_corr, dice_coeff
 
         References
         ----------
@@ -2204,20 +2167,17 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         by taking a square root.
 
         MCC is a also a geometric mean of informedness and markedness (the
-        regression coefficients of the problem and its dual). As the value of
-        'd' approaches infinity, MCC turns into Ochiai coefficient. Its
-        definition as a geometric mean of chance-corrected precision/recall
-        measures gives MCC a nice property in that this index is *unique*. For
-        comparison, ``kappa`` and ``mp_corr`` and not unique because each is a
-        harmonic mean of two slightly differently defined chance corrections of
-        precision and recall. In the case of MCC, regardless of which set of
-        chance-corrected definitions of precision and recall one starts with,
-        one always ends up with the same quantity after taking a geometric
-        mean, and that quantity is MCC.
+        regression coefficients of the problem and its dual). As :math:`d
+        \\rightarrow \\infty`, MCC turns into Ochiai coefficient. Unlike with
+        Kappa, normalizing the corresponding similarity coefficient for chance
+        by subtracting the fixed-margin null model does not produce MCC in
+        return, but gives a different index with equivalent discriminating
+        power to that of MCC. Normalizing MCC by its maximum value under fixed-
+        margin model gives Loevinger's H.
 
-        The overall performance profile of this measure is similar to that of
-        ``kappa`` and ``mp_corr`` except that, in almost all cases tested, the
-        resolving power tilts very slightly in favor of MCC. While MCC is a
+        Empirically, the discriminating power of MCC is sligtly better than
+        that of ``mp_corr`` and ``kappa``, and is only lower than that of
+        ``loevinger_coeff`` under highly biased conditions. While MCC is a
         commonly used and recently preferred measure of prediction and
         reproducibility [1]_, it is somewhat strange that one can hardly find
         any literature that uses this index in clustering comparison context,
@@ -2227,7 +2187,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
 
         See Also
         --------
-        kappa, mp_corr
+        kappa, mp_corr, ochiai_coeff
 
         References
         ----------
