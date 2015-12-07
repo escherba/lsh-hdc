@@ -46,11 +46,13 @@ COMPUTE_METRICS := $(EXP_COMPUTE_METRICS) \
 	fowlkes_mallows dice_coeff overlap_coeff rand_index \
 	yule_q yule_y loevinger_coeff cole_coeff diseq_coeff \
 	assignment_score split_join_similarity talburt_wang_index \
-	muc_scores bc_metrics hypergeometric
+	muc_scores bc_metrics hypergeometric \
+	xcoeff pairwise_hcv
 
 PLOT_METRICS := $(EXP_PLOT_METRICS) $(COMPUTE_METRICS) \
 	entropy_scores-2 mic_scores-2 \
-	muc_scores-2 bc_metrics-2
+	muc_scores-2 bc_metrics-2 \
+	pairwise_hcv-2
 
 MAPPER := $(PYTHON) -m lsh_hdc.monte_carlo.predictions mapper \
 	--sim_size 10000 \

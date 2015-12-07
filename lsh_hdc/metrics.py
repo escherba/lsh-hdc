@@ -321,7 +321,7 @@ class ContingencyTable(CrossTab):
     def adjust_to_null(self, measure, model='m3', with_warnings=False):
         """Adjust a measure to null model
 
-        Tbe general formula for chance correction of an association measure
+        The general formula for chance correction of an association measure
         :math:`M` is:
 
         .. math::
@@ -1860,11 +1860,74 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         else:
             return _div(self.covar(), p2 * q2)
 
-    def pairwise_hcv(self):
-        """Pairwise homogeneity and completeness
+    def xcoeff(self):
+        """Alternative to ``loevinger_coeff`` but with -1 lower bound
+        """
+        a, c, d, b = self.to_ccw()
+        p1, q1 = a + b, c + d
+        p2, q2 = a + c, b + d
+        n = p1 + q1
 
-        For positive covariance, equal to the two one-sided kappas. For
-        negative covariance, equal to Matthews correlation coefficient.
+        cov = self.covar()
+
+        if n == 0:
+            return np.nan
+        elif a == n or d == n:
+            return 0.5
+        elif b == n or c == n:
+            return -1.0
+        elif cov > 0.0:
+            return _div(cov, min(p1 * q2, p2 * q1))
+        elif cov < 0.0:
+            return _div(cov, min(n * c, n * b))
+        else:
+            return 0.0
+
+    def pairwise_hcv(self):
+        """Pairwise homogeneity, completeness, and their geometric mean
+
+        Each of the two one-sided measures is defined as follows:
+
+        .. math::
+
+            \\hat{M}_{adj} = \\frac{M - E[M]}{M_{max} - min(E[M], M)}.
+
+        It is clear from the definition above that *iff* :math:`M < E[M]` and
+        :math:`M \\leq M_{max}`, the denominator will switch from the
+        standardly defined normalization interval to a larger one, in the
+        process ensuring that :math:`-1.0 \\leq \\hat{M}_{adj} \\leq 1.0`.  The
+        definition for the bottom half can also be expressed in terms of the
+        standard adjusted value:
+
+        .. math::
+
+            \\hat{M}_{adj} = \\frac{M_{adj}}{(1 + |M_{adj}|^n)^{1/n}}, \\quad M_{adj} < 0, n = 1.
+
+        The resulting measure is not symmetric over its range (negative values
+        are scaled differently from positive values), however this may be
+        acceptable for applications where negative correlation does not carry a
+        special meaning (e.g. pairwise matrices in cluster analysis). If more
+        symmetric behavior is desired, the upper part of the negative range can
+        be linearized either by increasing :math:`n` or by using
+        :math:`\\hat{M}_{adj} = tanh(M_{adj})` transform.
+
+        For the compound measure, the geometric mean was chosen over the
+        harmonic after the results of a Monte Carlo power analysis, due to
+        slightly better discriminating performance. For positive matrices, the
+        geometric mean is equal to ``matthews_corr``, while the harmonic mean
+        would have been equal to ``kappa``. For negative matrices, the harmonic
+        mean would have remained monotonic (though not equal) to Kappa, while
+        the geometric mean is neither monotonic nor equal to MCC, despite the
+        two being closely correlated. The discriminating performance indices of
+        the geometric mean and of MCC are empirically the same (equal to within
+        rounding error).
+
+        For matrices with negative covariance, it is possible to switch to
+        ``markedness`` and ``informedness`` as one-sided components
+        (homogeneity and completeness, respectively). However, the desirable
+        property of measure orthogonality will not be preserved then, since
+        markedness and informedness exhibit strong correlation under the
+        assumed null model.
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1874,25 +1937,29 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         cov = self.covar()
 
         if n == 0.0:
-            k0, k1 = np.nan, np.nan
+            k0, k1, k2 = np.nan, np.nan, np.nan
         elif a == n or d == n:
-            k0, k1 = 0.5, 0.5
-        elif b == n or c == n:
-            k0, k1 = -0.5, -0.5
+            k0, k1, k2 = 0.5, 0.5, 0.5
+        elif b == n:
+            k0, k1, k2 = -1.0, -0.0, -0.0
+        elif c == n:
+            k0, k1, k2 = -0.0, -1.0, -0.0
         elif p1 == n or q2 == n:
-            k0, k1 = 0.0, 0.0
+            k0, k1, k2 = 0.0, 0.0, 0.0
         elif p2 == n or q1 == n:
-            k0, k1 = 0.0, 0.0
+            k0, k1, k2 = 0.0, 0.0, 0.0
         elif cov > 0.0:
-            # use formulas for kappas
-            k0, k1 = _div(cov, p2 * q1), _div(cov, p1 * q2)
+            k0 = _div(cov, p2 * q1)
+            k1 = _div(cov, p1 * q2)
+            k2 = _div(cov, sqrt(p1 * q1 * p2 * q2))
         elif cov < 0.0:
-            # use formulas for markedness/informedness
-            k0, k1 = _div(cov, p2 * q2), _div(cov, p1 * q1)
+            k0 = _div(cov, n * c)
+            k1 = _div(cov, n * b)
+            k2 = _div(cov, n * sqrt(b * c))
         else:
-            k0, k1 = 0.0, 0.0
+            k0, k1, k2 = 0.0, 0.0, 0.0
 
-        return k0, k1, self.matthews_corr()
+        return k0, k1, k2
 
     def kappas(self):
         """Pairwise precision and recall corrected for chance
@@ -1987,8 +2054,8 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
             return 0.5
         elif cov == 0.0:
             return 0.0
-
-        return _div(self.covar(), min(p1 * q2, p2 * q1))
+        else:
+            return _div(cov, min(p1 * q2, p2 * q1))
 
     def kappa(self):
         """Cohen's Kappa (Interrater Agreement)

@@ -4,6 +4,7 @@ NUM_PROCS=`python -c "import multiprocessing as m; print m.cpu_count()"`
 TARGET=config.mk
 TARGET_DIRS=study-predictions/exp-*
 
+touch *requirements.txt
 make -r extras
 make -r build_ext
 

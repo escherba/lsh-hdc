@@ -25,7 +25,7 @@ PYTHON := $(PYENV) python
 PIP := $(PYENV) pip
 
 
-include study-predictions/build.mk
+include study-strings/build.mk
 
 doc_sources:
 	sphinx-apidoc \
