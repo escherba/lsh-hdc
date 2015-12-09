@@ -880,10 +880,10 @@ class ContingencyTable(CrossTab):
 
         Implemented after description in [1]_. The compound fscore-like metric
         has good resolving power on sparse models, similar to
-        ``fowlkes_mallows`` (pairwise ``ochiai_coeff``) and to pairwise
-        ``odds_scores1``, however it becomes useless on dense matrices as it
-        relies on category cardinalities (how many types were seen) rather than
-        on observation counts (how many instances of each type were seen).
+        ``fowlkes_mallows`` (pairwise ``ochiai_coeff``), however it becomes
+        useless on dense matrices as it relies on category cardinalities (how
+        many types were seen) rather than on observation counts (how many
+        instances of each type were seen).
 
         ::
 
@@ -1353,147 +1353,6 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         a, c, d, b = self.to_ccw()
         ad, bc = a * d, b * c
         return _div(ad, bc)
-
-    def odds_scores1_adj(self):
-        """Odds ratio-like scores adjusted to null model
-
-        Because of non-linearity, the null model scores do not correspond to
-        the expected ones, so the adjustment is not precisely "correction for
-        chance", yet in practice it works quite well, giving similar resolving
-        power to that of ``ochiai_coeff_adj``. Still, ``ochiai_coeff_adj``
-        should be preferred whenever a compound (mean) measure with similar
-        behavior is required.
-        """
-        ps, qs = self.adjust_to_null(self.odds_scores1, model='m3')
-        return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
-
-    def odds_scores1(self):
-        """Asymmetric rescaling of odds ratio for similarity comparisons
-
-        Alternatively, odds ratio can be transformed into into an
-        association-like measure (weighted kappa) with range [-1, 1] by using
-        Kraemer rescaling [1]_ or one of Yule's formulas.
-
-        References
-        ----------
-
-        .. [1] `Warrens, M. J. (2010). A Kraemer-type rescaling that transforms
-               the odds ratio into the weighted kappa coefficient.
-               Psychometrika, 75(2), 328-330.
-               <http://doi.org/10.1007/s11336-010-9155-7>`_
-        """
-        a, c, d, b = self.to_ccw()
-        p1, q1 = a + b, c + d
-        p2, q2 = a + c, b + d
-        n = p1 + q1
-
-        if n == 0:
-            r0, r1, r2 = np.nan, np.nan, np.nan
-        elif a == n or d == n:
-            r0, r1, r2 = 0.5, 0.5, 0.5
-        elif b == n or c == n:
-            r0, r1, r2 = 0.0, 0.0, 0.0
-        elif p1 == n:
-            r0, r2 = 0.0, 0.0
-            r1 = _div(a, 2 * p1)
-        elif p2 == n:
-            r1, r2 = 0.0, 0.0
-            r0 = _div(a, 2 * p2)
-        elif q1 == n:
-            r1, r2 = 0.0, 0.0
-            r0 = _div(d, 2 * q1)
-        elif q2 == n:
-            r0, r2 = 0.0, 0.0
-            r1 = _div(d, 2 * q2)
-        else:
-            ad = a * d
-            p1q1, p2q2 = p1 * q1, p2 * q2
-            r0, r1 = _div(ad, p2q2), _div(ad, p1q1)
-            r2 = _div(2 * ad, p1q1 + p2q2)  # harmonic mean of r0 and r1
-
-        return r0, r1, r2
-
-    def odds_scores2_adj(self):
-        """Odds ratio-like scores adjusted to null model
-
-        Because of non-linearity, the null model scores do not correspond to
-        the expected ones, so the adjustment is not precisely "correction for
-        chance", yet in practice it works quite well, giving similar resolving
-        power to that of ``ochiai_coeff_adj``. Still, ``ochiai_coeff_adj``
-        should be preferred whenever a compound (mean) measure with similar
-        behavior is required.
-        """
-        ps, qs = self.adjust_to_null(self.odds_scores2, model='m3')
-        return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
-
-    def odds_scores2(self):
-        """Asymmetric rescaling of odds ratio for similarity comparisons
-
-        Alternatively, odds ratio can be transformed into into an
-        association-like measure (weighted kappa) with range [-1, 1] using
-        Kraemer rescaling [1]_ or by using one of Yule's formulas.
-
-        References
-        ----------
-
-        .. [1] `Warrens, M. J. (2010). A Kraemer-type rescaling that transforms
-               the odds ratio into the weighted kappa coefficient.
-               Psychometrika, 75(2), 328-330.
-               <http://doi.org/10.1007/s11336-010-9155-7>`_
-        """
-        a, c, d, b = self.to_ccw()
-        p1, q1 = a + b, c + d
-        p2, q2 = a + c, b + d
-        n = p1 + q1
-
-        if n == 0:
-            r0, r1, r2 = np.nan, np.nan, np.nan
-        elif a == n or d == n:
-            r0, r1, r2 = 0.5, 0.5, 0.5
-        elif b == n:
-            r0, r1, r2 = 0.25, 0.0, 0.0
-        elif c == n:
-            r0, r1, r2 = 0.0, 0.25, 0.0
-        elif p1 == n:
-            r0, r1, r2 = 0.0, 0.5, 0.0
-        elif p2 == n:
-            r0, r1, r2 = 0.5, 0.0, 0.0
-        elif q1 == n:
-            r0, r1, r2 = 0.0, 0.5, 0.0
-        elif q2 == n:
-            r0, r1, r2 = 0.5, 0.0, 0.0
-        else:
-            ad = a * d
-            p2q1, p1q2 = p2 * q1, p1 * q2
-            r0, r1 = _div(ad, p2q1), _div(ad, p1q2)
-            r2 = _div(2 * ad, p1q2 + p2q1)  # harmonic mean of r0 and r1
-
-        return r0, r1, r2
-
-    def risk_scores_adj(self):
-        """Relative risks normalized and adjusted to null model
-        """
-        ps, qs = self.adjust_to_null(self.risk_scores, model='m3')
-        return tuple(harmonic_mean(p, q) for p, q in zip(ps, qs))
-
-    def risk_scores(self, normalize=True):
-        """Relative risks and their harmonic mean
-        """
-        a, c, d, b = self.to_ccw()
-
-        numer0 = a * (c + d)
-        denom0 = c * (a + b)
-        if normalize:
-            denom0 += numer0
-        r0 = _div(numer0, denom0)
-
-        numer1 = a * (b + d)
-        denom1 = b * (a + c)
-        if normalize:
-            denom1 += numer1
-        r1 = _div(numer1, denom1)
-
-        return r0, r1, harmonic_mean(r0, r1)
 
     def fscore(self, beta=1.0):
         """F-score
