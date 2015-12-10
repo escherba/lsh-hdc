@@ -132,7 +132,7 @@ def ratio2weights(ratio):
     return lweight, 1.0 - lweight
 
 
-def geometric_mean(x, y):
+def gmean(x, y):
     """Geometric mean of two numbers. Always returns a float
 
     Although geometric mean is defined for negative numbers, Scipy function
@@ -144,16 +144,16 @@ def geometric_mean(x, y):
     return copysign(1, x) * sqrt(prod)
 
 
-def geometric_mean_weighted(x, y, ratio=1.0):
+def gmean_weighted(x, y, ratio=1.0):
     """Geometric mean of two numbers with a weight ratio. Returns a float
 
     ::
 
-        >>> geometric_mean_weighted(1, 4, ratio=1.0)
+        >>> gmean_weighted(1, 4, ratio=1.0)
         2.0
-        >>> geometric_mean_weighted(1, 4, ratio=0.0)
+        >>> gmean_weighted(1, 4, ratio=0.0)
         1.0
-        >>> geometric_mean_weighted(1, 4, ratio=float('inf'))
+        >>> gmean_weighted(1, 4, ratio=float('inf'))
         4.0
     """
     lweight, rweight = ratio2weights(ratio)
@@ -180,26 +180,41 @@ def unitsq_sigmoid(x, s=0.5):
     return a / (a + b)
 
 
-def harmonic_mean(x, y):
+def hmean(x, y):
     """Harmonic mean of two numbers. Always returns a float
     """
-    return float(x) if x == y else 2.0 * (x * y) / (x + y)
+    if x == y:
+        return float(x)
+    elif x == 0.0 or y == 0.0:
+        return 0.0
+    else:
+        return 2.0 * _div(x * y, x + y)
 
 
-def harmonic_mean_weighted(x, y, ratio=1.0):
+def hmean_weighted(x, y, ratio=1.0):
     """Harmonic mean of two numbers with a weight ratio. Returns a float
 
     ::
 
-        >>> harmonic_mean_weighted(1, 3, ratio=1.0)
+        >>> hmean_weighted(1, 3, ratio=1.0)
         1.5
-        >>> harmonic_mean_weighted(1, 3, ratio=0.0)
+        >>> hmean_weighted(1, 3, ratio=0.0)
         1.0
-        >>> harmonic_mean_weighted(1, 3, ratio=float('inf'))
+        >>> hmean_weighted(1, 3, ratio=float('inf'))
         3.0
     """
     lweight, rweight = ratio2weights(ratio)
-    return float(x) if x == y else (x * y) / (lweight * x + rweight * y)
+    if x == y:
+        return float(x)
+    elif x == 0.0 or y == 0.0:
+        if lweight == 0.0:
+            return float(x)
+        elif rweight == 0.0:
+            return float(y)
+        else:
+            return 0.0
+    else:
+        return _div(x * y, lweight * x + rweight * y)
 
 
 class ContingencyTable(CrossTab):
@@ -485,9 +500,9 @@ class ContingencyTable(CrossTab):
         h = 1.0 if H_C == 0.0 else max(0.0, I_CK / H_C)
         c = 1.0 if H_K == 0.0 else max(0.0, I_CK / H_K)
         if mean == 'harmonic':
-            rsquare = harmonic_mean(h, c)
+            rsquare = hmean(h, c)
         elif mean == 'geometric':
-            rsquare = geometric_mean(h, c)
+            rsquare = gmean(h, c)
         else:
             raise NotImplementedError(mean)
         return h, c, rsquare
@@ -918,7 +933,7 @@ class ContingencyTable(CrossTab):
 
         recall = _div(N - V_card,  N - A_card)
         precision = _div(N - V_card,  N - B_card)
-        fscore = harmonic_mean(recall, precision)
+        fscore = hmean(recall, precision)
         return precision, recall, fscore
 
     def bc_metrics(self):
@@ -958,7 +973,7 @@ class ContingencyTable(CrossTab):
         N = self.grand_total
         precision = _div(precision, N)
         recall = _div(recall, N)
-        fscore = harmonic_mean(recall, precision)
+        fscore = hmean(recall, precision)
         return precision, recall, fscore
 
 
@@ -1365,7 +1380,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         --------
         dice_coeff
         """
-        return harmonic_mean_weighted(self.precision(), self.recall(), beta ** 2)
+        return hmean_weighted(self.precision(), self.recall(), beta ** 2)
 
     def dice_coeff(self):
         """Dice similarity (Nei-Li coefficient)
