@@ -41,7 +41,7 @@ HASH_FUNC_TABLE = {
 
 
 def mshinglify(iterable, span, skip=0):
-    """Same as shingligy except repeatedly mask one word
+    """Same as shinglify except repeatedly mask one word
 
     After sparse binary polynomial hashing (SBPH).
     Note: mshinglify with span=4 and skip=0 produces as many shingles as

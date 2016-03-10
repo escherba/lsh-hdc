@@ -1727,7 +1727,7 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         else:
             return 0.0
 
-    def pairwise_hcv(self):
+    def pairwise_hcv(self, mean='geometric'):
         """Pairwise homogeneity, completeness, and their geometric mean
 
         Each of the two one-sided measures is defined as follows:
@@ -1768,12 +1768,13 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         the geometric mean and of MCC are empirically the same (equal to within
         rounding error).
 
-        For matrices with negative covariance, it is possible to switch to
-        ``markedness`` and ``informedness`` as one-sided components
-        (homogeneity and completeness, respectively). However, the desirable
-        property of measure orthogonality will not be preserved then, since
-        markedness and informedness exhibit strong correlation under the
-        assumed null model.
+        The choice of the mean can be seen as reflecting the desired behavior
+        under the case of a large difference between one-sided coefficients.
+        The harmonic mean penalizes situations when one coefficient is very
+        small to a higher degree than the geometric mean does. In other words,
+        if the information being sought can be better characterized by the
+        lowest performing coefficient, harmonic mean should be preferred; in
+        the opposite situation, geometric mean should be preferred.
         """
         a, c, d, b = self.to_ccw()
         p1, q1 = a + b, c + d
@@ -1797,11 +1798,21 @@ class ConfusionMatrix2(ContingencyTable, OrderedCrossTab):
         elif cov > 0.0:
             k0 = _div(cov, p2 * q1)
             k1 = _div(cov, p1 * q2)
-            k2 = _div(cov, sqrt(p1 * q1 * p2 * q2))
+            if mean == 'harmonic':
+                k2 = _div(2.0 * cov, p2 * q1 + p1 * q2)
+            elif mean == 'geometric':
+                k2 = _div(cov, sqrt(p1 * q1 * p2 * q2))
+            else:
+                raise NotImplementedError(mean)
         elif cov < 0.0:
             k0 = _div(cov, n * c)
             k1 = _div(cov, n * b)
-            k2 = _div(cov, n * sqrt(b * c))
+            if mean == 'harmonic':
+                k2 = _div(2.0 * cov, n * (b + c))
+            elif mean == 'geometric':
+                k2 = _div(cov, n * sqrt(b * c))
+            else:
+                raise NotImplementedError(mean)
         else:
             k0, k1, k2 = 0.0, 0.0, 0.0
 
