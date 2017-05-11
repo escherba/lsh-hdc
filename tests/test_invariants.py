@@ -5,8 +5,8 @@ Randomized tests for invariant properties of some clustering metrics
 import numpy as np
 import warnings
 from lsh_hdc.metrics import ClusteringMetrics,  ConfusionMatrix2, \
-    harmonic_mean, _div, adjusted_rand_score, mutual_info_score, \
-    adjusted_mutual_info_score, geometric_mean
+    hmean, _div, adjusted_rand_score, mutual_info_score, \
+    adjusted_mutual_info_score, gmean
 from numpy.testing import assert_array_almost_equal
 from nose.tools import assert_almost_equal, assert_true, assert_equal
 from sklearn.metrics import \
@@ -143,7 +143,7 @@ def test_2x2_invariants():
 
         # pairwise H, C, V
         h, c, v = cm.pairwise_hcv()[:3]
-        check_with_nans(v, geometric_mean(h, c), ensure_nans=False)
+        check_with_nans(v, gmean(h, c), ensure_nans=False)
 
         # informedness
         actual_info = cm.informedness()
@@ -161,22 +161,22 @@ def test_2x2_invariants():
 
         # matthews corr coeff
         # actual_mcc = cm.matthews_corr()
-        # expected_mcc = geometric_mean(actual_info, actual_mark)
+        # expected_mcc = gmean(actual_info, actual_mark)
         # check_with_nans(actual_mcc, expected_mcc, 4, ensure_nans=False)
 
         # kappas
         actual_kappa = cm.kappa()
 
         # kappa is the same as harmonic mean of kappa components
-        expected_kappa_1 = harmonic_mean(*cm.kappas()[:2])
+        expected_kappa_1 = hmean(*cm.kappas()[:2])
         check_with_nans(actual_kappa, expected_kappa_1, 4, ensure_nans=False)
 
         # kappa is the same as accuracy adjusted for chance
-        expected_kappa_2 = harmonic_mean(*cm.adjust_to_null(cm.accuracy, model='m3'))
+        expected_kappa_2 = hmean(*cm.adjust_to_null(cm.accuracy, model='m3'))
         check_with_nans(actual_kappa, expected_kappa_2, 4, ensure_nans=False)
 
         # kappa is the same as Dice coeff adjusted for chance
-        expected_kappa_3 = harmonic_mean(*cm.adjust_to_null(cm.dice_coeff, model='m3'))
+        expected_kappa_3 = hmean(*cm.adjust_to_null(cm.dice_coeff, model='m3'))
         check_with_nans(actual_kappa, expected_kappa_3, 4, ensure_nans=False)
 
         # odds ratio and Yule's Q
@@ -188,7 +188,7 @@ def test_2x2_invariants():
         check_with_nans(actual_yule_q, expected_yule_q, 4, ensure_nans=False)
 
         # F-score and Dice
-        expected_f = harmonic_mean(cm.precision(), cm.recall())
+        expected_f = hmean(cm.precision(), cm.recall())
         actual_f = cm.fscore()
         check_with_nans(expected_f, actual_f, 6)
         check_with_nans(expected_f, cm.dice_coeff(), 6, ensure_nans=False)
@@ -207,5 +207,5 @@ def test_2x2_invariants():
 
         # adjusted ochiai
         actual = cm.ochiai_coeff_adj()
-        expected = harmonic_mean(*cm.adjust_to_null(cm.ochiai_coeff, model='m3'))
+        expected = hmean(*cm.adjust_to_null(cm.ochiai_coeff, model='m3'))
         check_with_nans(actual, expected, 6, ensure_nans=False)

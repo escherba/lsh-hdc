@@ -7,7 +7,7 @@ from nose.tools import assert_almost_equal, assert_true, assert_equal, assert_gr
 from lsh_hdc.metrics import adjusted_rand_score, \
     homogeneity_completeness_v_measure, fentropy, \
     jaccard_similarity, ClusteringMetrics, \
-    ConfusionMatrix2, geometric_mean, harmonic_mean, _div, cohen_kappa, \
+    ConfusionMatrix2, gmean, hmean, _div, cohen_kappa, \
     product_moment, mutual_info_score, \
     adjusted_mutual_info_score, emi_from_margins as emi_cython
 from lsh_hdc.fent import emi_from_margins as emi_fortran
@@ -63,7 +63,7 @@ def _entropy_scores(cm):
     # and ensure that the scores are non-negative.
     homogeneity = 0.0 if H_C <= H_CK else (H_C - H_CK) / H_C
     completeness = 0.0 if H_K <= H_KC else (H_K - H_KC) / H_K
-    nmi_score = harmonic_mean(homogeneity, completeness)
+    nmi_score = hmean(homogeneity, completeness)
     return homogeneity, completeness, nmi_score
 
 
@@ -488,7 +488,7 @@ def test_negative_correlation():
     assert_almost_equal(cm.markedness(),    -0.8971, 4)
     assert_almost_equal(cm.kappa(),         -0.6407, 4)
     inform, marked = cm.informedness(), cm.markedness()
-    expected_matt = geometric_mean(inform, marked)
+    expected_matt = gmean(inform, marked)
     assert_almost_equal(expected_matt, cm.matthews_corr(), 6)
 
 
